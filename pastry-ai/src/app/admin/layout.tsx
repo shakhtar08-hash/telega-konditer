@@ -31,6 +31,11 @@ export default function AdminLayout({
             </Link>
           ))}
         </nav>
+        <form action="/api/admin/logout" className="mt-8" method="post">
+          <button className="rounded-md px-3 py-2 text-sm hover:bg-muted" type="submit">
+            Log out
+          </button>
+        </form>
       </aside>
       <main className="px-5 py-6 md:ml-64 md:px-8">{children}</main>
     </div>
