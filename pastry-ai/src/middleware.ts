@@ -5,7 +5,7 @@ import {
   isAdminSessionValid,
 } from "@/lib/admin-auth";
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const config = getAdminAuthConfig();
   const session = request.cookies.get(adminSessionCookieName)?.value;
   const isValid =
