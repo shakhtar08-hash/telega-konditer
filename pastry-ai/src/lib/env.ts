@@ -12,7 +12,9 @@ const envSchema = z.object({
 
 export type AppEnv = z.infer<typeof envSchema>;
 
-export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
+export function loadEnv(
+  source: Record<string, string | undefined> = process.env,
+): AppEnv {
   const parsed = envSchema.safeParse(source);
 
   if (!parsed.success) {
