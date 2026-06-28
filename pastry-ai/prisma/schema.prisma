@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model User {
+  id            String         @id @default(cuid())
+  telegramId    String         @unique
+  username      String?
+  name          String?
+  plan          Plan           @default(FREE)
+  credits       Int            @default(10)
+  createdAt     DateTime       @default(now())
+  conversations Conversation[]
+  usage         Usage[]
+  subscription  Subscription?
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  feature   String
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  tokens         Int?
+  model          String?
+  cost           Decimal?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Prompt {
+  id           String   @id @default(cuid())
+  slug         String
+  feature      String
+  systemPrompt String
+  userTemplate String
+  model        String
+  temperature  Float
+  active       Boolean  @default(true)
+  version      Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([slug, version])
+  @@index([feature, slug, active])
+}
+
+model PhotoStyle {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  prompt      String
+  preview     String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model CarouselTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  prompt    String
+  slides    Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Usage {
+  id           String   @id @default(cuid())
+  userId       String
+  feature      String
+  inputTokens  Int
+  outputTokens Int
+  cost         Decimal
+  latency      Int
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  provider  String
+  status    String
+  startedAt DateTime  @default(now())
+  expiresAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
