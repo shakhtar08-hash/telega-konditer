@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasUsableAccess } from "./access";
+import { hasUsableAccess, userPlanHasPromptAccess } from "./access";
 
 describe("bot access", () => {
   it("allows active subscriptions without expiration", () => {
@@ -23,5 +23,13 @@ describe("bot access", () => {
         new Date("2026-06-30T00:00:00.000Z"),
       ),
     ).toBe(false);
+  });
+
+  it("allows prompt access for basic and advanced user levels", () => {
+    expect(
+      userPlanHasPromptAccess({ plan: "FREE", subscription: null }),
+    ).toBe(false);
+    expect(userPlanHasPromptAccess({ plan: "PRO", subscription: null })).toBe(true);
+    expect(userPlanHasPromptAccess({ plan: "TEAM", subscription: null })).toBe(true);
   });
 });

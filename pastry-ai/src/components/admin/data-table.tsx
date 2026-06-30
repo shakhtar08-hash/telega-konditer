@@ -73,7 +73,7 @@ export function DataTable<Row>({
 export function StatusBadge({ active }: { active: boolean }) {
   return (
     <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
-      {active ? "Active" : "Inactive"}
+      {active ? "Активно" : "Выключено"}
     </span>
   );
 }

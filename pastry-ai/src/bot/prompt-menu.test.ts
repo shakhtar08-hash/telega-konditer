@@ -7,7 +7,7 @@ import {
 } from "./prompt-menu";
 
 describe("prompt menu", () => {
-  it("builds one selection button per active prompt", () => {
+  it("builds one selection button per active prompt title", () => {
     const items = mapPromptsToMenuItems([
       {
         feature: "recipes",
@@ -33,6 +33,14 @@ describe("prompt menu", () => {
         text: "ИИ-фотосессия",
       },
     ]);
+  });
+
+  it("uses Russian fallback titles when a prompt title is empty", () => {
+    expect(
+      mapPromptsToMenuItems([
+        { feature: "vision", slug: "dessert-identification", title: "" },
+      ])[0]?.title,
+    ).toBe("Определить десерт по фото");
   });
 
   it("uses a Russian working menu message", () => {

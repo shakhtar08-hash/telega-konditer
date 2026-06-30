@@ -39,7 +39,7 @@ describe("AdminFunnelPage", () => {
     expect(html).toContain("Приветствие");
     expect(html).toContain("/onboarding/welcome.png");
     expect(html).toContain("Текст шага");
-    expect(html).toContain("Custom buy URL");
-    expect(html).toContain("Create new step");
+    expect(html).toContain("Свой URL покупки");
+    expect(html).toContain("Создать новый шаг");
   });
 });

@@ -76,9 +76,9 @@ export async function clearApiSecret(formData: FormData) {
 async function getDatabaseStatus() {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return "Connected";
+    return "Подключена";
   } catch {
-    return "Unavailable";
+    return "Недоступна";
   }
 }
 
@@ -101,24 +101,24 @@ export default async function AdminSettingsPage() {
     source: storedSecretMap.has(key)
       ? "Admin"
       : process.env[key]
-        ? "Environment"
+        ? "Окружение"
         : "-",
-    status: storedSecretMap.has(key) || process.env[key] ? "Set" : "Missing",
+    status: storedSecretMap.has(key) || process.env[key] ? "Задано" : "Не задано",
   }));
   const databaseStatus = await getDatabaseStatus();
 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Runtime configuration status. Secret values are never shown."
-        title="Settings"
+        description="Состояние runtime-настроек. Значения секретов никогда не показываются."
+        title="Настройки"
       />
       <div className="rounded-lg border border-border bg-white p-5">
-        <p className="text-sm text-muted-foreground">Database</p>
+        <p className="text-sm text-muted-foreground">База данных</p>
         <p className="mt-1 text-lg font-semibold">{databaseStatus}</p>
       </div>
       <div className="rounded-lg border border-border bg-white p-5">
-        <h3 className="text-lg font-semibold">API Keys</h3>
+        <h3 className="text-lg font-semibold">API-ключи</h3>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           {managedApiKeys.map((key) => {
             const storedSecret = storedSecretMap.get(key);
@@ -140,21 +140,21 @@ export default async function AdminSettingsPage() {
                     formAction={clearApiSecret}
                     type="submit"
                   >
-                    Clear
+                    Очистить
                   </button>
                 </div>
                 <div className="flex gap-2">
                   <input
                     className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
                     name="value"
-                    placeholder="Paste new key"
+                    placeholder="Вставьте новый ключ"
                     type="password"
                   />
                   <button
                     className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
                     type="submit"
                   >
-                    Save
+                    Сохранить
                   </button>
                 </div>
               </form>
@@ -164,12 +164,12 @@ export default async function AdminSettingsPage() {
       </div>
       <DataTable
         columns={[
-          { header: "Variable", cell: (row) => row.key },
-          { header: "Status", cell: (row) => row.status },
-          { header: "Source", cell: (row) => row.source },
-          { header: "Preview", cell: (row) => row.preview },
+          { header: "Переменная", cell: (row) => row.key },
+          { header: "Статус", cell: (row) => row.status },
+          { header: "Источник", cell: (row) => row.source },
+          { header: "Превью", cell: (row) => row.preview },
         ]}
-        empty="No configuration variables are defined."
+        empty="Переменные конфигурации не заданы."
         getKey={(row) => row.key}
         rows={rows}
       />

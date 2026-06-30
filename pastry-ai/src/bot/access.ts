@@ -1,6 +1,13 @@
+import { planAllowsPromptAccess, type AppPlan } from "@/features/subscriptions/plans";
+
 export type BotSubscriptionAccess = {
   expiresAt: Date | null;
   status: string;
+};
+
+export type BotUserAccess = {
+  plan: AppPlan;
+  subscription: BotSubscriptionAccess | null;
 };
 
 export function hasUsableAccess(
@@ -13,17 +20,26 @@ export function hasUsableAccess(
   );
 }
 
+export function userPlanHasPromptAccess(user: BotUserAccess, now = new Date()) {
+  return planAllowsPromptAccess(user.plan) || hasUsableAccess(user.subscription, now);
+}
+
 export async function userHasPromptAccess(userId: string) {
   const { prisma } = await import("@/db/prisma");
-  const subscription = await prisma.subscription.findUnique({
+  const user = await prisma.user.findUnique({
     select: {
-      expiresAt: true,
-      status: true,
+      plan: true,
+      subscription: {
+        select: {
+          expiresAt: true,
+          status: true,
+        },
+      },
     },
     where: {
-      userId,
+      id: userId,
     },
   });
 
-  return hasUsableAccess(subscription);
+  return user ? userPlanHasPromptAccess(user) : false;
 }

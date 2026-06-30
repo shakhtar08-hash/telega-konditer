@@ -24,23 +24,23 @@ export default async function AdminUsagePage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="AI token usage, costs, and response latency."
-        title="Usage"
+        description="Использование токенов, расходы и задержка ответов AI."
+        title="Использование"
       />
       <DataTable
         columns={[
           {
-            header: "User",
+            header: "Пользователь",
             cell: (row) => row.user.username ?? row.user.telegramId,
           },
-          { header: "Feature", cell: (row) => row.feature },
-          { header: "Input", cell: (row) => row.inputTokens },
-          { header: "Output", cell: (row) => row.outputTokens },
-          { header: "Cost", cell: (row) => `$${row.cost.toString()}` },
-          { header: "Latency", cell: (row) => `${row.latency} ms` },
-          { header: "Created", cell: (row) => formatDate(row.createdAt) },
+          { header: "Функция", cell: (row) => row.feature },
+          { header: "Вход", cell: (row) => row.inputTokens },
+          { header: "Выход", cell: (row) => row.outputTokens },
+          { header: "Стоимость", cell: (row) => `$${row.cost.toString()}` },
+          { header: "Задержка", cell: (row) => `${row.latency} ms` },
+          { header: "Создано", cell: (row) => formatDate(row.createdAt) },
         ]}
-        empty="No usage records yet. Usage is recorded when AI features run."
+        empty="Записей использования пока нет. Они появятся после запуска AI-функций."
         getKey={(row) => row.id}
         rows={usage}
       />

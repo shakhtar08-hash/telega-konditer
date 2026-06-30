@@ -1,4 +1,5 @@
 import { isValidElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import AdminPromptsPage, { dynamic } from "./page";
 
@@ -39,6 +40,7 @@ describe("AdminPromptsPage", () => {
     findMany.mockResolvedValue([
       {
         id: "prompt_1",
+        title: "Рецепт по ингредиентам",
         slug: "recipe-from-ingredients",
         feature: "recipes",
         provider: "openrouter",
@@ -60,6 +62,7 @@ describe("AdminPromptsPage", () => {
       orderBy: [{ feature: "asc" }, { slug: "asc" }, { version: "desc" }],
       select: {
         id: true,
+        title: true,
         slug: true,
         feature: true,
         provider: true,
@@ -77,5 +80,10 @@ describe("AdminPromptsPage", () => {
     expect(text).toContain("recipes");
     expect(text).toContain("openrouter");
     expect(text).toContain("gpt-4o-mini");
+
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain("Название кнопки");
+    expect(html).toContain("Рецепт по ингредиентам");
+    expect(html).toContain("Показывать в меню бота");
   });
 });

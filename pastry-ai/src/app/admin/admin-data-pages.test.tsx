@@ -58,7 +58,10 @@ describe("admin data pages", () => {
     expect(usersDynamic).toBe("force-dynamic");
     expect(prismaMock.user.findMany).toHaveBeenCalled();
     expect(text).toContain("chef");
-    expect(text).toContain("PRO");
+    expect(text).toContain("Базовый");
+    expect(text).toContain("Без подписки");
+    expect(text).toContain("Продвинутый");
+    expect(text).toContain("Сохранить");
     expect(text).toContain("42");
   });
 
@@ -175,7 +178,7 @@ describe("admin data pages", () => {
     expect(text).toContain("OPENAI_API_KEY");
     expect(text).toContain("OPENROUTER_API_KEY");
     expect(text).toContain("sk-or...abcd");
-    expect(text).toContain("Set");
+    expect(text).toContain("Задано");
     expect(text).not.toContain("secret-openai");
     expect(text).not.toContain("secret-password");
 

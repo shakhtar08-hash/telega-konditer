@@ -38,36 +38,36 @@ export default async function AdminHistoryPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Recent bot conversations and the latest message in each thread."
-        title="History"
+        description="Последние диалоги бота и последнее сообщение в каждой ветке."
+        title="История"
       />
       <DataTable
         columns={[
           {
-            header: "User",
+            header: "Пользователь",
             cell: (conversation) =>
               conversation.user.username ?? conversation.user.telegramId,
           },
-          { header: "Feature", cell: (conversation) => conversation.feature },
+          { header: "Функция", cell: (conversation) => conversation.feature },
           {
-            header: "Role",
+            header: "Роль",
             cell: (conversation) => conversation.messages[0]?.role ?? "-",
           },
           {
-            header: "Latest message",
+            header: "Последнее сообщение",
             cell: (conversation) =>
-              preview(conversation.messages[0]?.content ?? "No messages"),
+              preview(conversation.messages[0]?.content ?? "Нет сообщений"),
           },
           {
-            header: "Model",
+            header: "Модель",
             cell: (conversation) => conversation.messages[0]?.model ?? "-",
           },
           {
-            header: "Created",
+            header: "Создан",
             cell: (conversation) => formatDate(conversation.createdAt),
           },
         ]}
-        empty="No conversation history yet. Bot interactions will appear here."
+        empty="Истории диалогов пока нет. Взаимодействия с ботом появятся здесь."
         getKey={(conversation) => conversation.id}
         rows={conversations}
       />

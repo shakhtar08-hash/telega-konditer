@@ -23,17 +23,17 @@ export default async function AdminPhotoStylesPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Reusable art-direction styles for generated pastry photos."
-        title="Photo Styles"
+        description="Переиспользуемые стили для генерации фотографий."
+        title="Фото-стили"
       />
       <DataTable
         columns={[
-          { header: "Name", cell: (style) => style.name },
-          { header: "Description", cell: (style) => style.description },
-          { header: "Status", cell: (style) => <StatusBadge active={style.active} /> },
-          { header: "Created", cell: (style) => formatDate(style.createdAt) },
+          { header: "Название", cell: (style) => style.name },
+          { header: "Описание", cell: (style) => style.description },
+          { header: "Статус", cell: (style) => <StatusBadge active={style.active} /> },
+          { header: "Создан", cell: (style) => formatDate(style.createdAt) },
         ]}
-        empty="No photo styles yet. Add styles before enabling photo presets in the bot."
+        empty="Фото-стилей пока нет. Добавьте стили перед включением пресетов в боте."
         getKey={(style) => style.id}
         rows={styles}
       />

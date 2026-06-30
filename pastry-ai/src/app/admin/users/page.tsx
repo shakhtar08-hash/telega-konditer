@@ -4,8 +4,32 @@ import {
   formatDate,
 } from "@/components/admin/data-table";
 import { prisma } from "@/db/prisma";
+import {
+  getPlanLabel,
+  isAppPlan,
+  subscriptionPlans,
+} from "@/features/subscriptions/plans";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
+
+export async function updateUserPlan(formData: FormData) {
+  "use server";
+
+  const id = String(formData.get("id") ?? "");
+  const plan = String(formData.get("plan") ?? "");
+
+  if (!id || !isAppPlan(plan)) {
+    return;
+  }
+
+  await prisma.user.update({
+    data: { plan },
+    where: { id },
+  });
+
+  revalidatePath("/admin/users");
+}
 
 export default async function AdminUsersPage() {
   const users = await prisma.user.findMany({
@@ -25,21 +49,46 @@ export default async function AdminUsersPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Telegram users registered through the bot."
-        title="Users"
+        description="Пользователи Telegram, зарегистрированные через бота."
+        title="Пользователи"
       />
       <DataTable
         columns={[
           { header: "Telegram ID", cell: (user) => user.telegramId },
           {
-            header: "Username",
-            cell: (user) => user.username ?? user.name ?? "No name",
+            header: "Имя",
+            cell: (user) => user.username ?? user.name ?? "Без имени",
           },
-          { header: "Plan", cell: (user) => user.plan },
-          { header: "Credits", cell: (user) => user.credits },
-          { header: "Created", cell: (user) => formatDate(user.createdAt) },
+          {
+            header: "Уровень",
+            cell: (user) => (
+              <form action={updateUserPlan} className="flex items-center gap-2">
+                <input name="id" type="hidden" value={user.id} />
+                <select
+                  className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                  defaultValue={user.plan}
+                  name="plan"
+                >
+                  {subscriptionPlans.map((plan) => (
+                    <option key={plan.value} value={plan.value}>
+                      {plan.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="rounded-md border border-border px-2 py-1 text-sm"
+                  type="submit"
+                >
+                  Сохранить
+                </button>
+              </form>
+            ),
+          },
+          { header: "Текущий уровень", cell: (user) => getPlanLabel(user.plan) },
+          { header: "Кредиты", cell: (user) => user.credits },
+          { header: "Создан", cell: (user) => formatDate(user.createdAt) },
         ]}
-        empty="No users yet. They will appear after someone starts the Telegram bot."
+        empty="Пользователей пока нет. Они появятся после запуска Telegram-бота."
         getKey={(user) => user.id}
         rows={users}
       />

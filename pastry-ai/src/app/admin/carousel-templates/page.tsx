@@ -23,23 +23,23 @@ export default async function AdminCarouselTemplatesPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Reusable carousel structures for pastry content."
-        title="Carousel Templates"
+        description="Переиспользуемые структуры каруселей для контента."
+        title="Шаблоны каруселей"
       />
       <DataTable
         columns={[
-          { header: "Name", cell: (template) => template.name },
-          { header: "Slides", cell: (template) => template.slides },
+          { header: "Название", cell: (template) => template.name },
+          { header: "Слайды", cell: (template) => template.slides },
           {
-            header: "Status",
+            header: "Статус",
             cell: (template) => <StatusBadge active={template.active} />,
           },
           {
-            header: "Created",
+            header: "Создан",
             cell: (template) => formatDate(template.createdAt),
           },
         ]}
-        empty="No carousel templates yet. Add templates before enabling carousel presets."
+        empty="Шаблонов каруселей пока нет. Добавьте шаблоны перед включением пресетов."
         getKey={(template) => template.id}
         rows={templates}
       />

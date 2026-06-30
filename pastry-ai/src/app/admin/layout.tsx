@@ -1,15 +1,15 @@
 import Link from "next/link";
 
 export const adminSections = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/prompts", label: "Prompts" },
-  { href: "/admin/funnel", label: "Funnel" },
-  { href: "/admin/photo-styles", label: "Photo Styles" },
-  { href: "/admin/carousel-templates", label: "Carousel Templates" },
-  { href: "/admin/history", label: "History" },
-  { href: "/admin/usage", label: "Usage" },
-  { href: "/admin/settings", label: "Settings" },
+  { href: "/admin", label: "Панель" },
+  { href: "/admin/users", label: "Пользователи" },
+  { href: "/admin/prompts", label: "Промпты" },
+  { href: "/admin/funnel", label: "Воронка" },
+  { href: "/admin/photo-styles", label: "Фото-стили" },
+  { href: "/admin/carousel-templates", label: "Шаблоны каруселей" },
+  { href: "/admin/history", label: "История" },
+  { href: "/admin/usage", label: "Использование" },
+  { href: "/admin/settings", label: "Настройки" },
 ] as const;
 
 export default function AdminLayout({
@@ -34,7 +34,7 @@ export default function AdminLayout({
         </nav>
         <form action="/api/admin/logout" className="mt-8" method="post">
           <button className="rounded-md px-3 py-2 text-sm hover:bg-muted" type="submit">
-            Log out
+            Выйти
           </button>
         </form>
       </aside>

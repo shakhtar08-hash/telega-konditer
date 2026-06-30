@@ -61,6 +61,7 @@ export async function loadPromptMenuItems(): Promise<PromptMenuItem[]> {
     select: {
       feature: true,
       slug: true,
+      title: true,
     },
     where: {
       active: true,

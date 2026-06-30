@@ -57,6 +57,7 @@ model Prompt {
   id           String   @id @default(cuid())
   slug         String
   feature      String
+  title        String   @default("")
   provider     String   @default("openai")
   systemPrompt String
   userTemplate String

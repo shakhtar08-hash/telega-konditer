@@ -5,6 +5,7 @@ export type PromptRecord = {
   id: string;
   slug: string;
   feature: PromptFeature;
+  title: string;
   provider: PromptProvider;
   systemPrompt: string;
   userTemplate: string;

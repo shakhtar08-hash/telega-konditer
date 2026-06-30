@@ -106,8 +106,8 @@ export default async function AdminFunnelPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Edit Telegram onboarding text, images, order, and buttons."
-        title="Funnel"
+        description="Редактирование текстов, изображений, порядка и кнопок Telegram-воронки."
+        title="Воронка"
       />
 
       <form
@@ -116,22 +116,22 @@ export default async function AdminFunnelPage() {
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-semibold">Create new step</h3>
+            <h3 className="font-semibold">Создать новый шаг</h3>
             <p className="text-sm text-muted-foreground">
-              Add a new Telegram funnel post with its own image, text, and buttons.
+              Добавьте новый пост воронки со своим изображением, текстом и кнопками.
             </p>
           </div>
           <button
             className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
             type="submit"
           >
-            Create
+            Создать
           </button>
         </div>
 
         <div className="grid gap-3 md:grid-cols-[120px_1fr_1fr]">
           <label className="space-y-2 text-sm">
-            <span className="font-medium">Order</span>
+            <span className="font-medium">Порядок</span>
             <input
               className="w-full rounded-md border border-border bg-background px-3 py-2"
               defaultValue={steps.length}
@@ -148,17 +148,17 @@ export default async function AdminFunnelPage() {
             />
           </label>
           <label className="space-y-2 text-sm">
-            <span className="font-medium">Title</span>
+            <span className="font-medium">Заголовок</span>
             <input
               className="w-full rounded-md border border-border bg-background px-3 py-2"
               name="title"
-              placeholder="New funnel step"
+              placeholder="Новый шаг воронки"
             />
           </label>
         </div>
 
         <label className="block space-y-2 text-sm">
-          <span className="font-medium">Image path or URL</span>
+          <span className="font-medium">Путь к изображению или URL</span>
           <input
             className="w-full rounded-md border border-border bg-background px-3 py-2"
             name="imagePath"
@@ -167,7 +167,7 @@ export default async function AdminFunnelPage() {
         </label>
 
         <label className="block space-y-2 text-sm">
-          <span className="font-medium">Message text</span>
+          <span className="font-medium">Текст сообщения</span>
           <textarea
             className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2"
             name="text"
@@ -176,7 +176,7 @@ export default async function AdminFunnelPage() {
 
         <div className="grid gap-3 md:grid-cols-4">
           <label className="space-y-2 text-sm">
-            <span className="font-medium">Next button</span>
+            <span className="font-medium">Кнопка далее</span>
             <input
               className="w-full rounded-md border border-border bg-background px-3 py-2"
               defaultValue="Далее"
@@ -184,7 +184,7 @@ export default async function AdminFunnelPage() {
             />
           </label>
           <label className="space-y-2 text-sm">
-            <span className="font-medium">Buy button</span>
+            <span className="font-medium">Кнопка покупки</span>
             <input
               className="w-full rounded-md border border-border bg-background px-3 py-2"
               defaultValue="Купить"
@@ -192,14 +192,14 @@ export default async function AdminFunnelPage() {
             />
           </label>
           <label className="space-y-2 text-sm">
-            <span className="font-medium">Offer button</span>
+            <span className="font-medium">Кнопка оффера</span>
             <input
               className="w-full rounded-md border border-border bg-background px-3 py-2"
               name="offerButtonText"
             />
           </label>
           <label className="space-y-2 text-sm">
-            <span className="font-medium">Custom buy URL</span>
+            <span className="font-medium">Свой URL покупки</span>
             <input
               className="w-full rounded-md border border-border bg-background px-3 py-2"
               name="buyButtonUrl"
@@ -211,8 +211,9 @@ export default async function AdminFunnelPage() {
 
       {steps.length === 0 ? (
         <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground">
-          No funnel steps found. Run <code className="font-mono">npm run seed</code>{" "}
-          to create the default funnel.
+          Шаги воронки не найдены. Запустите{" "}
+          <code className="font-mono">npm run seed</code>, чтобы создать воронку по
+          умолчанию.
         </div>
       ) : (
         <div className="grid gap-4">
@@ -234,13 +235,13 @@ export default async function AdminFunnelPage() {
                   className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
                   type="submit"
                 >
-                  Save
+                  Сохранить
                 </button>
               </div>
 
               <div className="grid gap-3 md:grid-cols-[120px_1fr_1fr]">
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium">Order</span>
+                  <span className="font-medium">Порядок</span>
                   <input
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     defaultValue={step.sortOrder}
@@ -249,7 +250,7 @@ export default async function AdminFunnelPage() {
                   />
                 </label>
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium">Title</span>
+                  <span className="font-medium">Заголовок</span>
                   <input
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     defaultValue={step.title}
@@ -258,12 +259,12 @@ export default async function AdminFunnelPage() {
                 </label>
                 <label className="flex items-end gap-2 pb-2 text-sm">
                   <input defaultChecked={step.active} name="active" type="checkbox" />
-                  <span className="font-medium">Active</span>
+                  <span className="font-medium">Активен</span>
                 </label>
               </div>
 
               <label className="block space-y-2 text-sm">
-                <span className="font-medium">Image path or URL</span>
+                <span className="font-medium">Путь к изображению или URL</span>
                 <input
                   className="w-full rounded-md border border-border bg-background px-3 py-2"
                   defaultValue={step.imagePath}
@@ -272,7 +273,7 @@ export default async function AdminFunnelPage() {
               </label>
 
               <label className="block space-y-2 text-sm">
-                <span className="font-medium">Message text</span>
+                <span className="font-medium">Текст сообщения</span>
                 <textarea
                   className="min-h-40 w-full rounded-md border border-border bg-background px-3 py-2"
                   defaultValue={step.text}
@@ -282,7 +283,7 @@ export default async function AdminFunnelPage() {
 
               <div className="grid gap-3 md:grid-cols-4">
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium">Next button</span>
+                  <span className="font-medium">Кнопка далее</span>
                   <input
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     defaultValue={step.nextButtonText}
@@ -290,7 +291,7 @@ export default async function AdminFunnelPage() {
                   />
                 </label>
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium">Buy button</span>
+                  <span className="font-medium">Кнопка покупки</span>
                   <input
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     defaultValue={step.buyButtonText}
@@ -298,7 +299,7 @@ export default async function AdminFunnelPage() {
                   />
                 </label>
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium">Offer button</span>
+                  <span className="font-medium">Кнопка оффера</span>
                   <input
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     defaultValue={step.offerButtonText ?? ""}
@@ -306,7 +307,7 @@ export default async function AdminFunnelPage() {
                   />
                 </label>
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium">Custom buy URL</span>
+                  <span className="font-medium">Свой URL покупки</span>
                   <input
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     defaultValue={step.buyButtonUrl ?? ""}
