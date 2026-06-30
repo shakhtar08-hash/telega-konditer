@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+  <rect width="900" height="900" fill="#fffaf4"/>
+  <circle cx="450" cy="450" r="230" fill="#f1d8c8"/>
+  <rect x="95" y="120" width="250" height="330" rx="42" fill="#1d2430"/>
+  <rect x="555" y="115" width="250" height="330" rx="42" fill="#c73545"/>
+  <rect x="100" y="520" width="250" height="260" rx="42" fill="#6086a8"/>
+  <rect x="550" y="520" width="250" height="260" rx="42" fill="#ece3d9"/>
+  <circle cx="450" cy="430" r="155" fill="#ffffff"/>
+  <text x="450" y="410" text-anchor="middle" font-family="Arial" font-size="48" font-weight="700" fill="#1d1b18">AI photo</text>
+  <text x="450" y="470" text-anchor="middle" font-family="Arial" font-size="34" fill="#6d655c">любые образы</text>
+  <path d="M355 220c70-35 145-20 195 50" fill="none" stroke="#1d1b18" stroke-width="8" stroke-linecap="round"/>
+</svg>

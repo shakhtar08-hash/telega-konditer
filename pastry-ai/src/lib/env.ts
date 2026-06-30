@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const envSchema = z.object({
   OPENAI_API_KEY: z.string().min(1),
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
+  FAL_KEY: z.string().min(1).optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
@@ -12,6 +14,9 @@ const envSchema = z.object({
   ADMIN_USERNAME: z.string().min(1).optional(),
   ADMIN_PASSWORD: z.string().min(1).optional(),
   ADMIN_SESSION_SECRET: z.string().min(1).optional(),
+  APP_BASE_URL: z.string().url().optional(),
+  CLOUDPAYMENTS_PUBLIC_ID: z.string().min(1).optional(),
+  CLOUDPAYMENTS_API_SECRET: z.string().min(1).optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

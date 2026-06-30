@@ -28,6 +28,7 @@ export function createRecipeAgent(dependencies: {
       return dependencies.aiService.generateObject({
         system: prompt.systemPrompt,
         prompt: renderedPrompt,
+        provider: prompt.provider,
         model: prompt.model,
         temperature: prompt.temperature,
         schema: recipeOutputSchema,

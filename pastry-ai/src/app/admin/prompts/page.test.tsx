@@ -41,6 +41,9 @@ describe("AdminPromptsPage", () => {
         id: "prompt_1",
         slug: "recipe-from-ingredients",
         feature: "recipes",
+        provider: "openrouter",
+        systemPrompt: "System prompt",
+        userTemplate: "User template",
         model: "gpt-4o-mini",
         temperature: 0.3,
         active: true,
@@ -59,6 +62,9 @@ describe("AdminPromptsPage", () => {
         id: true,
         slug: true,
         feature: true,
+        provider: true,
+        systemPrompt: true,
+        userTemplate: true,
         model: true,
         temperature: true,
         active: true,
@@ -69,6 +75,7 @@ describe("AdminPromptsPage", () => {
     });
     expect(text).toContain("recipe-from-ingredients");
     expect(text).toContain("recipes");
+    expect(text).toContain("openrouter");
     expect(text).toContain("gpt-4o-mini");
   });
 });

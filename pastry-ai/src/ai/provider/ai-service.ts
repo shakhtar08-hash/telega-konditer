@@ -1,6 +1,8 @@
 import type { z } from "zod";
+import type { PromptProvider } from "@/db/repositories/prompt-repository";
 
 export type GenerateTextInput = {
+  provider: PromptProvider;
   system: string;
   prompt: string;
   model: string;
@@ -12,6 +14,7 @@ export type GenerateObjectInput<TOutput> = GenerateTextInput & {
 };
 
 export type GenerateImageInput = {
+  provider: PromptProvider;
   prompt: string;
   model: string;
   size?: "1024x1024" | "1024x1536" | "1536x1024";

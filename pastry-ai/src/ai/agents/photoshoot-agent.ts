@@ -26,6 +26,7 @@ export function createPhotoshootAgent(dependencies: {
         .replace("{{style}}", input.style);
       const image = await dependencies.aiService.generateImage({
         prompt: renderedPrompt,
+        provider: prompt.provider,
         model: prompt.model,
       });
 

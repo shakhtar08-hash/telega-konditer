@@ -27,6 +27,7 @@ export function createCarouselAgent(dependencies: {
       return dependencies.aiService.generateObject({
         system: prompt.systemPrompt,
         prompt: prompt.userTemplate.replace("{{topic}}", input.topic),
+        provider: prompt.provider,
         model: prompt.model,
         temperature: prompt.temperature,
         schema: carouselOutputSchema,

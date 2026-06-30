@@ -8,6 +8,7 @@ describe("createPromptLoader", () => {
         id: "prompt_1",
         slug: "recipe-from-ingredients",
         feature: "recipes",
+        provider: "openrouter",
         systemPrompt: "System",
         userTemplate: "Ingredients: {{ingredients}}",
         model: "gpt-4o-mini",

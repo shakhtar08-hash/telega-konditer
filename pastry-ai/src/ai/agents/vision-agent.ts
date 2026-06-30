@@ -24,6 +24,7 @@ export function createVisionAgent(dependencies: {
       return dependencies.aiService.generateObject({
         system: prompt.systemPrompt,
         prompt: prompt.userTemplate.replace("{{imageUrl}}", input.imageUrl),
+        provider: prompt.provider,
         model: prompt.model,
         temperature: prompt.temperature,
         schema: visionOutputSchema,

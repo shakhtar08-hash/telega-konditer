@@ -11,6 +11,7 @@ describe("PromptRepository", () => {
         id: "prompt_1",
         slug: "recipe-from-ingredients",
         feature: "recipes",
+        provider: "openrouter",
         systemPrompt: "You are a pastry chef.",
         userTemplate: "Ingredients: {{ingredients}}",
         model: "gpt-4o-mini",

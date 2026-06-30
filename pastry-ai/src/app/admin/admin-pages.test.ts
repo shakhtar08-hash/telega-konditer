@@ -7,6 +7,7 @@ describe("adminSections", () => {
       "/admin",
       "/admin/users",
       "/admin/prompts",
+      "/admin/funnel",
       "/admin/photo-styles",
       "/admin/carousel-templates",
       "/admin/history",

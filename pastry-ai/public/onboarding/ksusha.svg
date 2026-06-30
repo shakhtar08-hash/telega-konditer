@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+  <rect width="900" height="900" fill="#f7fbff"/>
+  <rect x="55" y="55" width="355" height="355" rx="24" fill="#70c4d7"/>
+  <rect x="490" y="55" width="355" height="355" rx="24" fill="#21394f"/>
+  <rect x="55" y="490" width="355" height="355" rx="24" fill="#e6d7ca"/>
+  <rect x="490" y="490" width="355" height="355" rx="24" fill="#151515"/>
+  <circle cx="450" cy="450" r="175" fill="#c7b19d"/>
+  <text x="450" y="435" text-anchor="middle" font-family="Arial" font-size="54" font-weight="700" fill="#1d1b18">Ксюша</text>
+  <text x="450" y="496" text-anchor="middle" font-family="Arial" font-size="30" fill="#514840">новый образ</text>
+</svg>

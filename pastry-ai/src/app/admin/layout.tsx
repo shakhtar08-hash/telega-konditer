@@ -4,6 +4,7 @@ export const adminSections = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/prompts", label: "Prompts" },
+  { href: "/admin/funnel", label: "Funnel" },
   { href: "/admin/photo-styles", label: "Photo Styles" },
   { href: "/admin/carousel-templates", label: "Carousel Templates" },
   { href: "/admin/history", label: "History" },

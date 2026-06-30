@@ -1,9 +1,11 @@
 export type PromptFeature = "recipes" | "vision" | "photoshoot" | "carousel";
+export type PromptProvider = "openai" | "openrouter" | "fal";
 
 export type PromptRecord = {
   id: string;
   slug: string;
   feature: PromptFeature;
+  provider: PromptProvider;
   systemPrompt: string;
   userTemplate: string;
   model: string;

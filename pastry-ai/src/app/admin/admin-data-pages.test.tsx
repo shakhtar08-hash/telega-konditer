@@ -28,6 +28,9 @@ const { prismaMock } = vi.hoisted(() => ({
     usage: {
       findMany: vi.fn(),
     },
+    apiSecret: {
+      findMany: vi.fn(),
+    },
     $queryRaw: vi.fn(),
   },
 }));
@@ -147,6 +150,13 @@ describe("admin data pages", () => {
 
   it("renders settings without secret values", async () => {
     prismaMock.$queryRaw.mockResolvedValue([{ ok: 1 }]);
+    prismaMock.apiSecret.findMany.mockResolvedValue([
+      {
+        key: "OPENROUTER_API_KEY",
+        valuePreview: "sk-or...abcd",
+        updatedAt: new Date("2026-06-28T00:00:00.000Z"),
+      },
+    ]);
     const previousEnv = process.env;
     vi.stubGlobal("process", {
       ...process,
@@ -163,6 +173,8 @@ describe("admin data pages", () => {
 
     expect(settingsDynamic).toBe("force-dynamic");
     expect(text).toContain("OPENAI_API_KEY");
+    expect(text).toContain("OPENROUTER_API_KEY");
+    expect(text).toContain("sk-or...abcd");
     expect(text).toContain("Set");
     expect(text).not.toContain("secret-openai");
     expect(text).not.toContain("secret-password");

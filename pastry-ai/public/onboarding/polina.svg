@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+  <rect width="900" height="900" fill="#fff8f7"/>
+  <rect x="48" y="48" width="380" height="380" rx="20" fill="#101729"/>
+  <rect x="472" y="48" width="380" height="380" rx="20" fill="#e43d35"/>
+  <rect x="48" y="472" width="380" height="380" rx="20" fill="#d93636"/>
+  <rect x="472" y="472" width="380" height="380" rx="20" fill="#f2dfcf"/>
+  <circle cx="450" cy="450" r="180" fill="#d6b696"/>
+  <text x="450" y="435" text-anchor="middle" font-family="Arial" font-size="54" font-weight="700" fill="#1d1b18">Полина</text>
+  <text x="450" y="496" text-anchor="middle" font-family="Arial" font-size="30" fill="#514840">контент для соцсетей</text>
+</svg>

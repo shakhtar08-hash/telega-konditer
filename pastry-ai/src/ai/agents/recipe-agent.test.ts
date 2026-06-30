@@ -10,6 +10,7 @@ describe("RecipeAgent", () => {
           id: "prompt_1",
           slug: "recipe-from-ingredients",
           feature: "recipes",
+          provider: "openrouter",
           systemPrompt: "You are a pastry chef.",
           userTemplate: "Ingredients: {{ingredients}}",
           model: "gpt-4o-mini",
@@ -23,6 +24,7 @@ describe("RecipeAgent", () => {
         generateImage: async () => ({ url: "" }),
         generateObject: async (input) => {
           calls.push(input.prompt);
+          calls.push(input.provider);
           return input.schema.parse({
             title: "Butter cookies",
             description: "Simple tender cookies.",
@@ -38,6 +40,7 @@ describe("RecipeAgent", () => {
     });
 
     expect(calls[0]).toBe("Ingredients: eggs, butter, flour");
+    expect(calls[1]).toBe("openrouter");
     expect(result.title).toBe("Butter cookies");
   });
 });
