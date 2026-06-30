@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   adminSessionCookieName,
+  createAdminRedirectUrl,
   getAdminAuthConfig,
   isAdminSessionValid,
 } from "@/lib/admin-auth";
@@ -16,7 +17,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const loginUrl = new URL("/login", request.url);
+  const loginUrl = createAdminRedirectUrl("/login", request.url);
   loginUrl.searchParams.set("next", request.nextUrl.pathname);
 
   return NextResponse.redirect(loginUrl);

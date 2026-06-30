@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { adminSessionCookieName } from "@/lib/admin-auth";
+import { adminSessionCookieName, createAdminRedirectUrl } from "@/lib/admin-auth";
 
 export async function POST(request: Request) {
-  const response = NextResponse.redirect(new URL("/login", request.url), 303);
+  const response = NextResponse.redirect(
+    createAdminRedirectUrl("/login", request.url),
+    303,
+  );
 
   response.cookies.set(adminSessionCookieName, "", {
     httpOnly: true,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createAdminRedirectUrl,
   createAdminSession,
   getAdminAuthConfig,
   isAdminSessionValid,
@@ -49,5 +50,27 @@ describe("admin auth", () => {
   it("loads admin auth config only when all values are present", () => {
     expect(getAdminAuthConfig(authEnv)).toEqual(authEnv);
     expect(getAdminAuthConfig({ ADMIN_USERNAME: "admin" })).toBeNull();
+  });
+
+  it("builds admin redirects from APP_BASE_URL when configured", () => {
+    expect(
+      createAdminRedirectUrl(
+        "/admin",
+        "https://localhost:3000/api/admin/login",
+        {
+          APP_BASE_URL: "https://admin.example.com",
+        },
+      ).toString(),
+    ).toBe("https://admin.example.com/admin");
+  });
+
+  it("falls back to the request URL for admin redirects", () => {
+    expect(
+      createAdminRedirectUrl(
+        "/login?error=1",
+        "https://localhost:3000/api/admin/login",
+        {},
+      ).toString(),
+    ).toBe("https://localhost:3000/login?error=1");
   });
 });

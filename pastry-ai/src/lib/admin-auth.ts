@@ -42,6 +42,14 @@ export function isValidAdminCredentials(
   );
 }
 
+export function createAdminRedirectUrl(
+  path: string,
+  requestUrl: string,
+  source: AdminAuthSource = process.env,
+) {
+  return new URL(path, source.APP_BASE_URL ?? requestUrl);
+}
+
 export async function createAdminSession(
   username: string,
   secret: string,

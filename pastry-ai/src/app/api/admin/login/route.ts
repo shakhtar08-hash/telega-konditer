@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   adminSessionCookieName,
+  createAdminRedirectUrl,
   createAdminSession,
   getAdminAuthConfig,
   isValidAdminCredentials,
@@ -16,10 +17,16 @@ export async function POST(request: Request) {
     config === null ||
     !isValidAdminCredentials({ password, username }, config)
   ) {
-    return NextResponse.redirect(new URL("/login?error=1", request.url), 303);
+    return NextResponse.redirect(
+      createAdminRedirectUrl("/login?error=1", request.url),
+      303,
+    );
   }
 
-  const response = NextResponse.redirect(new URL("/admin", request.url), 303);
+  const response = NextResponse.redirect(
+    createAdminRedirectUrl("/admin", request.url),
+    303,
+  );
   const session = await createAdminSession(
     username,
     config.ADMIN_SESSION_SECRET,
