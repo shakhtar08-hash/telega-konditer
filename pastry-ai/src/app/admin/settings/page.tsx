@@ -1,7 +1,11 @@
+import { AdminPageHeader, DataTable } from "@/components/admin/data-table";
 import {
-  AdminPageHeader,
-  DataTable,
-} from "@/components/admin/data-table";
+  AdminButton,
+  AdminField,
+  AdminInput,
+  AdminPanel,
+  AdminSectionTitle,
+} from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
 import {
   encryptApiSecretValue,
@@ -99,7 +103,7 @@ export default async function AdminSettingsPage() {
       storedSecretMap.get(key)?.valuePreview ??
       (process.env[key] ? maskSecretValue(process.env[key] ?? "") : "-"),
     source: storedSecretMap.has(key)
-      ? "Admin"
+      ? "Админка"
       : process.env[key]
         ? "Окружение"
         : "-",
@@ -110,58 +114,71 @@ export default async function AdminSettingsPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Состояние runtime-настроек. Значения секретов никогда не показываются."
+        description="Runtime-настройки приложения. Значения секретов никогда не показываются полностью."
         title="Настройки"
       />
-      <div className="rounded-lg border border-border bg-white p-5">
-        <p className="text-sm text-muted-foreground">База данных</p>
-        <p className="mt-1 text-lg font-semibold">{databaseStatus}</p>
-      </div>
-      <div className="rounded-lg border border-border bg-white p-5">
-        <h3 className="text-lg font-semibold">API-ключи</h3>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {managedApiKeys.map((key) => {
-            const storedSecret = storedSecretMap.get(key);
-            const envValue = process.env[key];
-            const preview =
-              storedSecret?.valuePreview ??
-              (envValue ? maskSecretValue(envValue) : "Missing");
 
-            return (
-              <form action={saveApiSecret} className="space-y-3" key={key}>
-                <input name="key" type="hidden" value={key} />
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-sm font-medium">{key}</p>
-                    <p className="text-xs text-muted-foreground">{preview}</p>
+      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <AdminPanel>
+          <p className="text-sm text-[#97a4b8]">База данных</p>
+          <p className="mt-2 text-2xl font-semibold text-[#f4f7fb]">
+            {databaseStatus}
+          </p>
+          <p className="mt-2 text-xs text-[#7f8da3]">
+            Проверяется коротким запросом к PostgreSQL.
+          </p>
+        </AdminPanel>
+
+        <AdminPanel className="space-y-4">
+          <AdminSectionTitle
+            description="Здесь можно переопределить ключи OpenAI, OpenRouter и Fal AI без показа полного значения."
+            title="API-ключи"
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {managedApiKeys.map((key) => {
+              const storedSecret = storedSecretMap.get(key);
+              const envValue = process.env[key];
+              const preview =
+                storedSecret?.valuePreview ??
+                (envValue ? maskSecretValue(envValue) : "Не задано");
+
+              return (
+                <form action={saveApiSecret} className="space-y-3" key={key}>
+                  <input name="key" type="hidden" value={key} />
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-sm font-medium text-[#f4f7fb]">
+                        {key}
+                      </p>
+                      <p className="text-xs text-[#97a4b8]">{preview}</p>
+                    </div>
+                    <AdminButton
+                      formAction={clearApiSecret}
+                      type="submit"
+                      variant="secondary"
+                    >
+                      Очистить
+                    </AdminButton>
                   </div>
-                  <button
-                    className="rounded-md border border-border px-3 py-2 text-sm"
-                    formAction={clearApiSecret}
-                    type="submit"
-                  >
-                    Очистить
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
-                    name="value"
-                    placeholder="Вставьте новый ключ"
-                    type="password"
-                  />
-                  <button
-                    className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
-                    type="submit"
-                  >
-                    Сохранить
-                  </button>
-                </div>
-              </form>
-            );
-          })}
-        </div>
+                  <div className="flex gap-2">
+                    <AdminField label="Новый ключ">
+                      <AdminInput
+                        name="value"
+                        placeholder="Вставьте новый ключ"
+                        type="password"
+                      />
+                    </AdminField>
+                    <div className="flex items-end">
+                      <AdminButton type="submit">Сохранить</AdminButton>
+                    </div>
+                  </div>
+                </form>
+              );
+            })}
+          </div>
+        </AdminPanel>
       </div>
+
       <DataTable
         columns={[
           { header: "Переменная", cell: (row) => row.key },

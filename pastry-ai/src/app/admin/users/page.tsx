@@ -3,6 +3,7 @@ import {
   DataTable,
   formatDate,
 } from "@/components/admin/data-table";
+import { AdminButton, AdminSelect } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
 import {
   getPlanLabel,
@@ -49,7 +50,7 @@ export default async function AdminUsersPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Пользователи Telegram, зарегистрированные через бота."
+        description="Пользователи Telegram, зарегистрированные через бота. Уровень подписки можно менять вручную."
         title="Пользователи"
       />
       <DataTable
@@ -64,8 +65,8 @@ export default async function AdminUsersPage() {
             cell: (user) => (
               <form action={updateUserPlan} className="flex items-center gap-2">
                 <input name="id" type="hidden" value={user.id} />
-                <select
-                  className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                <AdminSelect
+                  className="min-w-36 py-1"
                   defaultValue={user.plan}
                   name="plan"
                 >
@@ -74,17 +75,17 @@ export default async function AdminUsersPage() {
                       {plan.label}
                     </option>
                   ))}
-                </select>
-                <button
-                  className="rounded-md border border-border px-2 py-1 text-sm"
-                  type="submit"
-                >
+                </AdminSelect>
+                <AdminButton className="py-1" type="submit" variant="secondary">
                   Сохранить
-                </button>
+                </AdminButton>
               </form>
             ),
           },
-          { header: "Текущий уровень", cell: (user) => getPlanLabel(user.plan) },
+          {
+            header: "Текущий уровень",
+            cell: (user) => getPlanLabel(user.plan),
+          },
           { header: "Кредиты", cell: (user) => user.credits },
           { header: "Создан", cell: (user) => formatDate(user.createdAt) },
         ]}

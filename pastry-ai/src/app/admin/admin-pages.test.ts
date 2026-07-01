@@ -2,16 +2,19 @@ import { describe, expect, it } from "vitest";
 import { adminSections } from "./layout";
 
 describe("adminSections", () => {
-  it("contains the required admin pages", () => {
+  it("contains the redesigned russian admin navigation", () => {
     expect(adminSections.map((section) => section)).toEqual([
-      { href: "/admin", label: "Панель" },
+      { href: "/admin", label: "Дашборд" },
+      { href: "/admin/history", label: "Чат-бот" },
+      { href: "/admin/funnel", label: "Рассылки" },
       { href: "/admin/users", label: "Пользователи" },
-      { href: "/admin/prompts", label: "Промпты" },
-      { href: "/admin/funnel", label: "Воронка" },
-      { href: "/admin/photo-styles", label: "Фото-стили" },
-      { href: "/admin/carousel-templates", label: "Шаблоны каруселей" },
-      { href: "/admin/history", label: "История" },
-      { href: "/admin/usage", label: "Использование" },
+      { href: "/admin/users", label: "Тарифы" },
+      { href: "/admin/photo-styles", label: "Стили фото" },
+      { href: "/admin/prompts", label: "База знаний" },
+      { href: "/admin/settings", label: "AI-настройки" },
+      { href: "/admin/history", label: "Диалоги" },
+      { href: "/admin/usage", label: "Финансы" },
+      { href: "/admin/usage", label: "Логи и события" },
       { href: "/admin/settings", label: "Настройки" },
     ]);
   });

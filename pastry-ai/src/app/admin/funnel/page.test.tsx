@@ -14,21 +14,27 @@ vi.mock("@/db/prisma", () => ({
   },
 }));
 
+function expectNoMojibake(text: string) {
+  for (const marker of ["\u0420\u045f", "\u0420\u045c", "\u0420\u040e", "\u0420\u2019"]) {
+    expect(text).not.toContain(marker);
+  }
+}
+
 describe("AdminFunnelPage", () => {
   it("renders funnel steps and controls for creating new posts", async () => {
     findMany.mockResolvedValue([
       {
         active: true,
-        buyButtonText: "Купить",
+        buyButtonText: "\u041a\u0443\u043f\u0438\u0442\u044c",
         buyButtonUrl: null,
         id: "step_1",
         imagePath: "/onboarding/welcome.png",
-        nextButtonText: "Далее",
+        nextButtonText: "\u0414\u0430\u043b\u0435\u0435",
         offerButtonText: null,
         slug: "welcome",
         sortOrder: 0,
-        text: "Текст шага",
-        title: "Приветствие",
+        text: "\u0422\u0435\u043a\u0441\u0442 \u0448\u0430\u0433\u0430",
+        title: "\u041f\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435",
       },
     ]);
 
@@ -36,10 +42,12 @@ describe("AdminFunnelPage", () => {
 
     expect(dynamic).toBe("force-dynamic");
     expect(findMany).toHaveBeenCalled();
-    expect(html).toContain("Приветствие");
+    expect(html).toContain("\u041f\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435");
     expect(html).toContain("/onboarding/welcome.png");
-    expect(html).toContain("Текст шага");
-    expect(html).toContain("Свой URL покупки");
-    expect(html).toContain("Создать новый шаг");
+    expect(html).toContain("\u0422\u0435\u043a\u0441\u0442 \u0448\u0430\u0433\u0430");
+    expect(html).toContain("\u0421\u0432\u043e\u0439 URL \u043f\u043e\u043a\u0443\u043f\u043a\u0438");
+    expect(html).toContain("\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u0448\u0430\u0433");
+    expect(html).toContain("bg-[#121a27]");
+    expectNoMojibake(html);
   });
 });

@@ -1,4 +1,12 @@
 import { AdminPageHeader } from "@/components/admin/data-table";
+import {
+  AdminButton,
+  AdminField,
+  AdminInput,
+  AdminPanel,
+  AdminTextarea,
+  AdminToggle,
+} from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -56,10 +64,8 @@ export async function createFunnelStep(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const imagePath = String(formData.get("imagePath") ?? "").trim();
   const text = String(formData.get("text") ?? "").trim();
-  const nextButtonText =
-    String(formData.get("nextButtonText") ?? "").trim() || "Далее";
-  const buyButtonText =
-    String(formData.get("buyButtonText") ?? "").trim() || "Купить";
+  const nextButtonText = String(formData.get("nextButtonText") ?? "").trim() || "Далее";
+  const buyButtonText = String(formData.get("buyButtonText") ?? "").trim() || "Купить";
   const buyButtonUrl = String(formData.get("buyButtonUrl") ?? "").trim();
   const offerButtonText = String(formData.get("offerButtonText") ?? "").trim();
 
@@ -106,216 +112,148 @@ export default async function AdminFunnelPage() {
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Редактирование текстов, изображений, порядка и кнопок Telegram-воронки."
+        description="Редактирование приветствия, изображений, порядка и кнопок Telegram-воронки."
         title="Воронка"
       />
 
-      <form
-        action={createFunnelStep}
-        className="space-y-4 rounded-lg border border-border bg-white p-5"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="font-semibold">Создать новый шаг</h3>
-            <p className="text-sm text-muted-foreground">
-              Добавьте новый пост воронки со своим изображением, текстом и кнопками.
-            </p>
+      <form action={createFunnelStep}>
+        <AdminPanel className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-[#f4f7fb]">Создать новый шаг</h3>
+              <p className="text-sm leading-6 text-[#97a4b8]">
+                Добавьте новый пост воронки со своим изображением, текстом и
+                кнопками. URL покупки можно оставить пустым, тогда бот построит
+                ссылку оплаты автоматически.
+              </p>
+            </div>
+            <AdminButton type="submit">Создать</AdminButton>
           </div>
-          <button
-            className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
-            type="submit"
-          >
-            Создать
-          </button>
-        </div>
 
-        <div className="grid gap-3 md:grid-cols-[120px_1fr_1fr]">
-          <label className="space-y-2 text-sm">
-            <span className="font-medium">Порядок</span>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
-              defaultValue={steps.length}
-              name="sortOrder"
-              type="number"
-            />
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium">Slug</span>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
-              name="slug"
-              placeholder="new-step"
-            />
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium">Заголовок</span>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
-              name="title"
-              placeholder="Новый шаг воронки"
-            />
-          </label>
-        </div>
+          <div className="grid gap-3 md:grid-cols-[120px_1fr_1fr]">
+            <AdminField label="Порядок">
+              <AdminInput defaultValue={steps.length} name="sortOrder" type="number" />
+            </AdminField>
+            <AdminField label="Slug">
+              <AdminInput name="slug" placeholder="new-step" />
+            </AdminField>
+            <AdminField label="Заголовок">
+              <AdminInput name="title" placeholder="Новый шаг воронки" />
+            </AdminField>
+          </div>
 
-        <label className="block space-y-2 text-sm">
-          <span className="font-medium">Путь к изображению или URL</span>
-          <input
-            className="w-full rounded-md border border-border bg-background px-3 py-2"
-            name="imagePath"
-            placeholder="/onboarding/new-step.png"
-          />
-        </label>
+          <AdminField label="Путь к изображению или URL">
+            <AdminInput name="imagePath" placeholder="/onboarding/new-step.png" />
+          </AdminField>
 
-        <label className="block space-y-2 text-sm">
-          <span className="font-medium">Текст сообщения</span>
-          <textarea
-            className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2"
-            name="text"
-          />
-        </label>
+          <AdminField label="Текст сообщения">
+            <AdminTextarea className="min-h-32" name="text" />
+          </AdminField>
 
-        <div className="grid gap-3 md:grid-cols-4">
-          <label className="space-y-2 text-sm">
-            <span className="font-medium">Кнопка далее</span>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
-              defaultValue="Далее"
-              name="nextButtonText"
-            />
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium">Кнопка покупки</span>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
-              defaultValue="Купить"
-              name="buyButtonText"
-            />
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium">Кнопка оффера</span>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
-              name="offerButtonText"
-            />
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium">Свой URL покупки</span>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2"
-              name="buyButtonUrl"
-              placeholder="{{baseUrl}}/pay?telegramId={{telegramId}}"
-            />
-          </label>
-        </div>
+          <div className="grid gap-3 md:grid-cols-4">
+            <AdminField label="Кнопка далее">
+              <AdminInput defaultValue="Далее" name="nextButtonText" />
+            </AdminField>
+            <AdminField label="Кнопка покупки">
+              <AdminInput defaultValue="Купить" name="buyButtonText" />
+            </AdminField>
+            <AdminField label="Кнопка оффера">
+              <AdminInput name="offerButtonText" />
+            </AdminField>
+            <AdminField
+              hint="Поддерживает {{baseUrl}} и {{telegramId}}."
+              label="Свой URL покупки"
+            >
+              <AdminInput
+                name="buyButtonUrl"
+                placeholder="{{baseUrl}}/pay?telegramId={{telegramId}}"
+              />
+            </AdminField>
+          </div>
+        </AdminPanel>
       </form>
 
       {steps.length === 0 ? (
-        <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground">
+        <AdminPanel className="text-sm text-[#97a4b8]">
           Шаги воронки не найдены. Запустите{" "}
-          <code className="font-mono">npm run seed</code>, чтобы создать воронку по
-          умолчанию.
-        </div>
+          <code className="font-mono text-[#dbe3ef]">npm run seed</code>, чтобы
+          создать воронку по умолчанию.
+        </AdminPanel>
       ) : (
         <div className="grid gap-4">
           {steps.map((step) => (
-            <form
-              action={updateFunnelStep}
-              className="space-y-4 rounded-lg border border-border bg-white p-5"
-              key={step.id}
-            >
-              <input name="id" type="hidden" value={step.id} />
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">{step.title}</h3>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {step.slug}
-                  </p>
+            <form action={updateFunnelStep} key={step.id}>
+              <AdminPanel className="space-y-4">
+                <input name="id" type="hidden" value={step.id} />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-[#f4f7fb]">{step.title}</h3>
+                    <p className="font-mono text-xs text-[#97a4b8]">{step.slug}</p>
+                  </div>
+                  <AdminButton type="submit">Сохранить</AdminButton>
                 </div>
-                <button
-                  className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
-                  type="submit"
-                >
-                  Сохранить
-                </button>
-              </div>
 
-              <div className="grid gap-3 md:grid-cols-[120px_1fr_1fr]">
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Порядок</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2"
-                    defaultValue={step.sortOrder}
-                    name="sortOrder"
-                    type="number"
-                  />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Заголовок</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2"
-                    defaultValue={step.title}
-                    name="title"
-                  />
-                </label>
-                <label className="flex items-end gap-2 pb-2 text-sm">
-                  <input defaultChecked={step.active} name="active" type="checkbox" />
-                  <span className="font-medium">Активен</span>
-                </label>
-              </div>
+                <div className="grid gap-3 md:grid-cols-[120px_1fr_180px]">
+                  <AdminField label="Порядок">
+                    <AdminInput
+                      defaultValue={step.sortOrder}
+                      name="sortOrder"
+                      type="number"
+                    />
+                  </AdminField>
+                  <AdminField label="Заголовок">
+                    <AdminInput defaultValue={step.title} name="title" />
+                  </AdminField>
+                  <div className="flex items-end pb-2">
+                    <AdminToggle defaultChecked={step.active} name="active">
+                      Активен
+                    </AdminToggle>
+                  </div>
+                </div>
 
-              <label className="block space-y-2 text-sm">
-                <span className="font-medium">Путь к изображению или URL</span>
-                <input
-                  className="w-full rounded-md border border-border bg-background px-3 py-2"
-                  defaultValue={step.imagePath}
-                  name="imagePath"
-                />
-              </label>
+                <AdminField label="Путь к изображению или URL">
+                  <AdminInput defaultValue={step.imagePath} name="imagePath" />
+                </AdminField>
 
-              <label className="block space-y-2 text-sm">
-                <span className="font-medium">Текст сообщения</span>
-                <textarea
-                  className="min-h-40 w-full rounded-md border border-border bg-background px-3 py-2"
-                  defaultValue={step.text}
-                  name="text"
-                />
-              </label>
+                <AdminField label="Текст сообщения">
+                  <AdminTextarea
+                    className="min-h-40"
+                    defaultValue={step.text}
+                    name="text"
+                  />
+                </AdminField>
 
-              <div className="grid gap-3 md:grid-cols-4">
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Кнопка далее</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2"
-                    defaultValue={step.nextButtonText}
-                    name="nextButtonText"
-                  />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Кнопка покупки</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2"
-                    defaultValue={step.buyButtonText}
-                    name="buyButtonText"
-                  />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Кнопка оффера</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2"
-                    defaultValue={step.offerButtonText ?? ""}
-                    name="offerButtonText"
-                  />
-                </label>
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Свой URL покупки</span>
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2"
-                    defaultValue={step.buyButtonUrl ?? ""}
-                    name="buyButtonUrl"
-                    placeholder="{{baseUrl}}/pay?telegramId={{telegramId}}"
-                  />
-                </label>
-              </div>
+                <div className="grid gap-3 md:grid-cols-4">
+                  <AdminField label="Кнопка далее">
+                    <AdminInput
+                      defaultValue={step.nextButtonText}
+                      name="nextButtonText"
+                    />
+                  </AdminField>
+                  <AdminField label="Кнопка покупки">
+                    <AdminInput
+                      defaultValue={step.buyButtonText}
+                      name="buyButtonText"
+                    />
+                  </AdminField>
+                  <AdminField label="Кнопка оффера">
+                    <AdminInput
+                      defaultValue={step.offerButtonText ?? ""}
+                      name="offerButtonText"
+                    />
+                  </AdminField>
+                  <AdminField
+                    hint="Можно оставить пустым для стандартной оплаты."
+                    label="Свой URL покупки"
+                  >
+                    <AdminInput
+                      defaultValue={step.buyButtonUrl ?? ""}
+                      name="buyButtonUrl"
+                      placeholder="{{baseUrl}}/pay?telegramId={{telegramId}}"
+                    />
+                  </AdminField>
+                </div>
+              </AdminPanel>
             </form>
           ))}
         </div>

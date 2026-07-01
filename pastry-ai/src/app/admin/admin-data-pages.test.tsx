@@ -39,6 +39,12 @@ vi.mock("@/db/prisma", () => ({
   prisma: prismaMock,
 }));
 
+function expectNoMojibake(text: string) {
+  for (const marker of ["\u0420\u045f", "\u0420\u045c", "\u0420\u040e", "\u0420\u2019"]) {
+    expect(text).not.toContain(marker);
+  }
+}
+
 describe("admin data pages", () => {
   it("renders users from the database", async () => {
     prismaMock.user.findMany.mockResolvedValue([
@@ -57,12 +63,14 @@ describe("admin data pages", () => {
 
     expect(usersDynamic).toBe("force-dynamic");
     expect(prismaMock.user.findMany).toHaveBeenCalled();
+    expect(text).toContain("\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438");
     expect(text).toContain("chef");
-    expect(text).toContain("Базовый");
-    expect(text).toContain("Без подписки");
-    expect(text).toContain("Продвинутый");
-    expect(text).toContain("Сохранить");
+    expect(text).toContain("\u0411\u0430\u0437\u043e\u0432\u044b\u0439");
+    expect(text).toContain("\u0411\u0435\u0437 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0438");
+    expect(text).toContain("\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0439");
+    expect(text).toContain("\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c");
     expect(text).toContain("42");
+    expectNoMojibake(text);
   });
 
   it("renders photo styles from the database", async () => {
@@ -80,8 +88,10 @@ describe("admin data pages", () => {
 
     expect(photoStylesDynamic).toBe("force-dynamic");
     expect(prismaMock.photoStyle.findMany).toHaveBeenCalled();
+    expect(text).toContain("\u0424\u043e\u0442\u043e-\u0441\u0442\u0438\u043b\u0438");
     expect(text).toContain("Editorial pastry");
     expect(text).toContain("Bright magazine lighting");
+    expectNoMojibake(text);
   });
 
   it("renders carousel templates from the database", async () => {
@@ -99,8 +109,10 @@ describe("admin data pages", () => {
 
     expect(carouselDynamic).toBe("force-dynamic");
     expect(prismaMock.carouselTemplate.findMany).toHaveBeenCalled();
+    expect(text).toContain("\u0428\u0430\u0431\u043b\u043e\u043d\u044b \u043a\u0430\u0440\u0443\u0441\u0435\u043b\u0435\u0439");
     expect(text).toContain("Recipe lesson");
     expect(text).toContain("6");
+    expectNoMojibake(text);
   });
 
   it("renders conversation history from the database", async () => {
@@ -125,8 +137,10 @@ describe("admin data pages", () => {
 
     expect(historyDynamic).toBe("force-dynamic");
     expect(prismaMock.conversation.findMany).toHaveBeenCalled();
+    expect(text).toContain("\u0418\u0441\u0442\u043e\u0440\u0438\u044f");
     expect(text).toContain("recipes");
     expect(text).toContain("Make a lemon tart");
+    expectNoMojibake(text);
   });
 
   it("renders usage rows from the database", async () => {
@@ -147,8 +161,10 @@ describe("admin data pages", () => {
 
     expect(usageDynamic).toBe("force-dynamic");
     expect(prismaMock.usage.findMany).toHaveBeenCalled();
+    expect(text).toContain("\u0418\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u0435");
     expect(text).toContain("vision");
     expect(text).toContain("$0.12");
+    expectNoMojibake(text);
   });
 
   it("renders settings without secret values", async () => {
@@ -175,12 +191,15 @@ describe("admin data pages", () => {
     const text = renderToStaticMarkup(await SettingsPage());
 
     expect(settingsDynamic).toBe("force-dynamic");
+    expect(text).toContain("\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438");
     expect(text).toContain("OPENAI_API_KEY");
     expect(text).toContain("OPENROUTER_API_KEY");
     expect(text).toContain("sk-or...abcd");
-    expect(text).toContain("Задано");
+    expect(text).toContain("\u0417\u0430\u0434\u0430\u043d\u043e");
+    expect(text).toContain("bg-[#121a27]");
     expect(text).not.toContain("secret-openai");
     expect(text).not.toContain("secret-password");
+    expectNoMojibake(text);
 
     vi.unstubAllGlobals();
   });

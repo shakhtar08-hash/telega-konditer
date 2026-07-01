@@ -15,6 +15,12 @@ vi.mock("@/db/prisma", () => ({
   },
 }));
 
+function expectNoMojibake(text: string) {
+  for (const marker of ["\u0420\u045f", "\u0420\u045c", "\u0420\u040e", "\u0420\u2019"]) {
+    expect(text).not.toContain(marker);
+  }
+}
+
 function collectText(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") {
     return String(node);
@@ -36,11 +42,11 @@ describe("AdminPromptsPage", () => {
     expect(dynamic).toBe("force-dynamic");
   });
 
-  it("renders prompts from the database", async () => {
+  it("renders prompts as dark Russian editor cards", async () => {
     findMany.mockResolvedValue([
       {
         id: "prompt_1",
-        title: "Рецепт по ингредиентам",
+        title: "\u0420\u0435\u0446\u0435\u043f\u0442 \u043f\u043e \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u0430\u043c",
         slug: "recipe-from-ingredients",
         feature: "recipes",
         provider: "openrouter",
@@ -82,8 +88,11 @@ describe("AdminPromptsPage", () => {
     expect(text).toContain("gpt-4o-mini");
 
     const html = renderToStaticMarkup(page);
-    expect(html).toContain("Название кнопки");
-    expect(html).toContain("Рецепт по ингредиентам");
-    expect(html).toContain("Показывать в меню бота");
+    expect(html).toContain("\u041f\u0440\u043e\u043c\u0442\u044b");
+    expect(html).toContain("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043a\u043d\u043e\u043f\u043a\u0438");
+    expect(html).toContain("\u0420\u0435\u0446\u0435\u043f\u0442 \u043f\u043e \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u0430\u043c");
+    expect(html).toContain("\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u0432 \u043c\u0435\u043d\u044e \u0431\u043e\u0442\u0430");
+    expect(html).toContain("bg-[#121a27]");
+    expectNoMojibake(html);
   });
 });

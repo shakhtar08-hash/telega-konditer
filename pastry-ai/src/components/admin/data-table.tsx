@@ -22,8 +22,8 @@ export function AdminPageHeader({
 }) {
   return (
     <div className="space-y-1">
-      <h2 className="text-2xl font-semibold">{title}</h2>
-      <p className="text-sm text-muted-foreground">{description}</p>
+      <h2 className="text-2xl font-semibold text-[#f4f7fb]">{title}</h2>
+      <p className="text-sm leading-6 text-[#97a4b8]">{description}</p>
     </div>
   );
 }
@@ -36,16 +36,16 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-[#223047] bg-[#121a27] p-5 text-sm text-[#97a4b8]">
         {empty}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-white">
+    <div className="overflow-x-auto rounded-lg border border-[#223047] bg-[#121a27]">
       <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-        <thead className="bg-muted text-xs uppercase text-muted-foreground">
+        <thead className="bg-[#192334] text-xs uppercase text-[#97a4b8]">
           <tr>
             {columns.map((column) => (
               <th className="px-4 py-3 font-semibold" key={column.header}>
@@ -56,9 +56,12 @@ export function DataTable<Row>({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr className="border-t border-border" key={getKey(row)}>
+            <tr className="border-t border-[#223047]/80" key={getKey(row)}>
               {columns.map((column) => (
-                <td className={`px-4 py-3 ${column.className ?? ""}`} key={column.header}>
+                <td
+                  className={`px-4 py-3 text-[#dbe3ef] ${column.className ?? ""}`}
+                  key={column.header}
+                >
                   {column.cell(row)}
                 </td>
               ))}
@@ -72,7 +75,7 @@ export function DataTable<Row>({
 
 export function StatusBadge({ active }: { active: boolean }) {
   return (
-    <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
+    <span className="rounded-full bg-[#192334] px-2 py-1 text-xs font-medium text-[#dbe3ef]">
       {active ? "Активно" : "Выключено"}
     </span>
   );

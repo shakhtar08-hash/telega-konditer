@@ -1,3 +1,13 @@
+import {
+  AdminButton,
+  AdminField,
+  AdminInput,
+  AdminPanel,
+  AdminSelect,
+  AdminTextarea,
+  AdminToggle,
+} from "@/components/admin/form";
+import { AdminPageHeader } from "@/components/admin/data-table";
 import { prisma } from "@/db/prisma";
 import type { PromptProvider } from "@/db/repositories/prompt-repository";
 import { revalidatePath } from "next/cache";
@@ -71,23 +81,21 @@ export default async function AdminPromptsPage() {
 
   return (
     <section className="space-y-5">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold">Промпты</h2>
-        <p className="text-sm text-muted-foreground">
-          Активные промпты выводятся кнопками в меню Telegram-бота.
-        </p>
-      </div>
+      <AdminPageHeader
+        description="Активные промты выводятся кнопками в меню Telegram-бота. Здесь можно менять название кнопки, модель, провайдера и текст инструкций."
+        title="Промты"
+      />
 
       {prompts.length === 0 ? (
-        <div className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground">
-          Промпты не найдены. Запустите{" "}
-          <code className="font-mono">npm run seed</code> для добавления стартовых
-          промптов.
-        </div>
+        <AdminPanel className="text-sm text-[#97a4b8]">
+          Промты не найдены. Запустите{" "}
+          <code className="font-mono text-[#dbe3ef]">npm run seed</code>, чтобы
+          добавить стартовые промты.
+        </AdminPanel>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-white">
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-            <thead className="bg-muted text-xs uppercase text-muted-foreground">
+        <AdminPanel className="overflow-x-auto p-0">
+          <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+            <thead className="bg-[#192334] text-xs uppercase text-[#97a4b8]">
               <tr>
                 <th className="px-4 py-3 font-semibold">Кнопка</th>
                 <th className="px-4 py-3 font-semibold">Функция</th>
@@ -102,119 +110,98 @@ export default async function AdminPromptsPage() {
             </thead>
             <tbody>
               {prompts.map((prompt) => (
-                <tr key={prompt.id} className="border-t border-border">
-                  <td className="px-4 py-3 font-medium">{prompt.title}</td>
-                  <td className="px-4 py-3">{prompt.feature}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{prompt.slug}</td>
-                  <td className="px-4 py-3">{prompt.provider}</td>
-                  <td className="px-4 py-3">{prompt.model}</td>
-                  <td className="px-4 py-3">{prompt.temperature}</td>
-                  <td className="px-4 py-3">v{prompt.version}</td>
+                <tr className="border-t border-[#223047]/80" key={prompt.id}>
+                  <td className="px-4 py-3 font-medium text-[#f4f7fb]">
+                    {prompt.title}
+                  </td>
+                  <td className="px-4 py-3 text-[#dbe3ef]">{prompt.feature}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#97a4b8]">
+                    {prompt.slug}
+                  </td>
+                  <td className="px-4 py-3 text-[#dbe3ef]">{prompt.provider}</td>
+                  <td className="px-4 py-3 text-[#dbe3ef]">{prompt.model}</td>
+                  <td className="px-4 py-3 text-[#dbe3ef]">{prompt.temperature}</td>
+                  <td className="px-4 py-3 text-[#dbe3ef]">v{prompt.version}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
+                    <span className="rounded-full bg-[#192334] px-2 py-1 text-xs font-medium text-[#dbe3ef]">
                       {prompt.active ? "Активен" : "Выключен"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="px-4 py-3 text-[#97a4b8]">
                     {prompt.updatedAt.toISOString().slice(0, 10)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </AdminPanel>
       )}
 
       <div className="grid gap-4">
         {prompts.map((prompt) => (
-          <form
-            action={updatePrompt}
-            className="space-y-4 rounded-lg border border-border bg-white p-5"
-            key={`${prompt.id}-editor`}
-          >
-            <input name="id" type="hidden" value={prompt.id} />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="font-semibold">{prompt.title || prompt.slug}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {prompt.feature} · v{prompt.version}
-                </p>
+          <form action={updatePrompt} key={`${prompt.id}-editor`}>
+            <AdminPanel className="space-y-4">
+              <input name="id" type="hidden" value={prompt.id} />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-[#f4f7fb]">
+                    {prompt.title || prompt.slug}
+                  </h3>
+                  <p className="text-sm text-[#97a4b8]">
+                    {prompt.feature} · v{prompt.version}
+                  </p>
+                </div>
+                <AdminButton type="submit">Сохранить</AdminButton>
               </div>
-              <button
-                className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
-                type="submit"
-              >
-                Сохранить
-              </button>
-            </div>
 
-            <label className="block space-y-2 text-sm">
-              <span className="font-medium">Название кнопки</span>
-              <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2"
-                defaultValue={prompt.title}
-                name="title"
-              />
-            </label>
+              <AdminField label="Название кнопки">
+                <AdminInput defaultValue={prompt.title} name="title" />
+              </AdminField>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input defaultChecked={prompt.active} name="active" type="checkbox" />
-              <span className="font-medium">Показывать в меню бота</span>
-            </label>
+              <AdminToggle defaultChecked={prompt.active} name="active">
+                Показывать в меню бота
+              </AdminToggle>
 
-            <div className="grid gap-3 md:grid-cols-[160px_1fr_120px]">
-              <label className="space-y-2 text-sm">
-                <span className="font-medium">Провайдер</span>
-                <select
-                  className="w-full rounded-md border border-border bg-background px-3 py-2"
-                  defaultValue={prompt.provider}
-                  name="provider"
-                >
-                  {providers.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-medium">Модель</span>
-                <input
-                  className="w-full rounded-md border border-border bg-background px-3 py-2"
-                  defaultValue={prompt.model}
-                  name="model"
+              <div className="grid gap-3 md:grid-cols-[180px_1fr_140px]">
+                <AdminField label="Провайдер">
+                  <AdminSelect defaultValue={prompt.provider} name="provider">
+                    {providers.map((provider) => (
+                      <option key={provider} value={provider}>
+                        {provider}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                </AdminField>
+                <AdminField label="Модель">
+                  <AdminInput defaultValue={prompt.model} name="model" />
+                </AdminField>
+                <AdminField label="Температура">
+                  <AdminInput
+                    defaultValue={prompt.temperature}
+                    max="2"
+                    min="0"
+                    name="temperature"
+                    step="0.1"
+                    type="number"
+                  />
+                </AdminField>
+              </div>
+
+              <AdminField label="Системный промт">
+                <AdminTextarea
+                  className="min-h-32"
+                  defaultValue={prompt.systemPrompt}
+                  name="systemPrompt"
                 />
-              </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-medium">Температура</span>
-                <input
-                  className="w-full rounded-md border border-border bg-background px-3 py-2"
-                  defaultValue={prompt.temperature}
-                  max="2"
-                  min="0"
-                  name="temperature"
-                  step="0.1"
-                  type="number"
+              </AdminField>
+              <AdminField label="Шаблон пользователя">
+                <AdminTextarea
+                  className="min-h-28"
+                  defaultValue={prompt.userTemplate}
+                  name="userTemplate"
                 />
-              </label>
-            </div>
-
-            <label className="block space-y-2 text-sm">
-              <span className="font-medium">Системный промпт</span>
-              <textarea
-                className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2"
-                defaultValue={prompt.systemPrompt}
-                name="systemPrompt"
-              />
-            </label>
-            <label className="block space-y-2 text-sm">
-              <span className="font-medium">Шаблон пользователя</span>
-              <textarea
-                className="min-h-24 w-full rounded-md border border-border bg-background px-3 py-2"
-                defaultValue={prompt.userTemplate}
-                name="userTemplate"
-              />
-            </label>
+              </AdminField>
+            </AdminPanel>
           </form>
         ))}
       </div>
