@@ -21,7 +21,6 @@ export const dynamic = "force-dynamic";
 const envKeys = [
   "OPENAI_API_KEY",
   "OPENROUTER_API_KEY",
-  "FAL_KEY",
   "SUPABASE_URL",
   "SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",

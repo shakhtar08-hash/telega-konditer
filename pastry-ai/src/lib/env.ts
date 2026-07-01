@@ -3,7 +3,6 @@ import { z } from "zod";
 const envSchema = z.object({
   OPENAI_API_KEY: z.string().min(1),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
-  FAL_KEY: z.string().min(1).optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),

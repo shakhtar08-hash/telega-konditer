@@ -22,6 +22,7 @@ export function createVisionAgent(dependencies: {
       );
 
       return dependencies.aiService.generateObject({
+        imageUrl: input.imageUrl,
         system: prompt.systemPrompt,
         prompt: prompt.userTemplate.replace("{{imageUrl}}", input.imageUrl),
         provider: prompt.provider,

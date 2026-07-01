@@ -14,7 +14,7 @@ import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
-const providers: PromptProvider[] = ["openai", "openrouter", "fal"];
+const providers: PromptProvider[] = ["openai", "openrouter"];
 
 function isPromptProvider(value: string): value is PromptProvider {
   return providers.includes(value as PromptProvider);

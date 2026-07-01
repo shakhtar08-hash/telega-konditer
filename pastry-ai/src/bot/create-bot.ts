@@ -3,6 +3,7 @@ import { registerHelpCommand } from "./commands/help";
 import { registerProfileCommand } from "./commands/profile";
 import { registerStartCommand } from "./commands/start";
 import type { PastryBotContext } from "./context";
+import { registerVisionPhotoHandler } from "./handlers/vision";
 import { auth } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
 import { logger } from "./middleware/logger";
@@ -12,6 +13,7 @@ import { subscription } from "./middleware/subscription";
 type BotDependencies = {
   token: string;
   userService: Parameters<typeof registerStartCommand>[1];
+  visionService?: Parameters<typeof registerVisionPhotoHandler>[1]["visionService"];
 };
 
 export function createPastryBot(
@@ -28,6 +30,12 @@ export function createPastryBot(
   registerStartCommand(bot, dependencies.userService);
   registerHelpCommand(bot);
   registerProfileCommand(bot);
+  if (dependencies.visionService) {
+    registerVisionPhotoHandler(bot, {
+      botToken: dependencies.token,
+      visionService: dependencies.visionService,
+    });
+  }
 
   return bot;
 }

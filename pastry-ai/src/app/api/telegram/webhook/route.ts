@@ -20,17 +20,37 @@ export async function POST(request: Request): Promise<Response> {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const [{ prisma }, { createUserRepository }, { createUserService }] =
+  const [
+    { prisma },
+    { createUserRepository },
+    { createPromptRepository },
+    { createUserService },
+    { createPromptLoader },
+    { createOpenAIAIService },
+    { createVisionAgent },
+    { createVisionService },
+  ] =
     await Promise.all([
       import("@/db/prisma"),
       import("@/db/repositories/user-repository"),
+      import("@/db/repositories/prompt-repository"),
       import("@/features/users/user-service"),
+      import("@/ai/prompts/prompt-loader"),
+      import("@/ai/provider/openai-provider"),
+      import("@/ai/agents/vision-agent"),
+      import("@/features/vision/vision-service"),
     ]);
   const userRepository = createUserRepository(prisma.user);
+  const promptRepository = createPromptRepository(prisma.prompt);
+  const promptLoader = createPromptLoader(promptRepository);
+  const aiService = createOpenAIAIService();
   const userService = createUserService({ userRepository });
+  const visionAgent = createVisionAgent({ aiService, promptLoader });
+  const visionService = createVisionService({ visionAgent });
   const bot = createPastryBot({
     token: env.TELEGRAM_BOT_TOKEN,
     userService,
+    visionService,
   });
 
   return webhookCallback(bot, "std/http")(request);

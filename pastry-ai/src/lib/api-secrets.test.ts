@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   decryptApiSecretValue,
   encryptApiSecretValue,
+  managedApiKeys,
   maskSecretValue,
   resolveManagedApiKey,
 } from "./api-secrets";
@@ -26,12 +27,17 @@ describe("api secrets", () => {
   });
 
   it("encrypts and decrypts API secret values", () => {
-    const encrypted = encryptApiSecretValue("fal-secret-key", "server-secret");
+    const encrypted = encryptApiSecretValue("openrouter-secret-key", "server-secret");
 
-    expect(encrypted).not.toContain("fal-secret-key");
+    expect(encrypted).not.toContain("openrouter-secret-key");
     expect(decryptApiSecretValue(encrypted, "server-secret")).toBe(
-      "fal-secret-key",
+      "openrouter-secret-key",
     );
+  });
+
+  it("does not expose Fal as a managed integration", () => {
+    expect(managedApiKeys).toContain("OPENROUTER_API_KEY");
+    expect(managedApiKeys).not.toContain("FAL_KEY");
   });
 
   it("resolves API keys from environment before the database", async () => {
@@ -51,7 +57,9 @@ describe("api secrets", () => {
       encryptedValue: encryptApiSecretValue("stored-key", "server-secret"),
     });
 
-    await expect(resolveManagedApiKey("FAL_KEY")).resolves.toBe("stored-key");
+    await expect(resolveManagedApiKey("OPENROUTER_API_KEY")).resolves.toBe(
+      "stored-key",
+    );
 
     vi.unstubAllEnvs();
   });

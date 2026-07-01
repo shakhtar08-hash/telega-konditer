@@ -10,6 +10,7 @@ export type GenerateTextInput = {
 };
 
 export type GenerateObjectInput<TOutput> = GenerateTextInput & {
+  imageUrl?: string;
   schema: z.ZodType<TOutput>;
 };
 

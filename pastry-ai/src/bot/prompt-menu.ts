@@ -8,12 +8,12 @@ export type PromptMenuItem = {
 
 const promptTitles: Record<string, string> = {
   carousel: "Карусель для Instagram",
-  "dessert-identification": "Определить десерт по фото",
+  "dessert-identification": "Разобрать десерт по фото",
   photoshoot: "ИИ-фотосессия",
   "product-photo": "ИИ-фотосессия",
   recipes: "Рецепт по ингредиентам",
   "recipe-from-ingredients": "Рецепт по ингредиентам",
-  vision: "Определить десерт по фото",
+  vision: "Разобрать десерт по фото",
 };
 
 export function mapPromptsToMenuItems(
@@ -50,6 +50,10 @@ export function buildPromptMenuMessage(name?: string | null) {
 }
 
 export function getPromptSelectionText(item: PromptMenuItem) {
+  if (item.feature === "vision") {
+    return `Вы выбрали: ${item.title}\n\nОтправьте фото десерта, а я определю, что изображено, разберу состав, технологии и предложу похожий рецепт.`;
+  }
+
   return `Вы выбрали: ${item.title}\n\nТеперь отправьте данные для этого сценария.`;
 }
 

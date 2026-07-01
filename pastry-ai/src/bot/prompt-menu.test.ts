@@ -15,9 +15,9 @@ describe("prompt menu", () => {
         title: "Рецепт по ингредиентам",
       },
       {
-        feature: "photoshoot",
-        slug: "product-photo",
-        title: "ИИ-фотосессия",
+        feature: "vision",
+        slug: "dessert-identification",
+        title: "Разобрать десерт по фото",
       },
     ]);
 
@@ -29,8 +29,8 @@ describe("prompt menu", () => {
         text: "Рецепт по ингредиентам",
       },
       {
-        callback_data: "prompt:photoshoot:product-photo",
-        text: "ИИ-фотосессия",
+        callback_data: "prompt:vision:dessert-identification",
+        text: "Разобрать десерт по фото",
       },
     ]);
   });
@@ -40,7 +40,7 @@ describe("prompt menu", () => {
       mapPromptsToMenuItems([
         { feature: "vision", slug: "dessert-identification", title: "" },
       ])[0]?.title,
-    ).toBe("Определить десерт по фото");
+    ).toBe("Разобрать десерт по фото");
   });
 
   it("uses a Russian working menu message", () => {
@@ -48,13 +48,13 @@ describe("prompt menu", () => {
     expect(buildPromptMenuMessage("Анна")).toContain("выберите");
   });
 
-  it("confirms selected prompt to the user", () => {
+  it("asks for a photo after selecting the vision prompt", () => {
     expect(
       getPromptSelectionText({
-        feature: "recipes",
-        slug: "recipe-from-ingredients",
-        title: "Рецепт по ингредиентам",
+        feature: "vision",
+        slug: "dessert-identification",
+        title: "Разобрать десерт по фото",
       }),
-    ).toContain("Рецепт по ингредиентам");
+    ).toContain("Отправьте фото десерта");
   });
 });
