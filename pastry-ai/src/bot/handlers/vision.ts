@@ -4,7 +4,7 @@ import type { VisionOutput } from "@/ai/schemas/vision";
 import type { PastryBotContext } from "../context";
 
 type VisionService = {
-  identifyDessert(input: { imageUrl: string }): Promise<VisionOutput>;
+  identifyDessert(input: { imageUrl: string }): Promise<string>;
 };
 
 const confidenceLabels: Record<VisionOutput["confidence"]["level"], string> = {
@@ -34,23 +34,29 @@ export function registerVisionPhotoHandler(
     const photo = getLargestPhoto(ctx.message.photo);
 
     if (!photo) {
-      await ctx.reply("Не получилось прочитать фото. Попробуйте отправить его ещё раз.");
+      await ctx.reply(
+        "Не получилось прочитать фото. Попробуйте отправить его ещё раз.",
+      );
       return;
     }
 
-    await ctx.reply("Анализирую десерт по фото. Это может занять несколько секунд.");
+    await ctx.reply(
+      "Анализирую десерт по фото. Это может занять несколько секунд.",
+    );
 
     const file = await ctx.api.getFile(photo.file_id);
 
     if (!file.file_path) {
-      await ctx.reply("Telegram не вернул путь к фото. Попробуйте другое изображение.");
+      await ctx.reply(
+        "Telegram не вернул путь к фото. Попробуйте другое изображение.",
+      );
       return;
     }
 
     const imageUrl = buildTelegramFileUrl(dependencies.botToken, file.file_path);
     const result = await dependencies.visionService.identifyDessert({ imageUrl });
 
-    await ctx.reply(formatVisionResult(result));
+    await ctx.reply(result);
   });
 }
 

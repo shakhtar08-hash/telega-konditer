@@ -1,13 +1,14 @@
 import type { PromptRecord } from "@/db/repositories/prompt-repository";
 import type { AIService } from "../provider/ai-service";
-import { recipeOutputSchema, type RecipeOutput } from "../schemas/recipe";
+import type { RecipeOutput } from "../schemas/recipe";
 
 type PromptLoader = {
   load(feature: "recipes", slug: string): Promise<PromptRecord>;
 };
 
 export type RecipeAgentInput = {
-  ingredients: string[];
+  ingredientsText: string;
+  promptSlug?: string;
 };
 
 export function createRecipeAgent(dependencies: {
@@ -18,20 +19,19 @@ export function createRecipeAgent(dependencies: {
     async execute(input: RecipeAgentInput): Promise<RecipeOutput> {
       const prompt = await dependencies.promptLoader.load(
         "recipes",
-        "recipe-from-ingredients",
+        input.promptSlug ?? "recipe-from-ingredients",
       );
       const renderedPrompt = prompt.userTemplate.replace(
         "{{ingredients}}",
-        input.ingredients.join(", "),
+        input.ingredientsText,
       );
 
-      return dependencies.aiService.generateObject({
+      return dependencies.aiService.generateText({
         system: prompt.systemPrompt,
         prompt: renderedPrompt,
         provider: prompt.provider,
         model: prompt.model,
         temperature: prompt.temperature,
-        schema: recipeOutputSchema,
       });
     },
   };

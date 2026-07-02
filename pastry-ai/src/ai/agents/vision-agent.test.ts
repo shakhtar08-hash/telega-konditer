@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createVisionAgent } from "./vision-agent";
 
 describe("VisionAgent", () => {
-  it("passes the dessert photo URL to OpenRouter multimodal generation", async () => {
+  it("passes the dessert photo URL to OpenRouter multimodal text generation", async () => {
     const calls: Array<{ imageUrl?: string; model: string; provider: string }> = [];
     const agent = createVisionAgent({
       promptLoader: {
@@ -21,42 +21,20 @@ describe("VisionAgent", () => {
         }),
       },
       aiService: {
-        generateText: async () => "",
-        generateImage: async () => ({ url: "" }),
-        generateObject: async (input) => {
+        generateText: async (input) => {
           calls.push({
             imageUrl: input.imageUrl,
             model: input.model,
             provider: input.provider,
           });
 
-          return input.schema.parse({
-            chefTips: ["Охладите мусс перед глазировкой."],
-            composition: {
-              base: ["миндальный дакуаз"],
-              coating: ["велюр"],
-              cream: ["мусс из белого шоколада"],
-              decor: ["шоколадный декор"],
-              filling: ["манго-маракуйя"],
-            },
-            confidence: {
-              level: "medium",
-              reason: "Виден внешний вид, но нет разреза.",
-            },
-            difficulty: {
-              level: "professional",
-              reason: "Нужны формы и работа с велюром.",
-            },
-            fillingHypotheses: ["манго-маракуйя", "лимонный курд"],
-            recipeIdea: {
-              ingredients: ["сливки 33%", "белый шоколад", "желатин"],
-              method: ["Приготовить мусс", "Собрать в форме", "Покрыть велюром"],
-              title: "Муссовое пирожное с манго",
-            },
-            similarDesserts: ["муссовое пирожное", "мини-энтреме"],
-            summary: "Похоже на современное муссовое пирожное.",
-            techniques: ["муссовая технология", "велюровое покрытие"],
-          });
+          return "Это муссовый десерт с велюром.";
+        },
+        generateImage: async () => ({ url: "" }),
+        generateObject: async () => {
+          throw new Error(
+            "generateObject should not be used for dessert identification",
+          );
         },
       },
     });
@@ -72,6 +50,6 @@ describe("VisionAgent", () => {
         provider: "openrouter",
       },
     ]);
-    expect(result.recipeIdea.title).toBe("Муссовое пирожное с манго");
+    expect(result).toBe("Это муссовый десерт с велюром.");
   });
 });

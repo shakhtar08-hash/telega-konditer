@@ -11,6 +11,7 @@ import {
 import {
   buildPromptMenuKeyboard,
   buildPromptMenuMessage,
+  findBotMenuItem,
   findPromptMenuItem,
   getPromptSelectionText,
   loadPromptMenuItems,
@@ -68,6 +69,26 @@ export function registerStartCommand(
 
     await ctx.reply(getPromptSelectionText(item));
   });
+
+  composer.callbackQuery(/^menu:(.+)$/, async (ctx) => {
+    const buttonId = ctx.match[1];
+    const item = await findBotMenuItem(buttonId);
+
+    await ctx.answerCallbackQuery();
+
+    if (!item) {
+      await ctx.reply(
+        "Эта кнопка сейчас недоступна. Откройте меню и выберите другой пункт.",
+      );
+      return;
+    }
+
+    ctx.session.lastFeature =
+      item.feature as PastryBotContext["session"]["lastFeature"];
+    ctx.session.lastPromptSlug = item.slug;
+
+    await ctx.reply(getPromptSelectionText(item));
+  });
 }
 
 async function sendAccessAwareEntryPoint(
@@ -87,7 +108,7 @@ async function sendAccessAwareEntryPoint(
     telegramId = user.telegramId;
 
     if (await userHasPromptAccess(user.id)) {
-      await sendPromptMenu(ctx, user.name);
+      await sendPromptMenu(ctx);
       return;
     }
   }
@@ -113,7 +134,7 @@ async function sendOnboardingStep(
   });
 }
 
-async function sendPromptMenu(ctx: PastryBotContext, name?: string | null) {
+async function sendPromptMenu(ctx: PastryBotContext) {
   const items = await loadPromptMenuItems();
 
   if (items.length === 0) {
@@ -121,7 +142,7 @@ async function sendPromptMenu(ctx: PastryBotContext, name?: string | null) {
     return;
   }
 
-  await ctx.reply(buildPromptMenuMessage(name), {
+  await ctx.reply(buildPromptMenuMessage(), {
     reply_markup: buildPromptMenuKeyboard(items),
   });
 }

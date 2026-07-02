@@ -1,8 +1,10 @@
-import { Bot } from "grammy";
+import { Bot, type StorageAdapter } from "grammy";
 import { registerHelpCommand } from "./commands/help";
 import { registerProfileCommand } from "./commands/profile";
 import { registerStartCommand } from "./commands/start";
-import type { PastryBotContext } from "./context";
+import type { BotSession, PastryBotContext } from "./context";
+import { registerPhotoshootPhotoHandler } from "./handlers/photoshoot";
+import { registerRecipeTextHandler } from "./handlers/recipes";
 import { registerVisionPhotoHandler } from "./handlers/vision";
 import { auth } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
@@ -13,6 +15,13 @@ import { subscription } from "./middleware/subscription";
 type BotDependencies = {
   token: string;
   userService: Parameters<typeof registerStartCommand>[1];
+  photoshootService?: Parameters<
+    typeof registerPhotoshootPhotoHandler
+  >[1]["photoshootService"];
+  recipeService?: Parameters<
+    typeof registerRecipeTextHandler
+  >[1]["recipeService"];
+  sessionStorage?: StorageAdapter<BotSession>;
   visionService?: Parameters<typeof registerVisionPhotoHandler>[1]["visionService"];
 };
 
@@ -23,13 +32,24 @@ export function createPastryBot(
 
   bot.use(errorHandler());
   bot.use(logger());
-  bot.use(sessionMiddleware());
+  bot.use(sessionMiddleware(dependencies.sessionStorage));
   bot.use(auth());
   bot.use(subscription());
 
   registerStartCommand(bot, dependencies.userService);
   registerHelpCommand(bot);
   registerProfileCommand(bot);
+  if (dependencies.photoshootService) {
+    registerPhotoshootPhotoHandler(bot, {
+      botToken: dependencies.token,
+      photoshootService: dependencies.photoshootService,
+    });
+  }
+  if (dependencies.recipeService) {
+    registerRecipeTextHandler(bot, {
+      recipeService: dependencies.recipeService,
+    });
+  }
   if (dependencies.visionService) {
     registerVisionPhotoHandler(bot, {
       botToken: dependencies.token,

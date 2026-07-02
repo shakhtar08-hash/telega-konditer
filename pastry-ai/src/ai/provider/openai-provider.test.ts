@@ -2,12 +2,13 @@ import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
 import { createOpenAIAIService } from "./openai-provider";
 
-const { generateObjectMock } = vi.hoisted(() => ({
+const { generateObjectMock, generateImageMock } = vi.hoisted(() => ({
+  generateImageMock: vi.fn(),
   generateObjectMock: vi.fn(),
 }));
 
 vi.mock("ai", () => ({
-  generateImage: vi.fn(),
+  generateImage: generateImageMock,
   generateObject: generateObjectMock,
   generateText: vi.fn(),
 }));
@@ -22,6 +23,45 @@ vi.mock("@/lib/api-secrets", () => ({
 }));
 
 describe("createOpenAIAIService", () => {
+  it("uses the OpenAI image edits API when a source image URL is provided", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(new Blob(["image"], { type: "image/png" })),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ data: [{ b64_json: "generated-image" }] }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await createOpenAIAIService().generateImage({
+      imageUrl: "https://example.com/dessert.png",
+      model: "gpt-image-1",
+      prompt: "Make it premium.",
+      provider: "openai",
+    });
+
+    expect(result).toEqual({
+      url: "data:image/png;base64,generated-image",
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://example.com/dessert.png",
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://api.openai.com/v1/images/edits",
+      expect.objectContaining({
+        headers: {
+          Authorization: "Bearer test-key",
+        },
+        method: "POST",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("sends image URLs as multimodal message content for structured vision", async () => {
     generateObjectMock.mockResolvedValue({ object: { title: "Dessert" } });
 

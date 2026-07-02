@@ -18,6 +18,11 @@ enum MessageRole {
   SYSTEM
 }
 
+enum BotMenuActionType {
+  PROMPT
+  URL
+}
+
 model User {
   id            String         @id @default(cuid())
   telegramId    String         @unique
@@ -70,6 +75,29 @@ model Prompt {
 
   @@unique([slug, version])
   @@index([feature, slug, active])
+}
+
+model BotMenuButton {
+  id            String            @id @default(cuid())
+  label         String
+  emoji         String            @default("")
+  description   String            @default("")
+  actionType    BotMenuActionType @default(PROMPT)
+  promptFeature String?
+  promptSlug    String?
+  url           String?
+  sortOrder     Int
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([active, sortOrder])
+}
+
+model TelegramSession {
+  key       String   @id
+  data      Json
+  updatedAt DateTime @updatedAt
 }
 
 model ApiSecret {

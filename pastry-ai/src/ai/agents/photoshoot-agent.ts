@@ -8,7 +8,11 @@ type PromptLoader = {
 
 export type PhotoshootAgentInput = {
   imageUrl: string;
-  style: string;
+  styles: Array<{
+    id: string;
+    name: string;
+    prompt: string;
+  }>;
 };
 
 export function createPhotoshootAgent(dependencies: {
@@ -21,16 +25,28 @@ export function createPhotoshootAgent(dependencies: {
         "photoshoot",
         "product-photo",
       );
-      const renderedPrompt = prompt.userTemplate
-        .replace("{{imageUrl}}", input.imageUrl)
-        .replace("{{style}}", input.style);
-      const image = await dependencies.aiService.generateImage({
-        prompt: renderedPrompt,
-        provider: prompt.provider,
-        model: prompt.model,
-      });
+      const images = await Promise.all(
+        input.styles.map(async (style) => {
+          const renderedPrompt = prompt.userTemplate
+            .replace("{{imageUrl}}", input.imageUrl)
+            .replace("{{style}}", `${style.name}: ${style.prompt}`);
+          const image = await dependencies.aiService.generateImage({
+            imageUrl: input.imageUrl,
+            prompt: renderedPrompt,
+            provider: prompt.provider,
+            model: prompt.model,
+          });
 
-      return { imageUrl: image.url, prompt: renderedPrompt };
+          return {
+            imageUrl: image.url,
+            prompt: renderedPrompt,
+            styleId: style.id,
+            styleName: style.name,
+          };
+        }),
+      );
+
+      return { images };
     },
   };
 }

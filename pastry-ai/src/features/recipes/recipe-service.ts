@@ -16,18 +16,19 @@ export function createRecipeService(dependencies: {
   return {
     async createFromIngredients(input: {
       ingredientsText: string;
+      promptSlug?: string;
     }): Promise<RecipeOutput> {
       const parsed = recipeInputSchema.parse(input);
-      const ingredients = parsed.ingredientsText
-        .split(",")
-        .map((ingredient) => ingredient.trim())
-        .filter(Boolean);
+      const ingredientsText = parsed.ingredientsText.trim();
 
-      if (ingredients.length === 0) {
+      if (!ingredientsText) {
         throw new Error("Ingredients are required");
       }
 
-      return dependencies.recipeAgent.execute({ ingredients });
+      return dependencies.recipeAgent.execute({
+        ingredientsText,
+        promptSlug: input.promptSlug,
+      });
     },
   };
 }

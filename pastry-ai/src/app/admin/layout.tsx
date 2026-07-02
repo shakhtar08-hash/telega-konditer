@@ -17,7 +17,7 @@ import {
 
 export const adminSections = [
   { href: "/admin", label: "Дашборд" },
-  { href: "/admin/history", label: "Чат-бот" },
+  { href: "/admin/chat-bot", label: "Чат-бот" },
   { href: "/admin/funnel", label: "Рассылки" },
   { href: "/admin/users", label: "Пользователи" },
   { href: "/admin/users", label: "Тарифы" },

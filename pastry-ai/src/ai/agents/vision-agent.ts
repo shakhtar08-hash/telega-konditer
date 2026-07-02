@@ -1,6 +1,5 @@
 import type { PromptRecord } from "@/db/repositories/prompt-repository";
 import type { AIService } from "../provider/ai-service";
-import { visionOutputSchema, type VisionOutput } from "../schemas/vision";
 
 type PromptLoader = {
   load(feature: "vision", slug: string): Promise<PromptRecord>;
@@ -15,20 +14,19 @@ export function createVisionAgent(dependencies: {
   aiService: AIService;
 }) {
   return {
-    async execute(input: VisionAgentInput): Promise<VisionOutput> {
+    async execute(input: VisionAgentInput): Promise<string> {
       const prompt = await dependencies.promptLoader.load(
         "vision",
         "dessert-identification",
       );
 
-      return dependencies.aiService.generateObject({
+      return dependencies.aiService.generateText({
         imageUrl: input.imageUrl,
         system: prompt.systemPrompt,
         prompt: prompt.userTemplate.replace("{{imageUrl}}", input.imageUrl),
         provider: prompt.provider,
         model: prompt.model,
         temperature: prompt.temperature,
-        schema: visionOutputSchema,
       });
     },
   };

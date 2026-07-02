@@ -53,6 +53,7 @@ describe("api secrets", () => {
 
   it("resolves API keys from encrypted database values", async () => {
     vi.stubEnv("ADMIN_SESSION_SECRET", "server-secret");
+    vi.stubEnv("OPENROUTER_API_KEY", undefined);
     findUnique.mockResolvedValue({
       encryptedValue: encryptApiSecretValue("stored-key", "server-secret"),
     });

@@ -5,7 +5,7 @@ describe("adminSections", () => {
   it("contains the redesigned russian admin navigation", () => {
     expect(adminSections.map((section) => section)).toEqual([
       { href: "/admin", label: "Дашборд" },
-      { href: "/admin/history", label: "Чат-бот" },
+      { href: "/admin/chat-bot", label: "Чат-бот" },
       { href: "/admin/funnel", label: "Рассылки" },
       { href: "/admin/users", label: "Пользователи" },
       { href: "/admin/users", label: "Тарифы" },

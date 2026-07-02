@@ -4,24 +4,35 @@ import type { PhotoshootOutput } from "@/ai/schemas/photoshoot";
 
 const photoshootInputSchema = z.object({
   imageUrl: z.string().url(),
-  style: z.string().trim().min(1),
 });
 
 type PhotoshootAgent = {
   execute(input: PhotoshootAgentInput): Promise<PhotoshootOutput>;
 };
 
+type PhotoStyleRepository = {
+  listActive(limit: number): Promise<PhotoshootAgentInput["styles"]>;
+};
+
 export function createPhotoshootService(dependencies: {
   photoshootAgent: PhotoshootAgent;
+  photoStyleRepository: PhotoStyleRepository;
 }) {
   return {
-    generateProductPhoto(input: {
+    async generateStyledDessertPhotos(input: {
       imageUrl: string;
-      style: string;
     }): Promise<PhotoshootOutput> {
-      return dependencies.photoshootAgent.execute(
-        photoshootInputSchema.parse(input),
-      );
+      const parsedInput = photoshootInputSchema.parse(input);
+      const styles = await dependencies.photoStyleRepository.listActive(7);
+
+      if (styles.length === 0) {
+        throw new Error("No active photo styles are configured");
+      }
+
+      return dependencies.photoshootAgent.execute({
+        ...parsedInput,
+        styles,
+      });
     },
   };
 }

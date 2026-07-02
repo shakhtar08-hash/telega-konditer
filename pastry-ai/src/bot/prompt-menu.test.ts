@@ -4,6 +4,7 @@ import {
   buildPromptMenuMessage,
   getPromptSelectionText,
   mapPromptsToMenuItems,
+  resolveBotMenuUrl,
 } from "./prompt-menu";
 
 describe("prompt menu", () => {
@@ -44,8 +45,7 @@ describe("prompt menu", () => {
   });
 
   it("uses a Russian working menu message", () => {
-    expect(buildPromptMenuMessage("Анна")).toContain("Анна");
-    expect(buildPromptMenuMessage("Анна")).toContain("выберите");
+    expect(buildPromptMenuMessage()).toContain("\n\n");
   });
 
   it("asks for a photo after selecting the vision prompt", () => {
@@ -56,5 +56,34 @@ describe("prompt menu", () => {
         title: "Разобрать десерт по фото",
       }),
     ).toContain("Отправьте фото десерта");
+  });
+
+  it("asks for a photo after selecting the photoshoot prompt", () => {
+    expect(
+      getPromptSelectionText({
+        feature: "photoshoot",
+        slug: "product-photo",
+        title: "Стилизация фото десерта",
+      }),
+    ).toContain("7 вариантов");
+  });
+
+  it("uses the menu button description as the full selection message", () => {
+    expect(
+      getPromptSelectionText({
+        description: "Custom selection message",
+        feature: "recipes",
+        slug: "recipe-from-ingredients",
+        title: "Recipe button",
+      }),
+    ).toBe("Custom selection message");
+  });
+
+  it("resolves base URL placeholders for Telegram URL buttons", () => {
+    process.env.APP_BASE_URL = "https://pastry.example.com";
+
+    expect(resolveBotMenuUrl("{{baseUrl}}/pay")).toBe(
+      "https://pastry.example.com/pay",
+    );
   });
 });
