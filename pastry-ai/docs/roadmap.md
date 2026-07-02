@@ -19,6 +19,8 @@
 - Local ngrok testing flow with a separate Telegram test bot token.
 - Working recipe-from-ingredients Telegram flow with text input, persistent session state, `/stop`, and long-answer splitting.
 - Persistent Telegram session storage and webhook update deduplication to prevent repeated AI generations on Telegram retries.
+- Photoshoot feature: agent, service, bot photo handler, and admin-managed photo styles.
+- Bot menu buttons: admin CRUD with Telegram-style preview, callback routing to prompts, URL buttons with `{{baseUrl}}` resolution.
 
 ## Current State
 
