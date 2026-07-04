@@ -1,3 +1,4 @@
+import { createTriggerService, TriggerMessageRecord, ScheduledMessageRecord } from "@/features/triggers/trigger-service";
 import { NextResponse } from "next/server";
 import { prisma } from "@/db/prisma";
 import {
@@ -76,6 +77,35 @@ export async function POST(request: Request) {
       },
     }),
   ]);
+
+  const user = await prisma.user.findUnique({
+    where: { id: invoice.userId },
+    select: { plan: true, telegramId: true },
+  });
+
+  if (user) {
+    const triggerService = createTriggerService({
+      findActiveBySlug: async (slug) =>
+        prisma.triggerMessage.findFirst({
+          where: { slug, active: true },
+        }) as Promise<TriggerMessageRecord | null>,
+      createScheduled: async (data) =>
+        prisma.scheduledMessage.create({ data }) as Promise<ScheduledMessageRecord>,
+      findExistingScheduled: async (triggerSlug, chatId) =>
+        prisma.scheduledMessage.findFirst({
+          where: { triggerSlug, chatId, sentAt: null },
+          select: { id: true },
+        }),
+      findPendingScheduled: async () => [],
+      markSent: async () => {},
+    });
+
+    await triggerService.scheduleTrigger(
+      "after-payment",
+      user.telegramId,
+      user.plan,
+    );
+  }
 
   return NextResponse.json({ code: 0 });
 }
