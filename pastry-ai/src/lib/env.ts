@@ -16,6 +16,7 @@ const envSchema = z.object({
   APP_BASE_URL: z.string().url().optional(),
   CLOUDPAYMENTS_PUBLIC_ID: z.string().min(1).optional(),
   CLOUDPAYMENTS_API_SECRET: z.string().min(1).optional(),
+  CRON_SECRET: z.string().min(1),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

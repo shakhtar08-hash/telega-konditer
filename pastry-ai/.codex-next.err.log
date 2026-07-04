@@ -1,0 +1,125 @@
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+(node:20164) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+⚠ Blocked cross-origin request to Next.js dev resource /__nextjs_font/geist-latin.woff2 from "schnapps-capillary-doorknob.ngrok-free.dev".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['schnapps-capillary-doorknob.ngrok-free.dev'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+⚠ Blocked cross-origin request to Next.js dev resource /_next/webpack-hmr from "schnapps-capillary-doorknob.ngrok-free.dev".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['schnapps-capillary-doorknob.ngrok-free.dev'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+[browser] Failed to fetch RSC payload for http://localhost:3000/admin. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8207:21)
+    at async fetchServerResponse (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8051:21)
+    at async navigateToUnknownRoute (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:10221:20) (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8128:21)
+[browser] Failed to fetch RSC payload for http://localhost:3000/admin/chat-bot. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8207:21)
+    at async fetchServerResponse (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8051:21)
+    at async navigateToUnknownRoute (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:10221:20) (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8128:21)
+[browser] Failed to fetch RSC payload for http://localhost:3000/admin. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8207:21)
+    at async fetchServerResponse (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8051:21)
+    at async navigateToUnknownRoute (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:10221:20) (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8128:21)
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error [PrismaClientKnownRequestError]: 
+Invalid `{imported module ./src/db/prisma.ts}["prisma"].botMenuButton.delete()` invocation in
+C:\Users\Roof\Documents\Телега\pastry-ai\.next\dev\server\chunks\ssr\_0_ilp3p._.js:490:157
+
+  487 if (!id) {
+  488     return;
+  489 }
+→ 490 await {imported module ./src/db/prisma.ts}["prisma"].botMenuButton.delete(
+An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.
+    at <unknown> (src\app\admin\chat-bot\page.tsx:113:36)
+    at async deleteBotMenuButton (src\app\admin\chat-bot\page.tsx:113:3)
+  111 |   }
+  112 |
+> 113 |   await prisma.botMenuButton.delete({ where: { id } });
+      |                                    ^
+  114 |   revalidatePath("/admin/chat-bot");
+  115 | }
+  116 | {
+  code: 'P2025',
+  meta: { modelName: 'BotMenuButton', operation: 'a delete' },
+  clientVersion: '7.8.0'
+}
+⨯ Error [PrismaClientKnownRequestError]: 
+Invalid `{imported module ./src/db/prisma.ts}["prisma"].botMenuButton.delete()` invocation in
+C:\Users\Roof\Documents\Телега\pastry-ai\.next\dev\server\chunks\ssr\_0_ilp3p._.js:490:157
+
+  487 if (!id) {
+  488     return;
+  489 }
+→ 490 await {imported module ./src/db/prisma.ts}["prisma"].botMenuButton.delete(
+An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.
+    at <unknown> (src\app\admin\chat-bot\page.tsx:113:36)
+    at async deleteBotMenuButton (src\app\admin\chat-bot\page.tsx:113:3)
+  111 |   }
+  112 |
+> 113 |   await prisma.botMenuButton.delete({ where: { id } });
+      |                                    ^
+  114 |   revalidatePath("/admin/chat-bot");
+  115 | }
+  116 | {
+  code: 'P2025',
+  meta: { modelName: 'BotMenuButton', operation: 'a delete' },
+  clientVersion: '7.8.0',
+  page: '/admin/chat-bot'
+}
+⚠ Blocked cross-origin request to Next.js dev resource /__nextjs_original-stack-frames from "schnapps-capillary-doorknob.ngrok-free.dev".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['schnapps-capillary-doorknob.ngrok-free.dev'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+[browser] Failed to fetch RSC payload for http://localhost:3000/admin. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8207:21)
+    at async fetchServerResponse (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8051:21)
+    at async navigateToUnknownRoute (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:10221:20) (file://C:/Users/Roof/Documents/Телега/pastry-ai/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8128:21)
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames
+⨯ Error: Request timed out after 10000 ms
+    at ignore-listed frames

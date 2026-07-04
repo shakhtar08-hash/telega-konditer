@@ -2,15 +2,24 @@
 
 This repository is a Next.js Telegram assistant for Russian-speaking pastry chefs.
 
-## Read First
+# Project Instructions
 
-For a new Codex/agent session, read these files before making changes:
+Before starting any task:
 
-1. `docs/architecture.md` - app structure and request flow.
-2. `docs/database.md` - Prisma/Supabase models, migrations, seed.
-3. `docs/prompts.md` - AI features, prompts, model choices.
-4. `docs/decisions.md` - important product and technical decisions.
-5. `docs/roadmap.md` - current state and next work.
+- Read docs/architecture.md
+- Read docs/database.md
+- Read docs/prompts.md
+- Read docs/decisions.md
+- Read docs/roadmap.md
+
+These documents are the source of truth.
+
+Never change architecture, database schema, AI prompts or product behavior without checking these documents first.
+
+After completing a task:
+- Update docs/roadmap.md.
+- If an architectural decision changed, update docs/decisions.md.
+- If AI behavior changed, update docs/prompts.md.
 
 ## Commands
 

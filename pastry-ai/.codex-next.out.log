@@ -1,0 +1,351 @@
+
+> pastry-ai@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.8.1.3:3000
+- Environments: .env
+✓ Ready in 703ms
+
+ GET /admin/settings 200 in 1761ms (next.js: 321ms, proxy.ts: 117ms, application-code: 1323ms)
+Skipping duplicate Telegram update { updateId: 300442542 }
+ POST /api/telegram/webhook 200 in 386ms (next.js: 154ms, application-code: 232ms)
+Telegram update { updateId: 300442543 }
+ POST /api/telegram/webhook 200 in 952ms (next.js: 7ms, application-code: 946ms)
+ GET / 200 in 115ms (next.js: 44ms, application-code: 71ms)
+ GET /admin 200 in 788ms (next.js: 48ms, proxy.ts: 9ms, application-code: 730ms)
+ GET /admin/chat-bot 200 in 337ms (next.js: 41ms, proxy.ts: 7ms, application-code: 289ms)
+Telegram update { updateId: 300442544 }
+ POST /api/telegram/webhook 200 in 1156ms (next.js: 7ms, application-code: 1149ms)
+✓ Compiled in 74ms
+ GET /admin/chat-bot 200 in 1153ms (next.js: 168ms, proxy.ts: 58ms, application-code: 927ms)
+ GET /admin/chat-bot 200 in 775ms (next.js: 7ms, proxy.ts: 7ms, application-code: 761ms)
+Telegram update { updateId: 300442545 }
+ POST /api/telegram/webhook 200 in 1437ms (next.js: 141ms, application-code: 1295ms)
+ GET /admin/chat-bot 200 in 920ms (next.js: 165ms, proxy.ts: 53ms, application-code: 701ms)
+Telegram update { updateId: 300442546 }
+ POST /api/telegram/webhook 200 in 1383ms (next.js: 165ms, application-code: 1218ms)
+ GET /admin/chat-bot 200 in 757ms (next.js: 127ms, proxy.ts: 20ms, application-code: 609ms)
+Telegram update { updateId: 300442547 }
+ POST /api/telegram/webhook 200 in 1033ms (next.js: 179ms, application-code: 854ms)
+ GET /admin/chat-bot 200 in 880ms (next.js: 168ms, proxy.ts: 25ms, application-code: 687ms)
+Telegram update { updateId: 300442548 }
+ POST /api/telegram/webhook 200 in 1126ms (next.js: 202ms, application-code: 924ms)
+ POST /admin/chat-bot 200 in 1052ms (next.js: 5ms, proxy.ts: 10ms, application-code: 1037ms)
+  └─ ƒ <inline action>({}) in 432ms src/app/admin/chat-bot/page.tsx
+Telegram update { updateId: 300442549 }
+ POST /api/telegram/webhook 200 in 834ms (next.js: 6ms, application-code: 828ms)
+ GET /admin/chat-bot 200 in 908ms (next.js: 176ms, proxy.ts: 29ms, application-code: 703ms)
+ GET /admin/chat-bot 200 in 534ms (next.js: 161ms, proxy.ts: 25ms, application-code: 347ms)
+ GET /admin/chat-bot 200 in 574ms (next.js: 164ms, proxy.ts: 23ms, application-code: 387ms)
+ GET /admin/chat-bot 200 in 816ms (next.js: 157ms, proxy.ts: 26ms, application-code: 632ms)
+ GET /admin/chat-bot 200 in 1078ms (next.js: 4ms, proxy.ts: 9ms, application-code: 1065ms)
+Telegram update { updateId: 300442550 }
+ POST /api/telegram/webhook 200 in 1519ms (next.js: 193ms, application-code: 1326ms)
+ POST /admin/chat-bot 200 in 717ms (next.js: 4ms, proxy.ts: 9ms, application-code: 704ms)
+  └─ ƒ <inline action>({}) in 76ms src/app/admin/chat-bot/page.tsx
+Telegram update { updateId: 300442551 }
+ POST /api/telegram/webhook 200 in 523ms (next.js: 3ms, application-code: 520ms)
+ GET /admin/prompts 200 in 546ms (next.js: 43ms, proxy.ts: 6ms, application-code: 497ms)
+ GET /admin/chat-bot 200 in 632ms (next.js: 5ms, proxy.ts: 7ms, application-code: 620ms)
+ POST /admin/chat-bot 200 in 1022ms (next.js: 5ms, proxy.ts: 8ms, application-code: 1009ms)
+  └─ ƒ <inline action>({}) in 426ms src/app/admin/chat-bot/page.tsx
+ POST /admin/chat-bot 200 in 1019ms (next.js: 5ms, proxy.ts: 7ms, application-code: 1007ms)
+  └─ ƒ <inline action>({}) in 439ms src/app/admin/chat-bot/page.tsx
+Telegram update { updateId: 300442552 }
+ POST /api/telegram/webhook 200 in 742ms (next.js: 4ms, application-code: 738ms)
+Telegram update { updateId: 300442553 }
+ POST /api/telegram/webhook 200 in 533ms (next.js: 3ms, application-code: 530ms)
+ POST /admin/chat-bot 200 in 937ms (next.js: 6ms, proxy.ts: 8ms, application-code: 922ms)
+  └─ ƒ <inline action>({}) in 351ms src/app/admin/chat-bot/page.tsx
+ POST /admin/chat-bot 200 in 1018ms (next.js: 5ms, proxy.ts: 8ms, application-code: 1005ms)
+  └─ ƒ <inline action>({}) in 406ms src/app/admin/chat-bot/page.tsx
+Telegram update { updateId: 300442554 }
+ POST /api/telegram/webhook 200 in 791ms (next.js: 3ms, application-code: 788ms)
+ GET /admin/prompts 200 in 442ms (next.js: 5ms, proxy.ts: 8ms, application-code: 430ms)
+Telegram update { updateId: 300442555 }
+ POST /api/telegram/webhook 200 in 650ms (next.js: 3ms, application-code: 646ms)
+Telegram update { updateId: 300442556 }
+ POST /api/telegram/webhook 200 in 789ms (next.js: 3ms, application-code: 786ms)
+Telegram update { updateId: 300442557 }
+ POST /api/telegram/webhook 200 in 870ms (next.js: 5ms, application-code: 866ms)
+ GET /admin/chat-bot 200 in 837ms (next.js: 5ms, proxy.ts: 5ms, application-code: 826ms)
+ GET /admin/chat-bot 200 in 305ms (next.js: 12ms, proxy.ts: 14ms, application-code: 280ms)
+ GET /admin 200 in 868ms (next.js: 33ms, proxy.ts: 5ms, application-code: 830ms)
+ POST /admin/chat-bot 200 in 2.4s (next.js: 5ms, proxy.ts: 6ms, application-code: 2.4s)
+  └─ ƒ <inline action>({}) in 1188ms src/app/admin/chat-bot/page.tsx
+ POST /admin/chat-bot 200 in 1032ms (next.js: 6ms, proxy.ts: 7ms, application-code: 1019ms)
+  └─ ƒ <inline action>({}) in 416ms src/app/admin/chat-bot/page.tsx
+ POST /admin/chat-bot 200 in 974ms (next.js: 5ms, proxy.ts: 6ms, application-code: 963ms)
+  └─ ƒ <inline action>({}) in 346ms src/app/admin/chat-bot/page.tsx
+ POST /admin/chat-bot 200 in 1601ms (next.js: 4ms, proxy.ts: 6ms, application-code: 1591ms)
+  └─ ƒ <inline action>({}) in 957ms src/app/admin/chat-bot/page.tsx
+ POST /admin/chat-bot 200 in 806ms (next.js: 7ms, proxy.ts: 9ms, application-code: 790ms)
+  └─ ƒ <inline action>({}) in 434ms src/app/admin/chat-bot/page.tsx
+Telegram update { updateId: 300442558 }
+ POST /api/telegram/webhook 200 in 900ms (next.js: 5ms, application-code: 895ms)
+ GET /admin/prompts 200 in 493ms (next.js: 5ms, proxy.ts: 6ms, application-code: 482ms)
+ GET /admin/chat-bot 200 in 534ms (next.js: 4ms, proxy.ts: 5ms, application-code: 524ms)
+ GET /admin/settings 200 in 659ms (next.js: 23ms, proxy.ts: 8ms, application-code: 627ms)
+ GET /admin/prompts 200 in 180ms (next.js: 5ms, proxy.ts: 10ms, application-code: 165ms)
+ GET /admin/chat-bot 200 in 958ms (next.js: 5ms, proxy.ts: 5ms, application-code: 949ms)
+ GET /admin/chat-bot 200 in 854ms (next.js: 5ms, proxy.ts: 6ms, application-code: 843ms)
+ GET /admin/prompts 200 in 807ms (next.js: 198ms, proxy.ts: 70ms, application-code: 540ms)
+ GET /admin/prompts 200 in 497ms (next.js: 155ms, proxy.ts: 40ms, application-code: 302ms)
+ GET /admin/prompts 200 in 194ms (next.js: 5ms, proxy.ts: 6ms, application-code: 183ms)
+ GET /admin/chat-bot 200 in 1591ms (next.js: 29ms, proxy.ts: 7ms, application-code: 1555ms)
+ GET /admin/prompts 200 in 714ms (next.js: 141ms, proxy.ts: 23ms, application-code: 549ms)
+ GET /admin/prompts 200 in 386ms (next.js: 148ms, proxy.ts: 34ms, application-code: 205ms)
+ GET /admin/prompts 200 in 467ms (next.js: 150ms, proxy.ts: 22ms, application-code: 295ms)
+ GET /admin/prompts 200 in 492ms (next.js: 161ms, proxy.ts: 30ms, application-code: 301ms)
+ GET /admin/chat-bot 200 in 964ms (next.js: 25ms, proxy.ts: 7ms, application-code: 932ms)
+ GET /admin/chat-bot 200 in 925ms (next.js: 5ms, proxy.ts: 6ms, application-code: 914ms)
+Telegram update { updateId: 300442559 }
+ POST /api/telegram/webhook 200 in 1537ms (next.js: 197ms, application-code: 1341ms)
+ GET /admin/chat-bot 200 in 864ms (next.js: 6ms, proxy.ts: 8ms, application-code: 850ms)
+Telegram update { updateId: 300442560 }
+ POST /api/telegram/webhook 200 in 621ms (next.js: 3ms, application-code: 618ms)
+ GET /admin/chat-bot 200 in 926ms (next.js: 6ms, proxy.ts: 6ms, application-code: 914ms)
+ GET /admin/prompts 200 in 664ms (next.js: 5ms, proxy.ts: 5ms, application-code: 654ms)
+ GET /admin/chat-bot 200 in 814ms (next.js: 6ms, proxy.ts: 10ms, application-code: 798ms)
+ GET /admin/chat-bot 200 in 795ms (next.js: 6ms, proxy.ts: 8ms, application-code: 780ms)
+ GET /admin/chat-bot 200 in 771ms (next.js: 4ms, proxy.ts: 5ms, application-code: 763ms)
+ GET /admin/chat-bot 200 in 812ms (next.js: 7ms, proxy.ts: 9ms, application-code: 795ms)
+ GET /admin/chat-bot 200 in 886ms (next.js: 8ms, proxy.ts: 7ms, application-code: 871ms)
+ GET /admin/chat-bot 200 in 1000ms (next.js: 6ms, proxy.ts: 9ms, application-code: 984ms)
+Telegram update { updateId: 300442561 }
+ POST /api/telegram/webhook 200 in 1936ms (next.js: 176ms, application-code: 1760ms)
+Telegram update { updateId: 300442562 }
+ POST /api/telegram/webhook 200 in 609ms (next.js: 7ms, application-code: 602ms)
+Telegram update { updateId: 300442563 }
+ POST /api/telegram/webhook 500 in 10.7s (next.js: 6ms, application-code: 10.7s)
+Skipping duplicate Telegram update { updateId: 300442563 }
+ POST /api/telegram/webhook 200 in 126ms (next.js: 3ms, application-code: 123ms)
+Telegram update { updateId: 300442564 }
+ POST /api/telegram/webhook 200 in 1023ms (next.js: 5ms, application-code: 1018ms)
+Telegram update { updateId: 300442565 }
+ POST /api/telegram/webhook 200 in 676ms (next.js: 3ms, application-code: 673ms)
+ GET /admin/prompts 200 in 1177ms (next.js: 303ms, proxy.ts: 136ms, application-code: 738ms)
+ GET /admin/prompts 200 in 803ms (next.js: 152ms, proxy.ts: 34ms, application-code: 617ms)
+ GET /admin/prompts 200 in 779ms (next.js: 157ms, proxy.ts: 25ms, application-code: 597ms)
+ GET /admin/prompts 200 in 493ms (next.js: 224ms, proxy.ts: 40ms, application-code: 228ms)
+Telegram update { updateId: 300442566 }
+ POST /api/telegram/webhook 200 in 1736ms (next.js: 253ms, application-code: 1483ms)
+ GET /admin/chat-bot 200 in 701ms (next.js: 45ms, proxy.ts: 6ms, application-code: 650ms)
+ GET /admin/funnel 200 in 638ms (next.js: 128ms, proxy.ts: 7ms, application-code: 503ms)
+ GET /admin/prompts 200 in 545ms (next.js: 4ms, proxy.ts: 11ms, application-code: 531ms)
+ GET / 200 in 610ms (next.js: 120ms, application-code: 490ms)
+ GET / 200 in 110ms (next.js: 8ms, application-code: 102ms)
+Telegram update { updateId: 300442567 }
+ POST /api/telegram/webhook 200 in 1332ms (next.js: 14ms, application-code: 1319ms)
+Telegram update { updateId: 300442568 }
+ POST /api/telegram/webhook 200 in 617ms (next.js: 5ms, application-code: 612ms)
+Telegram update { updateId: 300442570 }
+ POST /api/telegram/webhook 200 in 618ms (next.js: 4ms, application-code: 614ms)
+Telegram update { updateId: 300442573 }
+ POST /api/telegram/webhook 200 in 822ms (next.js: 9ms, application-code: 813ms)
+Telegram update { updateId: 300442574 }
+ POST /api/telegram/webhook 200 in 626ms (next.js: 4ms, application-code: 623ms)
+Telegram update { updateId: 300442575 }
+ POST /api/telegram/webhook 200 in 610ms (next.js: 3ms, application-code: 607ms)
+ GET /login?next=%2Fadmin%2Fchat-bot 200 in 487ms (next.js: 226ms, application-code: 261ms)
+ POST /api/admin/login 303 in 209ms (next.js: 162ms, application-code: 48ms)
+ POST /api/admin/login 303 in 18ms (next.js: 6ms, application-code: 12ms)
+ GET /admin 200 in 1558ms (next.js: 165ms, proxy.ts: 11ms, application-code: 1382ms)
+ GET /admin/chat-bot 200 in 627ms (next.js: 9ms, proxy.ts: 5ms, application-code: 614ms)
+ POST /admin/chat-bot 200 in 1312ms (next.js: 10ms, proxy.ts: 12ms, application-code: 1290ms)
+Telegram update { updateId: 300442576 }
+ POST /api/telegram/webhook 200 in 1037ms (next.js: 6ms, application-code: 1031ms)
+ POST /admin/chat-bot 200 in 1125ms (next.js: 6ms, proxy.ts: 10ms, application-code: 1108ms)
+Telegram update { updateId: 300442577 }
+ POST /api/telegram/webhook 200 in 956ms (next.js: 4ms, application-code: 952ms)
+Telegram update { updateId: 300442578 }
+ POST /api/telegram/webhook 200 in 813ms (next.js: 3ms, application-code: 811ms)
+Telegram update { updateId: 300442579 }
+ POST /api/telegram/webhook 500 in 10.6s (next.js: 3ms, application-code: 10.6s)
+Skipping duplicate Telegram update { updateId: 300442579 }
+ POST /api/telegram/webhook 200 in 90ms (next.js: 3ms, application-code: 87ms)
+Telegram update { updateId: 300442580 }
+○ Compiling /_error ...
+ POST /admin/chat-bot 500 in 5.3s (next.js: 5.0s, proxy.ts: 8ms, application-code: 218ms)
+ POST /api/telegram/webhook 500 in 11.5s (next.js: 4ms, application-code: 11.5s)
+Skipping duplicate Telegram update { updateId: 300442580 }
+ POST /api/telegram/webhook 200 in 83ms (next.js: 3ms, application-code: 80ms)
+ GET /admin/chat-bot 200 in 914ms (next.js: 5ms, proxy.ts: 9ms, application-code: 900ms)
+ GET /admin/chat-bot 200 in 922ms (next.js: 8ms, proxy.ts: 7ms, application-code: 907ms)
+ GET /admin/chat-bot 200 in 860ms (next.js: 5ms, proxy.ts: 5ms, application-code: 850ms)
+ GET /admin/chat-bot 200 in 881ms (next.js: 4ms, proxy.ts: 4ms, application-code: 872ms)
+ GET /admin/chat-bot 200 in 857ms (next.js: 5ms, proxy.ts: 7ms, application-code: 845ms)
+ GET /admin/chat-bot 200 in 898ms (next.js: 5ms, proxy.ts: 6ms, application-code: 888ms)
+ GET /admin/chat-bot 200 in 1897ms (next.js: 343ms, proxy.ts: 90ms, application-code: 1465ms)
+ GET /admin/chat-bot 200 in 906ms (next.js: 5ms, proxy.ts: 6ms, application-code: 895ms)
+Telegram update { updateId: 300442581 }
+ POST /api/telegram/webhook 200 in 1885ms (next.js: 456ms, application-code: 1429ms)
+Telegram update { updateId: 300442582 }
+ POST /api/telegram/webhook 200 in 635ms (next.js: 3ms, application-code: 632ms)
+Telegram update { updateId: 300442583 }
+ POST /api/telegram/webhook 500 in 10.5s (next.js: 5ms, application-code: 10.5s)
+Skipping duplicate Telegram update { updateId: 300442583 }
+ POST /api/telegram/webhook 200 in 82ms (next.js: 3ms, application-code: 79ms)
+ GET /admin/chat-bot 200 in 924ms (next.js: 6ms, proxy.ts: 7ms, application-code: 911ms)
+Telegram update { updateId: 300442584 }
+ POST /api/telegram/webhook 200 in 298ms (next.js: 4ms, application-code: 294ms)
+ GET /admin/chat-bot 200 in 883ms (next.js: 6ms, proxy.ts: 8ms, application-code: 869ms)
+ GET /admin/chat-bot 200 in 845ms (next.js: 5ms, proxy.ts: 5ms, application-code: 836ms)
+ GET /admin/chat-bot 200 in 880ms (next.js: 4ms, proxy.ts: 5ms, application-code: 871ms)
+ GET /admin/chat-bot 200 in 1294ms (next.js: 224ms, proxy.ts: 33ms, application-code: 1037ms)
+ GET /admin/chat-bot 200 in 1878ms (next.js: 385ms, proxy.ts: 41ms, application-code: 1452ms)
+ GET /admin/chat-bot 200 in 900ms (next.js: 4ms, proxy.ts: 6ms, application-code: 890ms)
+Telegram update { updateId: 300442585 }
+ POST /api/telegram/webhook 200 in 1204ms (next.js: 227ms, application-code: 976ms)
+Telegram update { updateId: 300442586 }
+ POST /api/telegram/webhook 500 in 10.6s (next.js: 4ms, application-code: 10.6s)
+Skipping duplicate Telegram update { updateId: 300442586 }
+ POST /api/telegram/webhook 200 in 90ms (next.js: 4ms, application-code: 86ms)
+Telegram update { updateId: 300442587 }
+ POST /api/telegram/webhook 200 in 2.7s (next.js: 5ms, application-code: 2.7s)
+ GET /admin/chat-bot 200 in 927ms (next.js: 7ms, proxy.ts: 12ms, application-code: 908ms)
+Telegram update { updateId: 300442588 }
+ POST /api/telegram/webhook 500 in 10.5s (next.js: 5ms, application-code: 10.5s)
+Skipping duplicate Telegram update { updateId: 300442588 }
+ POST /api/telegram/webhook 200 in 83ms (next.js: 3ms, application-code: 80ms)
+ GET /admin/chat-bot 200 in 916ms (next.js: 10ms, proxy.ts: 9ms, application-code: 897ms)
+ GET /admin/chat-bot 200 in 929ms (next.js: 4ms, proxy.ts: 7ms, application-code: 918ms)
+ GET /admin/chat-bot 200 in 852ms (next.js: 4ms, proxy.ts: 6ms, application-code: 841ms)
+ GET /admin/chat-bot 200 in 849ms (next.js: 7ms, proxy.ts: 5ms, application-code: 837ms)
+ GET /admin/chat-bot 200 in 1777ms (next.js: 307ms, proxy.ts: 41ms, application-code: 1429ms)
+ GET /admin/chat-bot 200 in 1525ms (next.js: 218ms, proxy.ts: 26ms, application-code: 1281ms)
+ GET /admin/chat-bot 200 in 907ms (next.js: 4ms, proxy.ts: 5ms, application-code: 898ms)
+Telegram update { updateId: 300442589 }
+ POST /api/telegram/webhook 200 in 1570ms (next.js: 275ms, application-code: 1295ms)
+Telegram update { updateId: 300442590 }
+ POST /api/telegram/webhook 500 in 10.5s (next.js: 3ms, application-code: 10.5s)
+Skipping duplicate Telegram update { updateId: 300442590 }
+ POST /api/telegram/webhook 200 in 97ms (next.js: 3ms, application-code: 95ms)
+ GET /admin/chat-bot 200 in 973ms (next.js: 5ms, proxy.ts: 8ms, application-code: 960ms)
+Telegram update { updateId: 300442591 }
+ POST /api/telegram/webhook 500 in 10.5s (next.js: 4ms, application-code: 10.5s)
+Skipping duplicate Telegram update { updateId: 300442591 }
+ POST /api/telegram/webhook 200 in 94ms (next.js: 6ms, application-code: 88ms)
+ GET /admin/chat-bot 200 in 999ms (next.js: 7ms, proxy.ts: 6ms, application-code: 986ms)
+Telegram update { updateId: 300442592 }
+ POST /api/telegram/webhook 200 in 927ms (next.js: 3ms, application-code: 923ms)
+Telegram update { updateId: 300442593 }
+ POST /api/telegram/webhook 200 in 517ms (next.js: 5ms, application-code: 512ms)
+Telegram update { updateId: 300442594 }
+ POST /api/telegram/webhook 500 in 10.5s (next.js: 3ms, application-code: 10.5s)
+Skipping duplicate Telegram update { updateId: 300442594 }
+ POST /api/telegram/webhook 200 in 85ms (next.js: 4ms, application-code: 81ms)
+ GET /admin/chat-bot 200 in 871ms (next.js: 4ms, proxy.ts: 5ms, application-code: 862ms)
+Telegram update { updateId: 300442595 }
+ POST /api/telegram/webhook 500 in 10.2s (next.js: 3ms, application-code: 10.2s)
+Skipping duplicate Telegram update { updateId: 300442595 }
+ POST /api/telegram/webhook 200 in 85ms (next.js: 4ms, application-code: 81ms)
+ GET /admin/chat-bot 200 in 915ms (next.js: 4ms, proxy.ts: 7ms, application-code: 903ms)
+ GET /admin/chat-bot 200 in 1339ms (next.js: 232ms, proxy.ts: 30ms, application-code: 1077ms)
+ GET /admin/chat-bot 200 in 1325ms (next.js: 4ms, proxy.ts: 5ms, application-code: 1316ms)
+Telegram update { updateId: 300442596 }
+ POST /api/telegram/webhook 200 in 2.2s (next.js: 192ms, application-code: 2.0s)
+Telegram update { updateId: 300442597 }
+ POST /api/telegram/webhook 200 in 549ms (next.js: 3ms, application-code: 546ms)
+Telegram update { updateId: 300442598 }
+ POST /api/telegram/webhook 200 in 8.3s (next.js: 3ms, application-code: 8.3s)
+Telegram update { updateId: 300442599 }
+ GET /admin/chat-bot 200 in 889ms (next.js: 5ms, proxy.ts: 7ms, application-code: 877ms)
+ POST /api/telegram/webhook 500 in 10.3s (next.js: 3ms, application-code: 10.3s)
+Skipping duplicate Telegram update { updateId: 300442599 }
+ POST /api/telegram/webhook 200 in 88ms (next.js: 3ms, application-code: 85ms)
+ GET /admin/chat-bot 200 in 880ms (next.js: 5ms, proxy.ts: 5ms, application-code: 869ms)
+ GET /admin/chat-bot 200 in 911ms (next.js: 7ms, proxy.ts: 8ms, application-code: 895ms)
+ GET /admin/chat-bot 200 in 1295ms (next.js: 245ms, proxy.ts: 23ms, application-code: 1026ms)
+ GET /admin/chat-bot 200 in 928ms (next.js: 6ms, proxy.ts: 8ms, application-code: 914ms)
+ GET /admin/chat-bot 200 in 877ms (next.js: 4ms, proxy.ts: 6ms, application-code: 867ms)
+ GET /admin/chat-bot 200 in 953ms (next.js: 8ms, proxy.ts: 9ms, application-code: 935ms)
+ GET /admin/chat-bot 200 in 970ms (next.js: 5ms, proxy.ts: 5ms, application-code: 960ms)
+ GET /admin/chat-bot 200 in 925ms (next.js: 7ms, proxy.ts: 7ms, application-code: 911ms)
+ GET /admin/chat-bot 200 in 918ms (next.js: 5ms, proxy.ts: 7ms, application-code: 906ms)
+ GET /admin/chat-bot 200 in 998ms (next.js: 4ms, proxy.ts: 5ms, application-code: 989ms)
+ GET /admin/chat-bot 200 in 861ms (next.js: 4ms, proxy.ts: 5ms, application-code: 852ms)
+ GET /admin/chat-bot 200 in 934ms (next.js: 5ms, proxy.ts: 8ms, application-code: 921ms)
+ GET /admin/chat-bot 200 in 888ms (next.js: 4ms, proxy.ts: 4ms, application-code: 880ms)
+ GET /admin/chat-bot 200 in 1360ms (next.js: 198ms, proxy.ts: 30ms, application-code: 1132ms)
+ GET /admin/chat-bot 200 in 919ms (next.js: 6ms, proxy.ts: 7ms, application-code: 906ms)
+ GET /admin/chat-bot 200 in 929ms (next.js: 5ms, proxy.ts: 8ms, application-code: 915ms)
+ GET /admin/chat-bot 200 in 889ms (next.js: 7ms, proxy.ts: 6ms, application-code: 876ms)
+ GET /admin/chat-bot 200 in 984ms (next.js: 6ms, proxy.ts: 6ms, application-code: 973ms)
+ GET /admin/chat-bot 200 in 1272ms (next.js: 199ms, proxy.ts: 42ms, application-code: 1030ms)
+ GET /admin/chat-bot 200 in 905ms (next.js: 4ms, proxy.ts: 9ms, application-code: 892ms)
+ GET /admin/chat-bot 200 in 922ms (next.js: 8ms, proxy.ts: 8ms, application-code: 906ms)
+ GET /admin/chat-bot 200 in 866ms (next.js: 5ms, proxy.ts: 6ms, application-code: 855ms)
+ GET /admin/chat-bot 200 in 936ms (next.js: 6ms, proxy.ts: 6ms, application-code: 924ms)
+ GET /admin/chat-bot 200 in 909ms (next.js: 7ms, proxy.ts: 9ms, application-code: 893ms)
+ GET /admin/chat-bot 200 in 916ms (next.js: 5ms, proxy.ts: 7ms, application-code: 905ms)
+ GET / 200 in 325ms (next.js: 267ms, application-code: 58ms)
+ OPTIONS /login?next=%2Fadmin 400 in 35ms
+ GET /login?next=%2Fadmin 200 in 95ms (next.js: 9ms, application-code: 87ms)
+ GET /admin/chat-bot 200 in 871ms (next.js: 1846µs, proxy.ts: 12ms, application-code: 857ms)
+ POST /api/admin/login 303 in 111ms (next.js: 89ms, application-code: 21ms)
+ GET /admin 200 in 931ms (next.js: 225ms, proxy.ts: 5ms, application-code: 701ms)
+ GET /admin/chat-bot 200 in 589ms (next.js: 4ms, proxy.ts: 4ms, application-code: 581ms)
+ GET /admin/chat-bot 200 in 920ms (next.js: 7ms, proxy.ts: 8ms, application-code: 904ms)
+Telegram update { updateId: 300442600 }
+ POST /api/telegram/webhook 200 in 1710ms (next.js: 225ms, application-code: 1485ms)
+Telegram update { updateId: 300442601 }
+ POST /api/telegram/webhook 200 in 516ms (next.js: 3ms, application-code: 513ms)
+Telegram update { updateId: 300442602 }
+ POST /api/telegram/webhook 500 in 10.2s (next.js: 5ms, application-code: 10.2s)
+Skipping duplicate Telegram update { updateId: 300442602 }
+ POST /api/telegram/webhook 200 in 90ms (next.js: 5ms, application-code: 86ms)
+ GET /admin/chat-bot 200 in 886ms (next.js: 4ms, proxy.ts: 5ms, application-code: 877ms)
+Telegram update { updateId: 300442603 }
+ POST /api/telegram/webhook 500 in 10.5s (next.js: 3ms, application-code: 10.4s)
+Skipping duplicate Telegram update { updateId: 300442603 }
+ POST /api/telegram/webhook 200 in 81ms (next.js: 5ms, application-code: 76ms)
+ GET /admin/chat-bot 200 in 855ms (next.js: 5ms, proxy.ts: 5ms, application-code: 846ms)
+Telegram update { updateId: 300442604 }
+ POST /api/telegram/webhook 200 in 808ms (next.js: 4ms, application-code: 804ms)
+ GET /admin/chat-bot 200 in 1038ms (next.js: 5ms, proxy.ts: 7ms, application-code: 1026ms)
+Telegram update { updateId: 300442605 }
+ POST /api/telegram/webhook 200 in 737ms (next.js: 5ms, application-code: 732ms)
+Telegram update { updateId: 300442606 }
+ GET /admin/chat-bot 200 in 888ms (next.js: 5ms, proxy.ts: 6ms, application-code: 877ms)
+ POST /api/telegram/webhook 500 in 10.5s (next.js: 5ms, application-code: 10.5s)
+Skipping duplicate Telegram update { updateId: 300442606 }
+ POST /api/telegram/webhook 200 in 80ms (next.js: 3ms, application-code: 77ms)
+ GET /admin/chat-bot 200 in 918ms (next.js: 7ms, proxy.ts: 6ms, application-code: 905ms)
+ GET /admin/chat-bot 200 in 991ms (next.js: 8ms, proxy.ts: 10ms, application-code: 973ms)
+ GET /admin/chat-bot 200 in 976ms (next.js: 6ms, proxy.ts: 7ms, application-code: 963ms)
+ GET /admin/chat-bot 200 in 928ms (next.js: 7ms, proxy.ts: 6ms, application-code: 915ms)
+ GET /admin/chat-bot 200 in 945ms (next.js: 8ms, proxy.ts: 11ms, application-code: 926ms)
+ GET /admin/chat-bot 200 in 969ms (next.js: 7ms, proxy.ts: 7ms, application-code: 954ms)
+ GET /admin/chat-bot 200 in 945ms (next.js: 5ms, proxy.ts: 7ms, application-code: 933ms)
+ GET /admin/chat-bot 200 in 929ms (next.js: 6ms, proxy.ts: 7ms, application-code: 917ms)
+ GET /admin/chat-bot 200 in 930ms (next.js: 8ms, proxy.ts: 9ms, application-code: 914ms)
+ GET /admin/chat-bot 200 in 922ms (next.js: 8ms, proxy.ts: 9ms, application-code: 906ms)
+ GET /admin/chat-bot 200 in 933ms (next.js: 5ms, proxy.ts: 6ms, application-code: 922ms)
+ GET /admin/chat-bot 200 in 918ms (next.js: 6ms, proxy.ts: 16ms, application-code: 897ms)
+ GET /admin/chat-bot 200 in 935ms (next.js: 5ms, proxy.ts: 7ms, application-code: 923ms)
+ GET /admin/chat-bot 200 in 935ms (next.js: 8ms, proxy.ts: 9ms, application-code: 918ms)
+ GET /admin/chat-bot 200 in 906ms (next.js: 7ms, proxy.ts: 7ms, application-code: 892ms)
+ GET /admin/chat-bot 200 in 899ms (next.js: 5ms, proxy.ts: 11ms, application-code: 882ms)
+ GET /admin/chat-bot 200 in 967ms (next.js: 4ms, proxy.ts: 7ms, application-code: 956ms)
+ GET /admin/chat-bot 200 in 904ms (next.js: 8ms, proxy.ts: 9ms, application-code: 887ms)
+ GET /admin/chat-bot 200 in 883ms (next.js: 5ms, proxy.ts: 8ms, application-code: 870ms)
+ GET /admin/chat-bot 200 in 936ms (next.js: 8ms, proxy.ts: 11ms, application-code: 917ms)
+ GET /admin/chat-bot 200 in 960ms (next.js: 8ms, proxy.ts: 10ms, application-code: 942ms)
+ GET /admin/chat-bot 200 in 888ms (next.js: 8ms, proxy.ts: 10ms, application-code: 870ms)
+ GET /admin/chat-bot 200 in 904ms (next.js: 6ms, proxy.ts: 9ms, application-code: 890ms)
+ GET /admin/chat-bot 200 in 938ms (next.js: 7ms, proxy.ts: 17ms, application-code: 913ms)
+ GET /admin/chat-bot 200 in 975ms (next.js: 8ms, proxy.ts: 10ms, application-code: 957ms)
+ GET /admin/chat-bot 200 in 1322ms (next.js: 6ms, proxy.ts: 9ms, application-code: 1307ms)
+ GET /admin/chat-bot 200 in 910ms (next.js: 6ms, proxy.ts: 8ms, application-code: 896ms)
+ GET /admin/chat-bot 200 in 960ms (next.js: 8ms, proxy.ts: 9ms, application-code: 943ms)
+ GET /admin/chat-bot 200 in 908ms (next.js: 7ms, proxy.ts: 7ms, application-code: 893ms)
+ GET /admin/chat-bot 200 in 900ms (next.js: 5ms, proxy.ts: 12ms, application-code: 882ms)
+ GET /admin/chat-bot 200 in 922ms (next.js: 8ms, proxy.ts: 17ms, application-code: 897ms)
+ GET /admin/chat-bot 200 in 889ms (next.js: 5ms, proxy.ts: 7ms, application-code: 878ms)
+ GET /admin/chat-bot 200 in 907ms (next.js: 4ms, proxy.ts: 5ms, application-code: 897ms)
+ GET /admin/chat-bot 200 in 906ms (next.js: 8ms, proxy.ts: 6ms, application-code: 891ms)
+ GET /admin/chat-bot 200 in 943ms (next.js: 5ms, proxy.ts: 9ms, application-code: 929ms)
+ GET /admin/chat-bot 200 in 851ms (next.js: 4ms, proxy.ts: 5ms, application-code: 842ms)

@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.2",
+    "@prisma/client": "^7.8.0",
+    "ai": "^7.0.4",
+    "grammy": "^1.44.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.8.0"
+  }
+}
