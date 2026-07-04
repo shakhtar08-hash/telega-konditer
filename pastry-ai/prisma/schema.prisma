@@ -183,3 +183,25 @@ model Subscription {
   expiresAt DateTime?
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model TriggerMessage {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  text         String
+  delayMinutes Int
+  targetPlans  Json
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ScheduledMessage {
+  id          String    @id @default(cuid())
+  triggerSlug String
+  chatId      String
+  text        String
+  sendAt      DateTime
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+}

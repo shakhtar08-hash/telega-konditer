@@ -689,5 +689,32 @@ for (const step of funnelSteps) {
 
 console.log(`Seeded ${funnelSteps.length} funnel steps.`);
 
+const existingTriggers = await prisma.triggerMessage.count();
+
+if (existingTriggers === 0) {
+  await prisma.triggerMessage.createMany({
+    data: [
+      {
+        slug: "after-start",
+        title: "После /start",
+        text: "Привет! Мы заметили, что вы ещё не попробовали наши рецепты. Специально для вас — скидка 20% на первый месяц подписки! Переходите в меню и выбирайте любой промт.",
+        delayMinutes: 15,
+        targetPlans: ["FREE"],
+        active: true,
+      },
+      {
+        slug: "after-payment",
+        title: "После оплаты",
+        text: "Спасибо за покупку! 🎉 У вас теперь полный доступ ко всем функциям бота. Попробуйте «Анализ десерта» — отправьте фото десерта и получите полный технологический разбор.",
+        delayMinutes: 30,
+        targetPlans: ["PRO", "TEAM"],
+        active: true,
+      },
+    ],
+  });
+}
+
+console.log(`Seeded trigger messages.`);
+
 await prisma.$disconnect();
 
