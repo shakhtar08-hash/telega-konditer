@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 export const managedApiKeys = [
   "OPENAI_API_KEY",
   "OPENROUTER_API_KEY",
+  "KIE_API_KEY",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_WEBHOOK_SECRET",
 ] as const;

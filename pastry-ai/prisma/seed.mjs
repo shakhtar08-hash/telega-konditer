@@ -462,8 +462,8 @@ const photoStyles = [
     description: "FLUX Kontext — фотореалистичная подача с кофейным стаканчиком.",
     prompt:
       "фотореалистичная подача десерта, картонный кофейный стаканчик KIE в кадре, мягкий дневной свет, жилая или кафе-атмосфера, lifestyle съёмка, естественные цвета, уют",
-    provider: "openrouter",
-    model: "flux/flux-1.1-pro",
+    provider: "kie",
+    model: "flux-kontext-pro",
   },
 ];
 

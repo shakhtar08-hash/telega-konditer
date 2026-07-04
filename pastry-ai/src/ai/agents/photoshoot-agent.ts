@@ -34,7 +34,7 @@ export function createPhotoshootAgent(dependencies: {
           const styleProvider = style.provider ?? prompt.provider;
           const styleModel = style.model ?? prompt.model;
 
-          if (styleProvider !== "openai" && styleProvider !== "openrouter") {
+          if (styleProvider !== "openai" && styleProvider !== "openrouter" && styleProvider !== "kie") {
             throw new UserFacingError(
               `Неподдерживаемый провайдер "${styleProvider}" для стиля "${style.name}".`,
             );

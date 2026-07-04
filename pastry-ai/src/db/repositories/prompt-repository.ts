@@ -1,5 +1,5 @@
 export type PromptFeature = "recipes" | "vision" | "photoshoot" | "carousel";
-export type PromptProvider = "openai" | "openrouter";
+export type PromptProvider = "openai" | "openrouter" | "kie";
 
 export type PromptRecord = {
   id: string;

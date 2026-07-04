@@ -6,6 +6,7 @@ import {
 } from "ai";
 import { resolveManagedApiKey } from "@/lib/api-secrets";
 import type { AIService, GenerateImageInput } from "./ai-service";
+import { generateFluxKontextImage } from "./kie-provider";
 
 export function createOpenAIAIService(): AIService {
   return {
@@ -78,6 +79,14 @@ export function createOpenAIAIService(): AIService {
     async generateImage(input: GenerateImageInput) {
       if (input.provider === "openrouter") {
         return generateFluxImage(input);
+      }
+
+      if (input.provider === "kie") {
+        return generateFluxKontextImage({
+          imageUrl: input.imageUrl,
+          model: input.model,
+          prompt: input.prompt,
+        });
       }
 
       if (input.imageUrl) {
@@ -188,7 +197,7 @@ async function generateFluxImage(input: GenerateImageInput) {
   return { url: `data:${image.mediaType};base64,${image.base64}` };
 }
 
-async function createTextProvider(provider: "openai" | "openrouter") {
+async function createTextProvider(provider: string) {
   if (provider === "openrouter") {
     return createOpenAI({
       apiKey: await resolveManagedApiKey("OPENROUTER_API_KEY"),
