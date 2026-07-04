@@ -12,12 +12,14 @@ import {
   NotebookText,
   Settings,
   SlidersHorizontal,
+  Timer,
   Users,
 } from "lucide-react";
 
 export const adminSections = [
   { href: "/admin", label: "Дашборд" },
   { href: "/admin/chat-bot", label: "Чат-бот" },
+  { href: "/admin/triggers", label: "Триггеры" },
   { href: "/admin/funnel", label: "Рассылки" },
   { href: "/admin/users", label: "Пользователи" },
   { href: "/admin/users", label: "Тарифы" },
@@ -33,6 +35,7 @@ export const adminSections = [
 const sectionIcons = [
   LayoutDashboard,
   Bot,
+  Timer,
   Mail,
   Users,
   CreditCard,
