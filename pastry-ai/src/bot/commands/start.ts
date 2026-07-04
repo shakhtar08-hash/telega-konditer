@@ -20,13 +20,15 @@ import {
   getPromptSelectionText,
   loadPromptMenuItems,
 } from "../prompt-menu";
+import { createTriggerService } from "@/features/triggers/trigger-service";
+import { prisma } from "@/db/prisma";
 
 type UserService = {
   registerTelegramUser(input: {
     telegramId: string;
     username?: string | null;
     name?: string | null;
-  }): Promise<{ id: string; name?: string | null; telegramId: string }>;
+  }): Promise<{ id: string; name?: string | null; telegramId: string; plan: "FREE" | "PRO" | "TEAM" }>;
 };
 
 export function buildStartMessage(name: string): string {
@@ -116,6 +118,28 @@ async function sendAccessAwareEntryPoint(
         null,
     });
     telegramId = user.telegramId;
+
+    const triggerService = createTriggerService({
+      findActiveBySlug: async (slug) =>
+        prisma.triggerMessage.findFirst({
+          where: { slug, active: true },
+        }) as Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+      createScheduled: async (data) =>
+        prisma.scheduledMessage.create({ data }) as Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+      findExistingScheduled: async (triggerSlug, chatId) =>
+        prisma.scheduledMessage.findFirst({
+          where: { triggerSlug, chatId, sentAt: null },
+          select: { id: true },
+        }),
+      findPendingScheduled: async () => [],
+      markSent: async () => {},
+    });
+
+    await triggerService.scheduleTrigger(
+      "after-start",
+      telegramId,
+      user.plan,
+    );
 
     if (await userHasPromptAccess(user.id)) {
       await sendPromptMenu(ctx);
