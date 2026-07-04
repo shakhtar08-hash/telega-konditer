@@ -7,7 +7,7 @@ export function errorHandler(): MiddlewareFn<PastryBotContext> {
       await next();
     } catch (error) {
       console.error("Telegram handler failed", error);
-      await ctx.reply("Something went wrong. Please try again.");
+      await ctx.reply("Произошла ошибка. Попробуйте ещё раз.");
     }
   };
 }

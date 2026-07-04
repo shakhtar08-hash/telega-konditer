@@ -19,8 +19,13 @@
 - Local ngrok testing flow with a separate Telegram test bot token.
 - Working recipe-from-ingredients Telegram flow with text input, persistent session state, `/stop`, and long-answer splitting.
 - Persistent Telegram session storage and webhook update deduplication to prevent repeated AI generations on Telegram retries.
+- Recipe scenario re-entry now clears stale follow-up context so old ingredient requests are not reused after `/menu`, `/start`, or prompt re-selection.
+- Recipe follow-up detection now keeps context for ingredient adjustment questions like `А если добавить...`, instead of treating them as a brand-new recipe search.
+- Recipe follow-ups now go through deterministic intent parsing and recipe session state, so common actions like add/remove/replace ingredients stop behaving like independent one-shot prompt launches.
 - Photoshoot feature: agent, service, bot photo handler, and admin-managed photo styles.
 - Bot menu buttons: admin CRUD with Telegram-style preview, callback routing to prompts, URL buttons with `{{baseUrl}}` resolution.
+- Fixed photo handler middleware chain: `photoshoot` and `vision` photo handlers now call `next()` when session doesn't match, preventing blocking of subsequent handlers.
+- Fixed dessert photo analysis: updated AI SDK 7.x `ImagePart` to `FilePart`, added 120s timeout to `generateText`, split long responses to avoid Telegram 4096-char limit, localized error handler to Russian.
 
 ## Current State
 

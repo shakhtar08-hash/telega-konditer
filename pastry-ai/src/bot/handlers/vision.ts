@@ -2,6 +2,7 @@ import type { Composer } from "grammy";
 import type { PhotoSize } from "grammy/types";
 import type { VisionOutput } from "@/ai/schemas/vision";
 import type { PastryBotContext } from "../context";
+import { splitTelegramText } from "./recipes";
 
 type VisionService = {
   identifyDessert(input: { imageUrl: string }): Promise<string>;
@@ -23,12 +24,12 @@ export function registerVisionPhotoHandler(
   composer: Composer<PastryBotContext>,
   dependencies: { botToken: string; visionService: VisionService },
 ): void {
-  composer.on("message:photo", async (ctx) => {
+  composer.on("message:photo", async (ctx, next) => {
     if (
       ctx.session.lastFeature !== "vision" ||
       ctx.session.lastPromptSlug !== "dessert-identification"
     ) {
-      return;
+      return next();
     }
 
     const photo = getLargestPhoto(ctx.message.photo);
@@ -56,7 +57,9 @@ export function registerVisionPhotoHandler(
     const imageUrl = buildTelegramFileUrl(dependencies.botToken, file.file_path);
     const result = await dependencies.visionService.identifyDessert({ imageUrl });
 
-    await ctx.reply(result);
+    for (const chunk of splitTelegramText(result)) {
+      await ctx.reply(chunk);
+    }
   });
 }
 

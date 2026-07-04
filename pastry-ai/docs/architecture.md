@@ -32,11 +32,12 @@ AI Pastry Assistant is a Next.js App Router application with a Telegram bot, adm
 3. The route claims the Telegram `update_id` in `TelegramSession` before handling it. Duplicate retry deliveries return `200 OK` without running handlers again.
 4. The route creates Prisma repositories, prompt loader, AI service, feature services, and the grammY bot.
 5. Bot middleware sets auth/subscription context and uses persistent grammY session storage backed by `TelegramSession`.
-6. `/start` and `/menu` register the user and either show onboarding or the prompt menu.
+6. `/start` and `/menu` register the user, clear the active scenario state, and either show onboarding or the prompt menu.
 7. The prompt menu is built from `BotMenuButton` rows if they exist; otherwise it falls back to active prompts.
-8. Prompt buttons set `ctx.session.lastFeature` and `ctx.session.lastPromptSlug`.
+8. Prompt buttons start a fresh scenario session by setting `ctx.session.lastFeature` and `ctx.session.lastPromptSlug` and clearing stale recipe follow-up context.
 9. Text/photo handlers use that persistent session state to route inputs to recipe, vision, or photoshoot services.
-10. `/stop` clears the current scenario session state.
+10. The `recipes` handler now parses common follow-up intents like add/remove/replace ingredients before any AI call, updates the current ingredient state in session, and only then decides whether to run a new recipe search or answer with a scenario action.
+11. `/stop` clears the current scenario session state.
 
 Telegram retries webhook updates if the request times out or returns a non-2xx response. The `update_id` claim prevents duplicate AI generations when a slow AI request causes Telegram to retry the same update.
 
@@ -61,7 +62,7 @@ The pattern is:
 
 Current AI features:
 
-- Recipes from ingredients. Text answers can exceed Telegram's single-message limit, so the bot splits recipe responses into multiple messages.
+- Recipes from ingredients. The Telegram recipe flow is now stateful for common follow-ups: it keeps the current ingredient set in session, supports deterministic ingredient changes, and splits long recipe responses into multiple messages.
 - Dessert photo analysis.
 - Dessert photo style generation.
 - Instagram carousel copy.

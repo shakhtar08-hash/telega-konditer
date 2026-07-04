@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRecipePromptText,
-  splitTelegramText,
+  shouldGenerateRecipeSearch,
   shouldHandleRecipeText,
+  splitTelegramText,
 } from "./recipes";
 
-const showAll = "\u041f\u043e\u043a\u0430\u0436\u0438 \u0432\u0441\u0435";
-const ingredients = "\u0415\u0441\u0442\u044c:\n- \u0441\u043b\u0438\u0432\u043a\u0438 33%\n- \u043a\u043b\u0443\u0431\u043d\u0438\u043a\u0430";
-const previousRequest =
-  "\u041f\u0440\u0435\u0434\u044b\u0434\u0443\u0449\u0438\u0439 \u0437\u0430\u043f\u0440\u043e\u0441 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f";
+const showAll = "Покажи все";
+const ingredients = "Есть:\n- сливки 33%\n- клубника";
+const previousRequest = "Предыдущие ингредиенты пользователя";
 
 describe("recipe text handler helpers", () => {
   it("handles text only after the recipe prompt was selected", () => {
@@ -54,6 +54,26 @@ describe("recipe text handler helpers", () => {
     expect(buildRecipePromptText(showAll, ingredients)).toContain(
       `${previousRequest}:\n${ingredients}`,
     );
+  });
+
+  it("treats ingredient adjustment questions as follow-ups", () => {
+    expect(
+      buildRecipePromptText("А если добавить в список яйца?", ingredients),
+    ).toContain(`${previousRequest}:\n${ingredients}`);
+  });
+
+  it("treats 'давай добавим' requests as follow-ups", () => {
+    expect(
+      buildRecipePromptText("давай добавим яйца и разрыхлитель", ingredients),
+    ).toContain(`${previousRequest}:\n${ingredients}`);
+  });
+
+  it("treats recipe detail requests as scenario actions instead of new searches", () => {
+    expect(shouldGenerateRecipeSearch("show_one")).toBe(false);
+  });
+
+  it("treats unknown follow-ups as clarification cases", () => {
+    expect(shouldGenerateRecipeSearch("clarify")).toBe(false);
   });
 
   it("splits long Telegram messages into chunks", () => {

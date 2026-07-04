@@ -1,5 +1,6 @@
 import { InputFile, type Composer } from "grammy";
 import type { PhotoshootOutput } from "@/ai/schemas/photoshoot";
+import { UserFacingError } from "@/lib/user-facing-error";
 import type { PastryBotContext } from "../context";
 import { buildTelegramFileUrl, getLargestPhoto } from "./vision";
 
@@ -9,44 +10,58 @@ type PhotoshootService = {
   }): Promise<PhotoshootOutput>;
 };
 
+const readPhotoErrorMessage =
+  "Не получилось прочитать фото. Попробуйте отправить его ещё раз.";
+const processingMessage =
+  "Готовлю 7 вариантов стилизации десерта. Это может занять пару минут.";
+const missingTelegramFilePathMessage =
+  "Telegram не вернул путь к фото. Попробуйте другое изображение.";
+
 export function registerPhotoshootPhotoHandler(
   composer: Composer<PastryBotContext>,
   dependencies: { botToken: string; photoshootService: PhotoshootService },
 ): void {
-  composer.on("message:photo", async (ctx) => {
+  composer.on("message:photo", async (ctx, next) => {
     if (
       ctx.session.lastFeature !== "photoshoot" ||
       ctx.session.lastPromptSlug !== "product-photo"
     ) {
-      return;
+      return next();
     }
 
     const photo = getLargestPhoto(ctx.message.photo);
 
     if (!photo) {
-      await ctx.reply(
-        "Не получилось прочитать фото. Попробуйте отправить его ещё раз.",
-      );
+      await ctx.reply(readPhotoErrorMessage);
       return;
     }
 
-    await ctx.reply(
-      "Готовлю 7 вариантов стилизации десерта. Это может занять пару минут.",
-    );
+    await ctx.reply(processingMessage);
 
     const file = await ctx.api.getFile(photo.file_id);
 
     if (!file.file_path) {
-      await ctx.reply(
-        "Telegram не вернул путь к фото. Попробуйте другое изображение.",
-      );
+      await ctx.reply(missingTelegramFilePathMessage);
       return;
     }
 
     const imageUrl = buildTelegramFileUrl(dependencies.botToken, file.file_path);
-    const result = await dependencies.photoshootService.generateStyledDessertPhotos({
-      imageUrl,
-    });
+    let result: PhotoshootOutput;
+
+    try {
+      result = await dependencies.photoshootService.generateStyledDessertPhotos({
+        imageUrl,
+      });
+    } catch (error) {
+      const configurationError = getPhotoshootConfigurationErrorMessage(error);
+
+      if (configurationError) {
+        await ctx.reply(configurationError);
+        return;
+      }
+
+      throw error;
+    }
 
     for (const [index, image] of result.images.entries()) {
       await ctx.replyWithPhoto(
@@ -82,5 +97,17 @@ export function formatPhotoshootCaption(
   total: number,
   styleName: string,
 ) {
-  return `${current}/${total} — ${styleName}`;
+  return `${current}/${total} - ${styleName}`;
+}
+
+export function getPhotoshootConfigurationErrorMessage(error: unknown) {
+  if (
+    error instanceof UserFacingError &&
+    error.message.includes("OpenAI") &&
+    error.message.includes("gpt-image-1")
+  ) {
+    return `${error.message} Верните в админке provider = OpenAI и model = gpt-image-1.`;
+  }
+
+  return null;
 }

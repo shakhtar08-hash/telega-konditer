@@ -59,6 +59,7 @@ The Telegram text handler supports any selected prompt with `feature = recipes`,
 - Purpose: user sends one dessert photo and receives 7 edited images in active `PhotoStyle` styles.
 - Bot input: photo.
 - Photo styles come from `PhotoStyle`, not from hardcoded bot text.
+- Important: this scenario currently calls the OpenAI Images Edit API directly. If you switch the prompt to `provider = openrouter` or another model, `Создать фото` will fail; keep `provider = openai` and `model = gpt-image-1`.
 
 ### Instagram Carousel
 

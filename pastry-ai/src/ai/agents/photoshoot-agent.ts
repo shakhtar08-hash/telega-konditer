@@ -1,4 +1,5 @@
 import type { PromptRecord } from "@/db/repositories/prompt-repository";
+import { UserFacingError } from "@/lib/user-facing-error";
 import type { AIService } from "../provider/ai-service";
 import type { PhotoshootOutput } from "../schemas/photoshoot";
 
@@ -25,6 +26,13 @@ export function createPhotoshootAgent(dependencies: {
         "photoshoot",
         "product-photo",
       );
+
+      if (prompt.provider !== "openai" || prompt.model !== "gpt-image-1") {
+        throw new UserFacingError(
+          'Сценарий "Создать фото" сейчас работает только через OpenAI с моделью gpt-image-1.',
+        );
+      }
+
       const images = await Promise.all(
         input.styles.map(async (style) => {
           const renderedPrompt = prompt.userTemplate

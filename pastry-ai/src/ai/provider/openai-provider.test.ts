@@ -83,8 +83,9 @@ describe("createOpenAIAIService", () => {
             content: [
               { type: "text", text: "Analyze this dessert." },
               {
-                type: "image",
-                image: new URL("https://example.com/photo.jpg"),
+                type: "file",
+                mediaType: "image",
+                data: new URL("https://example.com/photo.jpg"),
               },
             ],
           },

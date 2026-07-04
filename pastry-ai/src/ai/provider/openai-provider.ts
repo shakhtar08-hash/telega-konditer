@@ -19,12 +19,17 @@ export function createOpenAIAIService(): AIService {
       const result = input.imageUrl
         ? await generateText({
             ...shared,
+            timeout: 120000,
             messages: [
               {
                 role: "user" as const,
                 content: [
                   { type: "text" as const, text: input.prompt },
-                  { type: "image" as const, image: new URL(input.imageUrl) },
+                  {
+                    type: "file" as const,
+                    mediaType: "image",
+                    data: new URL(input.imageUrl),
+                  },
                 ],
               },
             ],
@@ -53,7 +58,11 @@ export function createOpenAIAIService(): AIService {
                 role: "user" as const,
                 content: [
                   { type: "text" as const, text: input.prompt },
-                  { type: "image" as const, image: new URL(input.imageUrl) },
+                  {
+                    type: "file" as const,
+                    mediaType: "image",
+                    data: new URL(input.imageUrl),
+                  },
                 ],
               },
             ],

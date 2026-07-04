@@ -2,6 +2,48 @@ import { describe, expect, it } from "vitest";
 import { createPhotoshootAgent } from "./photoshoot-agent";
 
 describe("PhotoshootAgent", () => {
+  it("rejects unsupported providers for dessert photo styling", async () => {
+    const agent = createPhotoshootAgent({
+      promptLoader: {
+        load: async () => ({
+          id: "prompt_photoshoot",
+          slug: "product-photo",
+          feature: "photoshoot",
+          title: "Стилизация фото десерта",
+          provider: "openrouter",
+          systemPrompt: "Edit dessert photos.",
+          userTemplate: "Исходное фото: {{imageUrl}}\nСтиль: {{style}}",
+          model: "google/gemini-2.5-pro",
+          temperature: 0.2,
+          active: true,
+          version: 1,
+        }),
+      },
+      aiService: {
+        generateText: async () => "",
+        generateObject: async (input) => input.schema.parse({}),
+        generateImage: async () => {
+          throw new Error("should not be called");
+        },
+      },
+    });
+
+    await expect(
+      agent.execute({
+        imageUrl: "https://example.com/dessert.jpg",
+        styles: [
+          {
+            id: "style_1",
+            name: "Каталог",
+            prompt: "Чистый светлый фон для каталога.",
+          },
+        ],
+      }),
+    ).rejects.toThrow(
+      'Сценарий "Создать фото" сейчас работает только через OpenAI с моделью gpt-image-1.',
+    );
+  });
+
   it("generates one edited image for each selected dessert photo style", async () => {
     const calls: Array<{ imageUrl?: string; prompt: string }> = [];
     const agent = createPhotoshootAgent({

@@ -1,6 +1,10 @@
 import type { Composer } from "grammy";
 import { userHasPromptAccess } from "../access";
-import type { PastryBotContext } from "../context";
+import {
+  clearScenarioSession,
+  setActivePrompt,
+  type PastryBotContext,
+} from "../context";
 import {
   buildOnboardingKeyboard,
   buildPaymentUrl,
@@ -63,9 +67,11 @@ export function registerStartCommand(
       return;
     }
 
-    ctx.session.lastFeature =
-      item.feature as PastryBotContext["session"]["lastFeature"];
-    ctx.session.lastPromptSlug = item.slug;
+    setActivePrompt(
+      ctx.session,
+      item.feature as NonNullable<PastryBotContext["session"]["lastFeature"]>,
+      item.slug,
+    );
 
     await ctx.reply(getPromptSelectionText(item));
   });
@@ -83,9 +89,11 @@ export function registerStartCommand(
       return;
     }
 
-    ctx.session.lastFeature =
-      item.feature as PastryBotContext["session"]["lastFeature"];
-    ctx.session.lastPromptSlug = item.slug;
+    setActivePrompt(
+      ctx.session,
+      item.feature as NonNullable<PastryBotContext["session"]["lastFeature"]>,
+      item.slug,
+    );
 
     await ctx.reply(getPromptSelectionText(item));
   });
@@ -95,6 +103,8 @@ async function sendAccessAwareEntryPoint(
   ctx: PastryBotContext,
   userService: UserService,
 ) {
+  clearScenarioSession(ctx.session);
+
   let telegramId = ctx.from ? String(ctx.from.id) : "";
 
   if (ctx.from) {
