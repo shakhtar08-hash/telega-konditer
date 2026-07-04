@@ -63,6 +63,19 @@ describe("createTriggerService", () => {
     expect(createScheduledMock).not.toHaveBeenCalled();
   });
 
+  it("marks sent on sendMessage failure", async () => {
+    findPendingScheduledMock.mockResolvedValue([
+      { id: "p1", triggerSlug: "after-start", chatId: "12345", text: "Hello!", sendAt: new Date(), sentAt: null, createdAt: new Date() },
+    ]);
+    const sendError = new Error("send failed");
+
+    await service.processPendingTriggers(async () => {
+      throw sendError;
+    });
+
+    expect(markSentMock).toHaveBeenCalledWith("p1");
+  });
+
   it("does not create duplicate pending scheduled message", async () => {
     findActiveBySlugMock.mockResolvedValue(mockTriggerMessage);
     findExistingScheduledMock.mockResolvedValue({ id: "existing" });

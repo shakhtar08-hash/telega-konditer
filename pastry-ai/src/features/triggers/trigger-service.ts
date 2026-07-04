@@ -51,7 +51,7 @@ export function createTriggerService(deps: Dependencies) {
         return;
       }
 
-      const plans = trigger.targetPlans as string[];
+      const plans = Array.isArray(trigger.targetPlans) ? trigger.targetPlans : [];
 
       if (!plans.includes(plan)) {
         return;
