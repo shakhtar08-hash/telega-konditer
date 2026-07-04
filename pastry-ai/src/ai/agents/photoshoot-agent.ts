@@ -13,6 +13,8 @@ export type PhotoshootAgentInput = {
     id: string;
     name: string;
     prompt: string;
+    provider?: string | null;
+    model?: string | null;
   }>;
 };
 
@@ -27,22 +29,25 @@ export function createPhotoshootAgent(dependencies: {
         "product-photo",
       );
 
-      if (prompt.provider !== "openai" || prompt.model !== "gpt-image-1") {
-        throw new UserFacingError(
-          'Сценарий "Создать фото" сейчас работает только через OpenAI с моделью gpt-image-1.',
-        );
-      }
-
       const images = await Promise.all(
         input.styles.map(async (style) => {
+          const styleProvider = style.provider ?? prompt.provider;
+          const styleModel = style.model ?? prompt.model;
+
+          if (styleProvider !== "openai" && styleProvider !== "openrouter") {
+            throw new UserFacingError(
+              `Неподдерживаемый провайдер "${styleProvider}" для стиля "${style.name}".`,
+            );
+          }
+
           const renderedPrompt = prompt.userTemplate
             .replace("{{imageUrl}}", input.imageUrl)
             .replace("{{style}}", `${style.name}: ${style.prompt}`);
           const image = await dependencies.aiService.generateImage({
             imageUrl: input.imageUrl,
             prompt: renderedPrompt,
-            provider: prompt.provider,
-            model: prompt.model,
+            provider: styleProvider as "openai" | "openrouter",
+            model: styleModel,
           });
 
           return {

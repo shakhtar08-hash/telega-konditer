@@ -130,11 +130,13 @@ export async function POST(request: Request): Promise<Response> {
       listActive: (limit) =>
         prisma.photoStyle.findMany({
           orderBy: { createdAt: "asc" },
-          select: {
-            id: true,
-            name: true,
-            prompt: true,
-          },
+select: {
+             id: true,
+             name: true,
+             prompt: true,
+             provider: true,
+             model: true,
+           },
           take: limit,
           where: {
             active: true,

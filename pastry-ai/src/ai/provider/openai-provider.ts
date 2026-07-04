@@ -5,7 +5,7 @@ import {
   generateText,
 } from "ai";
 import { resolveManagedApiKey } from "@/lib/api-secrets";
-import type { AIService } from "./ai-service";
+import type { AIService, GenerateImageInput } from "./ai-service";
 
 export function createOpenAIAIService(): AIService {
   return {
@@ -75,7 +75,11 @@ export function createOpenAIAIService(): AIService {
       return result.object as typeof input.schema._output;
     },
 
-    async generateImage(input) {
+    async generateImage(input: GenerateImageInput) {
+      if (input.provider === "openrouter") {
+        return generateFluxImage(input);
+      }
+
       if (input.imageUrl) {
         return generateImageEdit({
           imageUrl: input.imageUrl,
@@ -155,6 +159,33 @@ async function generateImageEdit(input: {
   }
 
   throw new Error("Image edit returned no image");
+}
+
+async function generateFluxImage(input: GenerateImageInput) {
+  const apiKey = await resolveManagedApiKey("OPENROUTER_API_KEY");
+
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is required for FLUX image generation");
+  }
+
+  const result = await generateImage({
+    model: createOpenAI({
+      apiKey,
+      baseURL: "https://openrouter.ai/api/v1",
+    }).image(input.model),
+    prompt: input.imageUrl
+      ? { text: input.prompt, images: [input.imageUrl] }
+      : input.prompt,
+    size: input.size ?? "1024x1024",
+  });
+
+  const [image] = result.images;
+
+  if (!image) {
+    throw new Error("FLUX image generation returned no image");
+  }
+
+  return { url: `data:${image.mediaType};base64,${image.base64}` };
 }
 
 async function createTextProvider(provider: "openai" | "openrouter") {

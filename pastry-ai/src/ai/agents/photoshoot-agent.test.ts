@@ -10,10 +10,10 @@ describe("PhotoshootAgent", () => {
           slug: "product-photo",
           feature: "photoshoot",
           title: "Стилизация фото десерта",
-          provider: "openrouter",
+          provider: "openai",
           systemPrompt: "Edit dessert photos.",
           userTemplate: "Исходное фото: {{imageUrl}}\nСтиль: {{style}}",
-          model: "google/gemini-2.5-pro",
+          model: "gpt-image-1",
           temperature: 0.2,
           active: true,
           version: 1,
@@ -36,16 +36,17 @@ describe("PhotoshootAgent", () => {
             id: "style_1",
             name: "Каталог",
             prompt: "Чистый светлый фон для каталога.",
+            provider: "replicate",
           },
         ],
       }),
     ).rejects.toThrow(
-      'Сценарий "Создать фото" сейчас работает только через OpenAI с моделью gpt-image-1.',
+      'Неподдерживаемый провайдер "replicate" для стиля "Каталог".',
     );
   });
 
   it("generates one edited image for each selected dessert photo style", async () => {
-    const calls: Array<{ imageUrl?: string; prompt: string }> = [];
+    const calls: Array<{ imageUrl?: string; prompt: string; provider: string; model: string }> = [];
     const agent = createPhotoshootAgent({
       promptLoader: {
         load: async () => ({
@@ -66,7 +67,7 @@ describe("PhotoshootAgent", () => {
         generateText: async () => "",
         generateObject: async (input) => input.schema.parse({}),
         generateImage: async (input) => {
-          calls.push({ imageUrl: input.imageUrl, prompt: input.prompt });
+          calls.push({ imageUrl: input.imageUrl, prompt: input.prompt, provider: input.provider, model: input.model });
           return {
             url: `data:image/png;base64,style-${calls.length}`,
           };
@@ -95,11 +96,15 @@ describe("PhotoshootAgent", () => {
         imageUrl: "https://example.com/dessert.jpg",
         prompt:
           "Исходное фото: https://example.com/dessert.jpg\nСтиль: Тёмный премиум: Чёрный камень, тёплый контровой свет.",
+        provider: "openai",
+        model: "gpt-image-1",
       },
       {
         imageUrl: "https://example.com/dessert.jpg",
         prompt:
           "Исходное фото: https://example.com/dessert.jpg\nСтиль: Каталог: Чистый светлый фон для каталога.",
+        provider: "openai",
+        model: "gpt-image-1",
       },
     ]);
     expect(result.images).toEqual([

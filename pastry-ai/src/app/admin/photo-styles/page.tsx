@@ -16,6 +16,8 @@ export default async function AdminPhotoStylesPage() {
       name: true,
       description: true,
       active: true,
+      provider: true,
+      model: true,
       createdAt: true,
     },
   });
@@ -30,6 +32,8 @@ export default async function AdminPhotoStylesPage() {
         columns={[
           { header: "Название", cell: (style) => style.name },
           { header: "Описание", cell: (style) => style.description },
+          { header: "Провайдер", cell: (style) => style.provider ?? "—" },
+          { header: "Модель", cell: (style) => style.model ?? "—" },
           { header: "Статус", cell: (style) => <StatusBadge active={style.active} /> },
           { header: "Создан", cell: (style) => formatDate(style.createdAt) },
         ]}
