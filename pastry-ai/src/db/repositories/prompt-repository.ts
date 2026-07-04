@@ -60,5 +60,5 @@ function isPromptFeature(value: string): value is PromptFeature {
 }
 
 function isPromptProvider(value: string): value is PromptProvider {
-  return ["openai", "openrouter"].includes(value);
+  return ["openai", "openrouter", "kie"].includes(value);
 }
