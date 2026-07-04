@@ -1,4 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/db/prisma", () => ({
+  prisma: {},
+}));
+
+vi.mock("@/features/triggers/trigger-service", () => ({
+  createTriggerService: () => ({
+    scheduleTrigger: vi.fn(),
+    processPendingTriggers: vi.fn(),
+  }),
+}));
+
 import { buildStartMessage } from "./start";
 
 describe("buildStartMessage", () => {

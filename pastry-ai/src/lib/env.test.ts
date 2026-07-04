@@ -11,6 +11,7 @@ describe("loadEnv", () => {
       DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
       TELEGRAM_BOT_TOKEN: "telegram-token",
       TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+      CRON_SECRET: "cron-secret",
     });
 
     expect(env.DATABASE_URL).toContain("postgresql://");
