@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { AIService } from "../provider/ai-service";
 import { createRecipeAgent } from "./recipe-agent";
 
 const recipeTitle =
@@ -9,6 +10,12 @@ const recipeOutput = {
     { name: "\u0422\u0438\u0440\u0430\u043c\u0438\u0441\u0443", description: "\u041a\u043b\u0430\u0441\u0441\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0438\u0442\u0430\u043b\u044c\u044f\u043d\u0441\u043a\u0438\u0439 \u0434\u0435\u0441\u0435\u0440\u0442" },
   ],
 };
+
+const mockAiService = {
+  generateText: async () => "",
+  generateImage: async () => ({ url: "" }),
+  generateObject: async () => recipeOutput,
+} as AIService;
 
 describe("RecipeAgent", () => {
   it("uses prompt loader and AIService to generate recipe text", async () => {
@@ -30,14 +37,13 @@ describe("RecipeAgent", () => {
         }),
       },
       aiService: {
-        generateText: async () => "",
-        generateImage: async () => ({ url: "" }),
-        generateObject: async (input) => {
-          calls.push(input.prompt);
-          calls.push(input.provider);
+        ...mockAiService,
+        generateObject: async (input: Record<string, unknown>) => {
+          calls.push(input.prompt as string);
+          calls.push(input.provider as string);
           return recipeOutput;
         },
-      },
+      } as AIService,
     });
 
     const result = await agent.execute({
@@ -71,11 +77,7 @@ describe("RecipeAgent", () => {
           };
         },
       },
-      aiService: {
-        generateText: async () => "",
-        generateImage: async () => ({ url: "" }),
-        generateObject: async () => recipeOutput,
-      },
+      aiService: mockAiService,
     });
 
     await agent.execute({
