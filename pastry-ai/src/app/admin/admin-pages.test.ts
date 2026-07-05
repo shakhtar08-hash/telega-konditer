@@ -9,7 +9,7 @@ describe("adminSections", () => {
       { href: "/admin/triggers", label: "Триггеры" },
       { href: "/admin/funnel", label: "Рассылки" },
       { href: "/admin/users", label: "Пользователи" },
-      { href: "/admin/users", label: "Тарифы" },
+      { href: "/admin/tariffs", label: "Тарифы" },
       { href: "/admin/photo-styles", label: "Стили фото" },
       { href: "/admin/prompts", label: "База знаний" },
       { href: "/admin/settings", label: "AI-настройки" },
