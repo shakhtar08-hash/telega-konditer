@@ -135,20 +135,31 @@ export async function POST(request: Request): Promise<Response> {
   const tokenGuard = createTokenGuardService(userTariffRepository, tokenUsageRepository);
   const photoshootAgent = createPhotoshootAgent({ aiService, promptLoader });
   const photoshootService = createPhotoshootService({
-    photoStyleRepository: {
+photoStyleRepository: {
       listActive: (limit) =>
         prisma.photoStyle.findMany({
           orderBy: { createdAt: "asc" },
-select: {
-             id: true,
-             name: true,
-             prompt: true,
-             provider: true,
-             model: true,
-           },
+          select: {
+            id: true,
+            name: true,
+            prompt: true,
+            provider: true,
+            model: true,
+          },
           take: limit,
           where: {
             active: true,
+          },
+        }),
+      findById: (id) =>
+        prisma.photoStyle.findFirst({
+          where: { id },
+          select: {
+            id: true,
+            name: true,
+            prompt: true,
+            provider: true,
+            model: true,
           },
         }),
     },

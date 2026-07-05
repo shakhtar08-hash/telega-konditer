@@ -1,8 +1,14 @@
 import { InputFile, type Composer } from "grammy";
 import type { PhotoshootOutput } from "@/ai/schemas/photoshoot";
+import { prisma } from "@/db/prisma";
 import { UserFacingError } from "@/lib/user-facing-error";
 import type { PastryBotContext } from "../context";
 import { buildTelegramFileUrl, getLargestPhoto } from "./vision";
+
+type TokenGuardService = {
+  ensureSufficientTokens(userId: string, required: number): Promise<void>;
+  chargeTokens(userId: string, feature: string, promptSlug: string | null, imagesSent: number): Promise<void>;
+};
 
 type PhotoshootService = {
   generateStyledDessertPhotos(input: {
@@ -19,7 +25,11 @@ const missingTelegramFilePathMessage =
 
 export function registerPhotoshootPhotoHandler(
   composer: Composer<PastryBotContext>,
-  dependencies: { botToken: string; photoshootService: PhotoshootService },
+  dependencies: {
+    botToken: string;
+    photoshootService: PhotoshootService;
+    tokenGuard: TokenGuardService;
+  },
 ): void {
   composer.on("message:photo", async (ctx, next) => {
     if (
@@ -46,6 +56,21 @@ export function registerPhotoshootPhotoHandler(
     }
 
     const imageUrl = buildTelegramFileUrl(dependencies.botToken, file.file_path);
+
+    const userTelegramId = ctx.from ? String(ctx.from.id) : "";
+    const styleCount = await prisma.photoStyle.count({ where: { active: true } });
+    if (styleCount > 0) {
+      try {
+        await dependencies.tokenGuard.ensureSufficientTokens(userTelegramId, styleCount);
+      } catch (error) {
+        if (error instanceof UserFacingError) {
+          await ctx.reply(error.message);
+          return;
+        }
+        throw error;
+      }
+    }
+
     let result: PhotoshootOutput;
 
     try {
@@ -74,6 +99,7 @@ export function registerPhotoshootPhotoHandler(
           ),
         },
       );
+      await dependencies.tokenGuard.chargeTokens(userTelegramId, "photoshoot", "product-photo", 1);
     }
   });
 }

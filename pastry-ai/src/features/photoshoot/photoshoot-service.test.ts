@@ -15,6 +15,7 @@ describe("PhotoshootService", () => {
             prompt: `Описание стиля ${index + 1}`,
           }));
         },
+        findById: async () => null,
       },
       photoshootAgent: {
         execute: async (input) => {

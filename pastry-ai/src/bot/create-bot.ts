@@ -4,6 +4,7 @@ import { registerProfileCommand } from "./commands/profile";
 import { registerStartCommand } from "./commands/start";
 import type { BotSession, PastryBotContext } from "./context";
 import { registerPhotoshootPhotoHandler } from "./handlers/photoshoot";
+import { registerSingleStylePhotoshootHandler } from "./handlers/single-style-photoshoot";
 import { registerRecipeTextHandler } from "./handlers/recipes";
 import { registerVisionPhotoHandler } from "./handlers/vision";
 import { auth } from "./middleware/auth";
@@ -15,15 +16,20 @@ import { subscription } from "./middleware/subscription";
 type BotDependencies = {
   token: string;
   userService: Parameters<typeof registerStartCommand>[1];
-  photoshootService?: Parameters<
-    typeof registerPhotoshootPhotoHandler
-  >[1]["photoshootService"];
+  photoshootService?: {
+    generateStyledDessertPhotos(input: { imageUrl: string }): Promise<import("@/ai/schemas/photoshoot").PhotoshootOutput>;
+    generateStyledDessertPhoto(input: { imageUrl: string; styleId: string }): Promise<import("@/ai/schemas/photoshoot").PhotoshootOutput>;
+  };
   recipeService?: Parameters<
     typeof registerRecipeTextHandler
   >[1]["recipeService"];
   sessionStorage?: StorageAdapter<BotSession>;
   visionService?: Parameters<typeof registerVisionPhotoHandler>[1]["visionService"];
-  tokenGuard?: Parameters<typeof registerRecipeTextHandler>[1]["tokenGuard"];
+  tokenGuard?: {
+    getAvailablePhotoSlots(userId: string, maxSlots: number): Promise<number>;
+    ensureSufficientTokens(userId: string, required: number): Promise<void>;
+    chargeTokens(userId: string, feature: string, promptSlug: string | null, imagesSent: number): Promise<void>;
+  };
   aiService?: Parameters<typeof registerRecipeTextHandler>[1]["imageService"];
 };
 
@@ -45,6 +51,12 @@ export function createPastryBot(
     registerPhotoshootPhotoHandler(bot, {
       botToken: dependencies.token,
       photoshootService: dependencies.photoshootService,
+      tokenGuard: dependencies.tokenGuard!,
+    });
+    registerSingleStylePhotoshootHandler(bot, {
+      botToken: dependencies.token,
+      photoshootService: dependencies.photoshootService,
+      tokenGuard: dependencies.tokenGuard!,
     });
   }
   if (dependencies.recipeService) {

@@ -12,6 +12,7 @@ type PhotoshootAgent = {
 
 type PhotoStyleRepository = {
   listActive(limit: number): Promise<PhotoshootAgentInput["styles"]>;
+  findById(id: string): Promise<PhotoshootAgentInput["styles"][number] | null>;
 };
 
 export function createPhotoshootService(dependencies: {
@@ -32,6 +33,23 @@ export function createPhotoshootService(dependencies: {
       return dependencies.photoshootAgent.execute({
         ...parsedInput,
         styles,
+      });
+    },
+
+    async generateStyledDessertPhoto(input: {
+      imageUrl: string;
+      styleId: string;
+    }): Promise<PhotoshootOutput> {
+      const parsedInput = photoshootInputSchema.parse(input);
+      const style = await dependencies.photoStyleRepository.findById(input.styleId);
+
+      if (!style) {
+        throw new Error(`Photo style with id "${input.styleId}" not found`);
+      }
+
+      return dependencies.photoshootAgent.execute({
+        ...parsedInput,
+        styles: [style],
       });
     },
   };

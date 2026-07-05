@@ -15,7 +15,7 @@ export type RecipeLastIntent =
   | "restart";
 
 export type BotSession = {
-  lastFeature?: "recipes" | "vision" | "photoshoot" | "carousel";
+  lastFeature?: "recipes" | "vision" | "photoshoot" | "carousel" | "photoshoot-single-style";
   lastPromptSlug?: string;
   lastRecipeRequestText?: string;
   baseIngredientsText?: string;
@@ -24,6 +24,7 @@ export type BotSession = {
   lastShownRecipe?: string;
   recipeScenarioStep?: RecipeScenarioStep;
   recipeLastIntent?: RecipeLastIntent;
+  selectedStyleId?: string;
 };
 
 export type PastryBotContext = Context & SessionFlavor<BotSession>;
