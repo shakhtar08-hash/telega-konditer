@@ -89,6 +89,9 @@ export async function POST(request: Request): Promise<Response> {
     { createPhotoshootService },
     { createRecipeAgent },
     { createRecipeService },
+    { createUserTariffRepository },
+    { createTokenUsageRepository },
+    { createTokenGuardService },
     { createVisionAgent },
     { createVisionService },
   ] =
@@ -104,6 +107,9 @@ export async function POST(request: Request): Promise<Response> {
       import("@/features/photoshoot/photoshoot-service"),
       import("@/ai/agents/recipe-agent"),
       import("@/features/recipes/recipe-service"),
+      import("@/db/repositories/user-tariff-repository"),
+      import("@/db/repositories/token-usage-repository"),
+      import("@/features/tariffs/token-guard-service"),
       import("@/ai/agents/vision-agent"),
       import("@/features/vision/vision-service"),
     ]);
@@ -124,6 +130,9 @@ export async function POST(request: Request): Promise<Response> {
   const aiService = createOpenAIAIService();
   const sessionStorage = createPrismaSessionStorage(prisma.telegramSession);
   const userService = createUserService({ userRepository });
+  const userTariffRepository = createUserTariffRepository(prisma.userTariff as never);
+  const tokenUsageRepository = createTokenUsageRepository(prisma.tokenUsage as never);
+  const tokenGuard = createTokenGuardService(userTariffRepository, tokenUsageRepository);
   const photoshootAgent = createPhotoshootAgent({ aiService, promptLoader });
   const photoshootService = createPhotoshootService({
     photoStyleRepository: {
@@ -156,6 +165,8 @@ select: {
     recipeService,
     sessionStorage,
     visionService,
+    tokenGuard,
+    aiService,
   });
 
   return webhookCallback(bot, "std/http")(request);

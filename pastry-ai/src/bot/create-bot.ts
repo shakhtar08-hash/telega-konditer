@@ -23,6 +23,8 @@ type BotDependencies = {
   >[1]["recipeService"];
   sessionStorage?: StorageAdapter<BotSession>;
   visionService?: Parameters<typeof registerVisionPhotoHandler>[1]["visionService"];
+  tokenGuard?: Parameters<typeof registerRecipeTextHandler>[1]["tokenGuard"];
+  aiService?: Parameters<typeof registerRecipeTextHandler>[1]["imageService"];
 };
 
 export function createPastryBot(
@@ -48,6 +50,8 @@ export function createPastryBot(
   if (dependencies.recipeService) {
     registerRecipeTextHandler(bot, {
       recipeService: dependencies.recipeService,
+      tokenGuard: dependencies.tokenGuard!,
+      imageService: dependencies.aiService!,
     });
   }
   if (dependencies.visionService) {

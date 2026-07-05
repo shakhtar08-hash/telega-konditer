@@ -2,13 +2,25 @@ import type { Composer } from "grammy";
 import { clearScenarioSession, type BotSession, type PastryBotContext } from "../context";
 import { parseRecipeIntent } from "./recipe-intent";
 import { applyRecipeIntent, type RecipeStateAction } from "./recipe-state";
-import type { RecipeOutput } from "@/ai/schemas/recipe";
+
 
 type RecipeService = {
   createFromIngredients(input: {
     ingredientsText: string;
     promptSlug?: string;
-  }): Promise<RecipeOutput>;
+  }): Promise<{
+    text: string;
+    dishes: Array<{ name: string; description: string }>;
+  }>;
+};
+
+type TokenGuardService = {
+  getAvailablePhotoSlots(userId: string, maxSlots: number): Promise<number>;
+  chargeTokens(userId: string, feature: string, promptSlug: string | null, imagesSent: number): Promise<void>;
+};
+
+type ImageService = {
+  generateImage(input: { provider: string; model: string; prompt: string; size?: string }): Promise<{ url: string }>;
 };
 
 const processingMessage =
@@ -21,7 +33,11 @@ const telegramMessageLimit = 3900;
 
 export function registerRecipeTextHandler(
   composer: Composer<PastryBotContext>,
-  dependencies: { recipeService: RecipeService },
+  dependencies: {
+    recipeService: RecipeService;
+    tokenGuard: TokenGuardService;
+    imageService: ImageService;
+  },
 ): void {
   composer.command("stop", async (ctx) => {
     clearScenarioSession(ctx.session);
@@ -55,7 +71,7 @@ export function shouldHandleRecipeText(session: BotSession, text = "") {
 async function handleIngredientRecipe(
   ctx: PastryBotContext,
   text: string,
-  dependencies: { recipeService: RecipeService },
+  dependencies: { recipeService: RecipeService; tokenGuard: TokenGuardService; imageService: ImageService },
 ) {
   const intent = parseRecipeIntent(text);
   const result = applyRecipeIntent(ctx.session, intent);
@@ -114,12 +130,40 @@ async function handleIngredientRecipe(
   for (const chunk of splitTelegramText(recipeOutput.text)) {
     await ctx.reply(chunk);
   }
+
+  await generateDishPhotos(ctx, recipeOutput.dishes, dependencies);
+}
+
+async function generateDishPhotos(
+  ctx: PastryBotContext,
+  dishes: Array<{ name: string; description: string }>,
+  dependencies: { tokenGuard: TokenGuardService; imageService: ImageService },
+) {
+  const slots = await dependencies.tokenGuard.getAvailablePhotoSlots(String(ctx.from?.id ?? ""), dishes.length);
+  if (slots === 0) {
+    if (dishes.length > 0) {
+      await ctx.reply(
+        "У вас недостаточно токенов для генерации фото. Пополните баланс в /menu.",
+      );
+    }
+    return;
+  }
+  for (let i = 0; i < slots; i++) {
+    const dish = dishes[i];
+    const image = await dependencies.imageService.generateImage({
+      provider: "openai",
+      model: "dall-e-3",
+      prompt: dish.description,
+    });
+    await ctx.replyWithPhoto(image.url, { caption: dish.name });
+    await dependencies.tokenGuard.chargeTokens(String(ctx.from?.id ?? ""), "recipes", ctx.session.lastPromptSlug ?? null, 1);
+  }
 }
 
 async function handleSimpleRecipe(
   ctx: PastryBotContext,
   text: string,
-  dependencies: { recipeService: RecipeService },
+  dependencies: { recipeService: RecipeService; tokenGuard: TokenGuardService; imageService: ImageService },
 ) {
   await ctx.reply(processingBestRecipeMessage);
 
@@ -135,6 +179,8 @@ async function handleSimpleRecipe(
   for (const chunk of splitTelegramText(recipeOutput.text)) {
     await ctx.reply(chunk);
   }
+
+  await generateDishPhotos(ctx, recipeOutput.dishes, dependencies);
 }
 
 export function splitTelegramText(
