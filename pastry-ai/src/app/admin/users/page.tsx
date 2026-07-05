@@ -32,6 +32,18 @@ export async function updateUserPlan(formData: FormData) {
   revalidatePath("/admin/users");
 }
 
+export async function updateUserTokens(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id") ?? "");
+  const tokens = Number(formData.get("tokens") ?? 0);
+  if (!id || tokens < 0) return;
+  await prisma.userTariff.update({
+    where: { userId: id },
+    data: { remainingTokens: tokens },
+  });
+  revalidatePath("/admin/users");
+}
+
 export default async function AdminUsersPage() {
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
@@ -43,6 +55,13 @@ export default async function AdminUsersPage() {
       plan: true,
       credits: true,
       createdAt: true,
+      userTariff: {
+        select: {
+          remainingTokens: true,
+          expiresAt: true,
+          tariffPlan: { select: { name: true } },
+        },
+      },
     },
     take: 100,
   });
@@ -82,11 +101,34 @@ export default async function AdminUsersPage() {
               </form>
             ),
           },
-          {
-            header: "Текущий уровень",
-            cell: (user) => getPlanLabel(user.plan),
-          },
           { header: "Кредиты", cell: (user) => user.credits },
+          {
+            header: "Тариф",
+            cell: (user) => user.userTariff?.tariffPlan?.name ?? "—",
+          },
+          {
+            header: "Токены",
+            cell: (user) => (
+              <form action={updateUserTokens} className="flex items-center gap-2">
+                <input name="id" type="hidden" value={user.id} />
+                <input
+                  className="w-20 rounded border border-[#223047] bg-[#0d1522] px-2 py-1 text-center text-sm text-[#eef4ff]"
+                  defaultValue={user.userTariff?.remainingTokens ?? 0}
+                  name="tokens"
+                  type="number"
+                  min="0"
+                />
+                <button
+                  className="rounded bg-[#223047] px-2 py-1 text-xs text-[#97a4b8] hover:text-white"
+                  type="submit"
+                >OK</button>
+              </form>
+            ),
+          },
+          {
+            header: "Истекает",
+            cell: (user) => user.userTariff?.expiresAt ? formatDate(user.userTariff.expiresAt) : "—",
+          },
           { header: "Создан", cell: (user) => formatDate(user.createdAt) },
         ]}
         empty="Пользователей пока нет. Они появятся после запуска Telegram-бота."

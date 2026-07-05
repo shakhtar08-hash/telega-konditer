@@ -1,48 +1,87 @@
-# Task 5: Admin CRUD Page for Triggers
+﻿### Task 5: TokenUsage repository
 
 **Files:**
-- Create: `src/app/admin/triggers/page.tsx`
-- Modify: `src/app/admin/layout.tsx`
+- Create: `src/db/repositories/token-usage-repository.ts`
+- Create: `src/db/repositories/token-usage-repository.test.ts`
 
-## Requirements
+**Interfaces:**
+- Produces: `create`
 
-### Layout changes
+- [ ] **Step 1: Write the failing test**
 
-In `src/app/admin/layout.tsx`:
-
-1. Add `Timer` to the lucide-react import:
+Create `src/db/repositories/token-usage-repository.test.ts`:
 ```typescript
-import { Timer } from "lucide-react";
+import { describe, expect, it, vi } from "vitest";
+import { createTokenUsageRepository } from "./token-usage-repository";
+
+describe("TokenUsageRepository", () => {
+  it("creates a token usage record", async () => {
+    const mockDelegate = {
+      create: vi.fn().mockResolvedValue({
+        id: "tu1", userId: "u1", feature: "recipes",
+        promptSlug: "recipe-from-ingredients", imagesSent: 2, tokensSpent: 2,
+      }),
+    };
+    const repo = createTokenUsageRepository(mockDelegate as never);
+    const result = await repo.create({
+      userId: "u1", feature: "recipes", promptSlug: "recipe-from-ingredients",
+      imagesSent: 2, tokensSpent: 2,
+    });
+    expect(result.tokensSpent).toBe(2);
+    expect(mockDelegate.create).toHaveBeenCalledWith({
+      data: { userId: "u1", feature: "recipes", promptSlug: "recipe-from-ingredients", imagesSent: 2, tokensSpent: 2 },
+    });
+  });
+});
 ```
 
-2. Add nav link to `adminSections` array (after chat-bot entry):
-```typescript
-  { href: "/admin/triggers", label: "Триггеры" },
+- [ ] **Step 2: Run test**
+
+```bash
+npm run test -- src/db/repositories/token-usage-repository.test.ts
 ```
 
-3. Add `Timer` icon to `sectionIcons` array (after Bot):
+- [ ] **Step 3: Write minimal implementation**
+
+Create `src/db/repositories/token-usage-repository.ts`:
 ```typescript
-  Timer,
+type TokenUsageDelegate = {
+  create(args: {
+    data: {
+      userId: string;
+      feature: string;
+      promptSlug?: string | null;
+      imagesSent: number;
+      tokensSpent: number;
+    };
+  }): Promise<{ id: string; tokensSpent: number }>;
+};
+
+export function createTokenUsageRepository(delegate: TokenUsageDelegate) {
+  return {
+    create(data: {
+      userId: string;
+      feature: string;
+      promptSlug?: string | null;
+      imagesSent: number;
+      tokensSpent: number;
+    }) {
+      return delegate.create({ data });
+    },
+  };
+}
 ```
 
-### Triggers page
+- [ ] **Step 4: Run test to verify it passes**
 
-Create `src/app/admin/triggers/page.tsx` with the full CRUD from the plan. The file is ~250 lines. Use the existing admin form components: `AdminPanel`, `AdminField`, `AdminInput`, `AdminTextarea`, `AdminToggle`, `AdminButton` from `@/components/admin/form`, and `AdminPageHeader` from `@/components/admin/data-table`.
+```bash
+npm run test -- src/db/repositories/token-usage-repository.test.ts
+```
 
-The page must include:
-- Server actions: `createTriggerMessage`, `updateTriggerMessage`, `deleteTriggerMessage`
-- List view of all triggers
-- Create form
-- Per-trigger edit forms with save/delete
-- Tab navigation (Меню / Цепочки / Триггеры) with Триггеры active
-- Info panel on the right explaining how triggers work
+- [ ] **Step 5: Commit**
 
-## Verification
+```bash
+git add src/db/repositories/token-usage-repository.ts src/db/repositories/token-usage-repository.test.ts
+git commit -m "feat: add TokenUsageRepository"
+```
 
-- `npm run lint` passes
-- `npm run typecheck` passes
-- The page compiles without errors
-
-## Exact code for the triggers page
-
-Read it from the plan file: `docs/superpowers/plans/2026-07-04-trigger-messages-plan.md` (search for "Task 5: Admin CRUD Page for Triggers")

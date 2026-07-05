@@ -1,33 +1,12 @@
-# Task 3 Report: Trigger Service + Unit Tests
+# Task 3: TariffPlan Repository — Report
 
-**Status:** DONE
+**Status:** ✅ Complete
 
-## Что сделано
+**Commit:** `6b87004` feat: add TariffPlanRepository
 
-- Создан `src/features/triggers/trigger-service.ts` с функцией `createTriggerService`, экспортирующей два метода:
-  - `scheduleTrigger(slug, chatId, plan)` — находит активное триггерное сообщение по slug, проверяет соответствие плану, проверяет отсутствие дубликата, создаёт запланированное сообщение с задержкой `delayMinutes`.
-  - `processPendingTriggers(sendMessage)` — забирает до 50 ожидающих сообщений, отправляет каждое через `sendMessage`, помечает отправленным (включая ошибки).
-- Создан `src/features/triggers/trigger-service.test.ts` с 4 тестами на `scheduleTrigger`.
+## Summary
 
-## Результаты тестов
-
-```bash
-> npx vitest run src/features/triggers/trigger-service.test.ts
-✓ src/features/triggers/trigger-service.test.ts (4 tests)
-  Test Files  1 passed (1)
-       Tests  4 passed (4)
-
-> npm run typecheck  # passed (no output)
-> npm run lint       # passed (no output)
-```
-
-## Коммит
-
-```
-eebada9 Task 3: implement trigger service (scheduleTrigger + processPendingTriggers)
-```
-
-## Замечания
-
-- Тесты используют `vi.clearAllMocks()` в `beforeEach` для изоляции между тестами.
-- `processPendingTriggers` не покрыт тестами — можно добавить в отдельной задаче при необходимости.
+- Created `src/db/repositories/tariff-plan-repository.ts` — implements `TariffPlanRepository` with methods: `listAll`, `findBySlug`, `findById`, `update`, `create`, `toggleActive`
+- Created `src/db/repositories/tariff-plan-repository.test.ts` — 3 tests covering `listAll`, `findBySlug`, `update`
+- All 3 tests pass
+- Follows the existing repository pattern from `prompt-repository.ts` and `user-repository.ts`

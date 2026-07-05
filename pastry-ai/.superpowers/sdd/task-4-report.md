@@ -1,18 +1,19 @@
-# Task 4 Report
+# Task 4: UserTariff Repository — Done
 
-## Status: ✅ Complete
+## Steps completed
 
-## Commands Run
+1. **Wrote failing tests** — `src/db/repositories/user-tariff-repository.test.ts` with 3 tests:
+   - `finds user tariff by userId`
+   - `returns null when no tariff found`
+   - `upserts a user tariff (full replace)`
 
-| Command | Exit Code | Output |
-|---------|-----------|--------|
-| `npm run typecheck` | 0 | Passed (no errors) |
-| `npm run lint` | 0 | Passed (no errors) |
-| `git add src/app/api/cron/ && git commit -m "task 4: add cron process-triggers API route"` | 0 | `1 file changed, 65 insertions(+)` |
+2. **Ran test → FAIL** (module not found — expected)
 
-## Notes
+3. **Wrote minimal implementation** — `src/db/repositories/user-tariff-repository.ts` with `createUserTariffRepository` exposing:
+   - `findByUserId`
+   - `upsert`
+   - `updateRemainingTokens`
 
-- Created `src/app/api/cron/process-triggers/route.ts` as specified in the brief.
-- Replaced `as Promise<any>` casts with proper type imports (`TriggerMessageRecord`, `ScheduledMessageRecord`) to satisfy the `@typescript-eslint/no-explicit-any` rule.
-- Used `await` on `prisma.scheduledMessage.update` in `markSent` to match the `Promise<void>` return type.
-- Commit: `ada95abe`
+4. **Ran test → PASS** (3/3)
+
+5. **Committed** — `d8c33ac` feat: add UserTariffRepository

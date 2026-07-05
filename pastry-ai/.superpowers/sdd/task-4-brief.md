@@ -1,86 +1,168 @@
-# Task 4: Cron API Route
+﻿### Task 4: UserTariff repository
 
 **Files:**
-- Create: `src/app/api/cron/process-triggers/route.ts`
+- Create: `src/db/repositories/user-tariff-repository.ts`
+- Create: `src/db/repositories/user-tariff-repository.test.ts`
 
-## Requirements
+**Interfaces:**
+- Produces: `UserTariffRepository` with `findByUserId`, `upsert`, `updateRemainingTokens`
 
-Create a GET endpoint at `/api/cron/process-triggers?token=<CRON_SECRET>` that processes pending trigger messages.
+- [ ] **Step 1: Write the failing tests**
 
-The route must:
-1. Validate the `token` query parameter against `env.CRON_SECRET`
-2. Create trigger service with Prisma dependencies
-3. Process pending triggers using bot API to send messages
-4. Return JSON with `{ ok: true, sent: <count> }`
-
-## Implementation
-
-`src/app/api/cron/process-triggers/route.ts`:
-
+Create `src/db/repositories/user-tariff-repository.test.ts`:
 ```typescript
-import { NextResponse } from "next/server";
-import { Bot } from "grammy";
-import { prisma } from "@/db/prisma";
-import { loadEnv } from "@/lib/env";
-import { createTriggerService } from "@/features/triggers/trigger-service";
+import { describe, expect, it, vi } from "vitest";
+import { createUserTariffRepository } from "./user-tariff-repository";
 
-export const runtime = "nodejs";
-
-export async function GET(request: Request) {
-  const env = loadEnv();
-
-  const { searchParams } = new URL(request.url);
-  const token = searchParams.get("token");
-
-  if (token !== env.CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const triggerService = createTriggerService({
-    findActiveBySlug: async (slug) =>
-      prisma.triggerMessage.findFirst({
-        where: { slug, active: true },
-      }) as Promise<any>,
-
-    createScheduled: async (data) =>
-      prisma.scheduledMessage.create({ data }) as Promise<any>,
-
-    findExistingScheduled: async (triggerSlug, chatId) =>
-      prisma.scheduledMessage.findFirst({
-        where: { triggerSlug, chatId, sentAt: null },
-        select: { id: true },
+describe("UserTariffRepository", () => {
+  it("finds user tariff by userId", async () => {
+    const mockDelegate = {
+      findUnique: vi.fn().mockResolvedValue({
+        id: "ut1", userId: "u1", tariffPlanId: "tp1",
+        remainingTokens: 15, startedAt: new Date(), expiresAt: new Date(),
+        tariffPlan: { name: "РџСЂРѕРјРѕ" },
       }),
-
-    findPendingScheduled: async (limit) =>
-      prisma.scheduledMessage.findMany({
-        orderBy: { sendAt: "asc" },
-        take: limit,
-        where: {
-          sentAt: null,
-          sendAt: { lte: new Date() },
-        },
-      }) as Promise<any>,
-
-    markSent: async (id) =>
-      prisma.scheduledMessage.update({
-        data: { sentAt: new Date() },
-        where: { id },
-      }),
+      upsert: vi.fn(),
+      update: vi.fn(),
+    };
+    const repo = createUserTariffRepository(mockDelegate as never);
+    const result = await repo.findByUserId("u1");
+    expect(result?.tariffPlan.name).toBe("РџСЂРѕРјРѕ");
+    expect(result?.remainingTokens).toBe(15);
   });
 
-  const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
+  it("returns null when no tariff found", async () => {
+    const mockDelegate = {
+      findUnique: vi.fn().mockResolvedValue(null),
+      upsert: vi.fn(),
+      update: vi.fn(),
+    };
+    const repo = createUserTariffRepository(mockDelegate as never);
+    const result = await repo.findByUserId("u1");
+    expect(result).toBeNull();
+  });
 
-  const sent = await triggerService.processPendingTriggers(
-    async (chatId, text) => {
-      await bot.api.sendMessage(chatId, text);
+  it("upserts a user tariff (full replace)", async () => {
+    const mockDelegate = {
+      findUnique: vi.fn(),
+      upsert: vi.fn().mockResolvedValue({
+        id: "ut1", userId: "u1", tariffPlanId: "tp1",
+        remainingTokens: 100, startedAt: new Date(), expiresAt: new Date(Date.now() + 30 * 86400000),
+      }),
+      update: vi.fn(),
+    };
+    const repo = createUserTariffRepository(mockDelegate as never);
+    const result = await repo.upsert("u1", { tariffPlanId: "tp1", remainingTokens: 100, expiresAt: new Date(Date.now() + 30 * 86400000) });
+    expect(result.remainingTokens).toBe(100);
+    expect(mockDelegate.upsert).toHaveBeenCalledWith({
+      where: { userId: "u1" },
+      update: expect.objectContaining({ tariffPlanId: "tp1", remainingTokens: 100 }),
+      create: expect.objectContaining({ userId: "u1", tariffPlanId: "tp1", remainingTokens: 100 }),
+    });
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```bash
+npm run test -- src/db/repositories/user-tariff-repository.test.ts
+```
+
+Expected: FAIL
+
+- [ ] **Step 3: Write minimal implementation**
+
+Create `src/db/repositories/user-tariff-repository.ts`:
+```typescript
+export type UserTariffRecord = {
+  id: string;
+  userId: string;
+  tariffPlanId: string;
+  remainingTokens: number;
+  startedAt: Date;
+  expiresAt: Date;
+  tariffPlan: { name: string; slug: string };
+};
+
+type UserTariffDelegate = {
+  findUnique(args: {
+    where: { userId: string };
+    include?: { tariffPlan: { select: { name: boolean; slug: boolean } } };
+  }): Promise<UserTariffRecord | null>;
+  upsert(args: {
+    where: { userId: string };
+    update: {
+      tariffPlanId: string;
+      remainingTokens: number;
+      startedAt: Date;
+      expiresAt: Date;
+    };
+    create: {
+      userId: string;
+      tariffPlanId: string;
+      remainingTokens: number;
+      startedAt: Date;
+      expiresAt: Date;
+    };
+  }): Promise<UserTariffRecord>;
+  update(args: {
+    where: { userId: string };
+    data: { remainingTokens?: number };
+  }): Promise<UserTariffRecord>;
+};
+
+export function createUserTariffRepository(delegate: UserTariffDelegate) {
+  return {
+    findByUserId(userId: string): Promise<UserTariffRecord | null> {
+      return delegate.findUnique({
+        where: { userId },
+        include: { tariffPlan: { select: { name: true, slug: true } } },
+      });
     },
-  );
-
-  return NextResponse.json({ ok: true, sent });
+    upsert(
+      userId: string,
+      data: { tariffPlanId: string; remainingTokens: number; expiresAt: Date },
+    ): Promise<UserTariffRecord> {
+      return delegate.upsert({
+        where: { userId },
+        update: {
+          tariffPlanId: data.tariffPlanId,
+          remainingTokens: data.remainingTokens,
+          startedAt: new Date(),
+          expiresAt: data.expiresAt,
+        },
+        create: {
+          userId,
+          tariffPlanId: data.tariffPlanId,
+          remainingTokens: data.remainingTokens,
+          startedAt: new Date(),
+          expiresAt: data.expiresAt,
+        },
+      });
+    },
+    updateRemainingTokens(userId: string, remainingTokens: number): Promise<UserTariffRecord> {
+      return delegate.update({
+        where: { userId },
+        data: { remainingTokens },
+      });
+    },
+  };
 }
 ```
 
-## Verification
+- [ ] **Step 4: Run test to verify it passes**
 
-- `npm run typecheck` passes
-- `npm run lint` passes
+```bash
+npm run test -- src/db/repositories/user-tariff-repository.test.ts
+```
+
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/db/repositories/user-tariff-repository.ts src/db/repositories/user-tariff-repository.test.ts
+git commit -m "feat: add UserTariffRepository"
+```
+

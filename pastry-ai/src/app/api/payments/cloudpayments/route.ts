@@ -38,6 +38,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ code: 13 });
   }
 
+  const tariffPlan = await prisma.tariffPlan.findUnique({ where: { slug: "pastry-chef" } });
+  if (!tariffPlan) {
+    return NextResponse.json({ code: 13 });
+  }
+
   await prisma.$transaction([
     prisma.payment.upsert({
       where: { invoiceId },
@@ -55,32 +60,27 @@ export async function POST(request: Request) {
         userId: invoice.userId,
       },
     }),
-    prisma.subscription.upsert({
+    prisma.userTariff.upsert({
       where: { userId: invoice.userId },
       update: {
-        expiresAt: getNextMonth(),
-        provider: "cloudpayments",
-        status: "active",
+        tariffPlanId: tariffPlan.id,
+        remainingTokens: tariffPlan.tokenAmount,
+        startedAt: new Date(),
+        expiresAt: new Date(Date.now() + tariffPlan.durationDays * 24 * 60 * 60 * 1000),
       },
       create: {
-        expiresAt: getNextMonth(),
-        provider: "cloudpayments",
-        status: "active",
         userId: invoice.userId,
-      },
-    }),
-    prisma.user.update({
-      where: { id: invoice.userId },
-      data: {
-        credits: { increment: 70 },
-        plan: "PRO",
+        tariffPlanId: tariffPlan.id,
+        remainingTokens: tariffPlan.tokenAmount,
+        startedAt: new Date(),
+        expiresAt: new Date(Date.now() + tariffPlan.durationDays * 24 * 60 * 60 * 1000),
       },
     }),
   ]);
 
   const user = await prisma.user.findUnique({
     where: { id: invoice.userId },
-    select: { plan: true, telegramId: true },
+    select: { telegramId: true },
   });
 
   if (user) {
@@ -103,15 +103,11 @@ export async function POST(request: Request) {
     await triggerService.scheduleTrigger(
       "after-payment",
       user.telegramId,
-      user.plan,
+      "PRO",
     );
   }
 
   return NextResponse.json({ code: 0 });
 }
 
-function getNextMonth() {
-  const date = new Date();
-  date.setMonth(date.getMonth() + 1);
-  return date;
-}
+

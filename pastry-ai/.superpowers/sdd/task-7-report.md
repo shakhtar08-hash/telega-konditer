@@ -1,14 +1,22 @@
-# Task 7 Report
+# Task 7: Admin tariffs page — Report
 
-**Status:** ✅ Done
+## Completed
 
-**Changes:**
-- `src/app/api/payments/cloudpayments/route.ts` — imported `createTriggerService`, `TriggerMessageRecord`, `ScheduledMessageRecord`; added trigger scheduling after `prisma.$transaction` (fetches user, creates trigger service with proper typed casts, calls `scheduleTrigger("after-payment", ...)`).
+### Files changed
 
-**Verification:**
-- `npm run typecheck` — ✅ passes (0 errors)
-- `npm run lint` — ✅ passes on changed file; 2 pre-existing `any` errors in `src/bot/commands/start.ts` only (unrelated)
+1. **`src/app/admin/layout.tsx:25`** — Sidebar "Тарифы" link href changed from `/admin/users` to `/admin/tariffs`
+2. **`src/app/admin/admin-pages.test.ts:12`** — Test updated to match new href
+3. **`src/app/admin/tariffs/page.tsx`** (new) — Full CRUD admin page for TariffPlan
 
-**Concerns:**
-- `TriggerMessageRecord` / `ScheduledMessageRecord` are cast over Prisma results — this is a minimal bridge until Prisma-generated types are used.
-- `findPendingScheduled` and `markSent` are stubbed as no-ops (they're only needed in cron processing, not here) — that's expected per the adapter pattern.
+### Page features
+
+- **Data listing**: All TariffPlans ordered by `sortOrder asc`, showing name, tokenAmount, durationDays, sortOrder, active (StatusBadge), createdAt
+- **Create form** (top panel): slug, name, tokenAmount, durationDays, active toggle
+- **Inline editor** (per row): name, tokenAmount, durationDays inputs, active toggle, save button
+- **Toggle button** (per row): "Вкл" / "Выкл" to flip active state
+- **Server actions**: `createTariff`, `updateTariff`, `toggleTariff`
+
+### Verification
+
+- `npm run test -- src/app/admin/` — all admin tests pass
+- `npm run build` — fails only on pre-existing TS error in `src/bot/handlers/single-style-photoshoot.ts` (unrelated)

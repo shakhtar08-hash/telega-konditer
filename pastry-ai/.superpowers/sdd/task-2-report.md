@@ -1,18 +1,22 @@
-# Task 2 Report: CRON_SECRET Environment Variable
+# Task 2 Report: Migration script for existing users
 
-**Status:** ✅ Complete
+## What was implemented
+Created `prisma/migrate-legacy-users.mjs` — a one-shot migration script for existing users.
 
-## What was done
+- Reads the "promo" TariffPlan
+- Iterates all users; skips those already having a UserTariff
+- If `credits > 0`: `remainingTokens = credits`, `expiresAt = now + 3 days`
+- If `credits === 0`: `remainingTokens = 15`, `expiresAt = now + 3 days`
 
-1. Added `CRON_SECRET: z.string().min(1)` to `envSchema` in `src/lib/env.ts`
-2. Added `CRON_SECRET=your-cron-secret-here` to `.env.example`
-3. Committed both changes
+## Files changed
+- Created: `prisma/migrate-legacy-users.mjs`
 
-## Verification
-
-- `npm run lint` — ✅ passed
-- `npm run typecheck` — ✅ passed
+## Self-review findings
+- Syntax check passed (`node --check` exits clean)
+- Script matches the brief exactly
+- Uses `@prisma/adapter-pg` (same pattern as `seed-tariffs.mjs`)
+- Handles missing "promo" plan with clear error message
+- Uses `process.exit(1)` on failure as is standard in Prisma scripts
 
 ## Concerns
-
-None.
+- None. Script is straightforward and follows existing patterns.

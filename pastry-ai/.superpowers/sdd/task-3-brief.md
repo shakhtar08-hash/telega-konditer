@@ -1,198 +1,134 @@
-# Task 3: Trigger Service + Unit Tests
+﻿### Task 3: TariffPlan repository
 
 **Files:**
-- Create: `src/features/triggers/trigger-service.ts`
-- Create: `src/features/triggers/trigger-service.test.ts`
+- Create: `src/db/repositories/tariff-plan-repository.ts`
+- Create: `src/db/repositories/tariff-plan-repository.test.ts`
 
-## Requirements
+**Interfaces:**
+- Produces: `TariffPlanRepository` with `listAll`, `findBySlug`, `findById`, `update`, `create`, `toggleActive`
 
-Create a trigger service with two functions: `scheduleTrigger` and `processPendingTriggers`.
+- [ ] **Step 1: Write the failing tests**
 
-### Step 1: Create test file
-
-`src/features/triggers/trigger-service.test.ts`:
-
+Create `src/db/repositories/tariff-plan-repository.test.ts`:
 ```typescript
 import { describe, expect, it, vi } from "vitest";
-import { createTriggerService } from "./trigger-service";
+import { createTariffPlanRepository } from "./tariff-plan-repository";
 
-describe("createTriggerService", () => {
-  const mockTriggerMessage = {
-    id: "1",
-    slug: "after-start",
-    title: "test",
-    text: "Hello!",
-    delayMinutes: 15,
-    targetPlans: ["FREE"],
-    active: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const findActiveBySlugMock = vi.fn();
-  const createScheduledMock = vi.fn();
-  const findPendingScheduledMock = vi.fn();
-  const markSentMock = vi.fn();
-  const findExistingScheduledMock = vi.fn();
-
-  const service = createTriggerService({
-    findActiveBySlug: findActiveBySlugMock,
-    createScheduled: createScheduledMock,
-    findPendingScheduled: findPendingScheduledMock,
-    markSent: markSentMock,
-    findExistingScheduled: findExistingScheduledMock,
+describe("TariffPlanRepository", () => {
+  it("lists all tariff plans ordered by sortOrder", async () => {
+    const mockDelegate = {
+      findMany: vi.fn().mockResolvedValue([
+        { id: "1", slug: "promo", name: "РџСЂРѕРјРѕ", tokenAmount: 15, durationDays: 3, active: true, sortOrder: 1 },
+        { id: "2", slug: "pastry-chef", name: "РљРѕРЅРґРёС‚РµСЂ", tokenAmount: 100, durationDays: 30, active: true, sortOrder: 2 },
+      ]),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      create: vi.fn(),
+    };
+    const repo = createTariffPlanRepository(mockDelegate as never);
+    const result = await repo.listAll();
+    expect(result).toHaveLength(2);
+    expect(mockDelegate.findMany).toHaveBeenCalledWith({ orderBy: { sortOrder: "asc" } });
   });
 
-  it("schedules a trigger when plan matches targetPlans", async () => {
-    findActiveBySlugMock.mockResolvedValue(mockTriggerMessage);
-    findExistingScheduledMock.mockResolvedValue(null);
-
-    await service.scheduleTrigger("after-start", "12345", "FREE");
-
-    expect(createScheduledMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        triggerSlug: "after-start",
-        chatId: "12345",
-        text: "Hello!",
-      }),
-    );
+  it("finds by slug", async () => {
+    const mockDelegate = {
+      findMany: vi.fn(),
+      findUnique: vi.fn().mockResolvedValue({ id: "1", slug: "promo", name: "РџСЂРѕРјРѕ", tokenAmount: 15, durationDays: 3, active: true, sortOrder: 1 }),
+      update: vi.fn(),
+      create: vi.fn(),
+    };
+    const repo = createTariffPlanRepository(mockDelegate as never);
+    const result = await repo.findBySlug("promo");
+    expect(result?.name).toBe("РџСЂРѕРјРѕ");
+    expect(mockDelegate.findUnique).toHaveBeenCalledWith({ where: { slug: "promo" } });
   });
 
-  it("skips scheduling when plan does not match targetPlans", async () => {
-    findActiveBySlugMock.mockResolvedValue(mockTriggerMessage);
-
-    await service.scheduleTrigger("after-start", "12345", "PRO");
-
-    expect(createScheduledMock).not.toHaveBeenCalled();
-  });
-
-  it("skips scheduling when trigger is not found", async () => {
-    findActiveBySlugMock.mockResolvedValue(null);
-
-    await service.scheduleTrigger("nonexistent", "12345", "FREE");
-
-    expect(createScheduledMock).not.toHaveBeenCalled();
-  });
-
-  it("does not create duplicate pending scheduled message", async () => {
-    findActiveBySlugMock.mockResolvedValue(mockTriggerMessage);
-    findExistingScheduledMock.mockResolvedValue({ id: "existing" });
-
-    await service.scheduleTrigger("after-start", "12345", "FREE");
-
-    expect(createScheduledMock).not.toHaveBeenCalled();
+  it("updates a tariff plan", async () => {
+    const mockDelegate = {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn().mockResolvedValue({ id: "1", slug: "promo", name: "РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№", tokenAmount: 20, durationDays: 5, active: true, sortOrder: 1 }),
+      create: vi.fn(),
+    };
+    const repo = createTariffPlanRepository(mockDelegate as never);
+    const result = await repo.update("1", { name: "РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№", tokenAmount: 20, durationDays: 5 });
+    expect(result.name).toBe("РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№");
+    expect(mockDelegate.update).toHaveBeenCalledWith({
+      where: { id: "1" },
+      data: { name: "РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№", tokenAmount: 20, durationDays: 5 },
+    });
   });
 });
 ```
 
-### Step 2: Create implementation
+- [ ] **Step 2: Run test to verify it fails**
 
-`src/features/triggers/trigger-service.ts`:
+```bash
+npm run test -- src/db/repositories/tariff-plan-repository.test.ts
+```
 
+Expected: FAIL вЂ” module not found
+
+- [ ] **Step 3: Write minimal implementation**
+
+Create `src/db/repositories/tariff-plan-repository.ts`:
 ```typescript
-export type TriggerMessageRecord = {
+export type TariffPlanRecord = {
   id: string;
   slug: string;
-  title: string;
-  text: string;
-  delayMinutes: number;
-  targetPlans: string[];
+  name: string;
+  tokenAmount: number;
+  durationDays: number;
   active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  sortOrder: number;
 };
 
-export type ScheduledMessageRecord = {
-  id: string;
-  triggerSlug: string;
-  chatId: string;
-  text: string;
-  sendAt: Date;
-  sentAt: Date | null;
-  createdAt: Date;
+type TariffPlanDelegate = {
+  findMany(args: { orderBy: Record<string, string> }): Promise<TariffPlanRecord[]>;
+  findUnique(args: { where: { slug?: string; id?: string } }): Promise<TariffPlanRecord | null>;
+  update(args: { where: { id: string }; data: Partial<TariffPlanRecord> }): Promise<TariffPlanRecord>;
+  create(args: { data: Omit<TariffPlanRecord, "id"> }): Promise<TariffPlanRecord>;
 };
 
-type Dependencies = {
-  findActiveBySlug(slug: string): Promise<TriggerMessageRecord | null>;
-  createScheduled(data: {
-    triggerSlug: string;
-    chatId: string;
-    text: string;
-    sendAt: Date;
-  }): Promise<ScheduledMessageRecord>;
-  findExistingScheduled(
-    triggerSlug: string,
-    chatId: string,
-  ): Promise<{ id: string } | null>;
-  findPendingScheduled(
-    limit: number,
-  ): Promise<ScheduledMessageRecord[]>;
-  markSent(id: string): Promise<void>;
-};
-
-export function createTriggerService(deps: Dependencies) {
+export function createTariffPlanRepository(delegate: TariffPlanDelegate) {
   return {
-    async scheduleTrigger(
-      slug: string,
-      chatId: string,
-      plan: string,
-    ): Promise<void> {
-      const trigger = await deps.findActiveBySlug(slug);
-
-      if (!trigger) {
-        return;
-      }
-
-      const plans = trigger.targetPlans as string[];
-
-      if (!plans.includes(plan)) {
-        return;
-      }
-
-      const existing = await deps.findExistingScheduled(slug, chatId);
-
-      if (existing) {
-        return;
-      }
-
-      const sendAt = new Date(Date.now() + trigger.delayMinutes * 60 * 1000);
-
-      await deps.createScheduled({
-        chatId,
-        sendAt,
-        text: trigger.text,
-        triggerSlug: slug,
-      });
+    listAll(): Promise<TariffPlanRecord[]> {
+      return delegate.findMany({ orderBy: { sortOrder: "asc" } });
     },
-
-    async processPendingTriggers(
-      sendMessage: (chatId: string, text: string) => Promise<void>,
-    ): Promise<number> {
-      const pending = await deps.findPendingScheduled(50);
-      let sentCount = 0;
-
-      for (const message of pending) {
-        try {
-          await sendMessage(message.chatId, message.text);
-          await deps.markSent(message.id);
-          sentCount++;
-        } catch (error) {
-          console.error("Failed to send trigger message", {
-            chatId: message.chatId,
-            error,
-          });
-          await deps.markSent(message.id);
-        }
-      }
-
-      return sentCount;
+    findBySlug(slug: string): Promise<TariffPlanRecord | null> {
+      return delegate.findUnique({ where: { slug } });
+    },
+    findById(id: string): Promise<TariffPlanRecord | null> {
+      return delegate.findUnique({ where: { id } });
+    },
+    update(id: string, data: Partial<Omit<TariffPlanRecord, "id" | "slug">>): Promise<TariffPlanRecord> {
+      return delegate.update({ where: { id }, data });
+    },
+    create(data: Omit<TariffPlanRecord, "id">): Promise<TariffPlanRecord> {
+      return delegate.create({ data });
+    },
+    async toggleActive(id: string): Promise<TariffPlanRecord> {
+      const plan = await delegate.findUnique({ where: { id } });
+      if (!plan) throw new Error("Tariff plan not found");
+      return delegate.update({ where: { id }, data: { active: !plan.active } });
     },
   };
 }
 ```
 
-### Verification
+- [ ] **Step 4: Run test to verify it passes**
 
-- `npx vitest run src/features/triggers/trigger-service.test.ts` — all 4 tests pass
-- `npm run typecheck` passes
-- `npm run lint` passes
+```bash
+npm run test -- src/db/repositories/tariff-plan-repository.test.ts
+```
+
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/db/repositories/tariff-plan-repository.ts src/db/repositories/tariff-plan-repository.test.ts
+git commit -m "feat: add TariffPlanRepository"
+```
+
