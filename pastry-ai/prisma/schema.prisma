@@ -35,6 +35,47 @@ model User {
   usage         Usage[]
   subscription  Subscription?
   payments      Payment[]
+  userTariff    UserTariff?
+  tokenUsage    TokenUsage[]
+}
+
+model TariffPlan {
+  id           String       @id @default(cuid())
+  slug         String       @unique
+  name         String
+  tokenAmount  Int
+  durationDays Int
+  active       Boolean      @default(true)
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  userTariffs  UserTariff[]
+}
+
+model UserTariff {
+  id              String     @id @default(cuid())
+  userId          String     @unique
+  tariffPlanId    String
+  remainingTokens Int        @default(0)
+  startedAt       DateTime   @default(now())
+  expiresAt       DateTime
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tariffPlan      TariffPlan @relation(fields: [tariffPlanId], references: [id])
+}
+
+model TokenUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  feature     String
+  promptSlug  String?
+  imagesSent  Int      @default(0)
+  tokensSpent Int      @default(0)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model Conversation {
@@ -92,6 +133,14 @@ model BotMenuButton {
   updatedAt     DateTime          @updatedAt
 
   @@index([active, sortOrder])
+}
+
+model BotTextBlock {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model TelegramSession {
@@ -193,6 +242,7 @@ model TriggerMessage {
   text         String
   delayMinutes Int
   targetPlans  Json
+  buttons      Json?
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -203,6 +253,7 @@ model ScheduledMessage {
   triggerSlug String
   chatId      String
   text        String
+  buttons     Json?
   sendAt      DateTime
   sentAt      DateTime?
   createdAt   DateTime  @default(now())
