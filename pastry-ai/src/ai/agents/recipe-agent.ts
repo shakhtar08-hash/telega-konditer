@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { PromptRecord } from "@/db/repositories/prompt-repository";
 import type { AIService } from "../provider/ai-service";
 import type { RecipeOutput } from "../schemas/recipe";
@@ -26,12 +27,21 @@ export function createRecipeAgent(dependencies: {
         input.ingredientsText,
       );
 
-      return dependencies.aiService.generateText({
+      const recipeSchema = z.object({
+        text: z.string(),
+        dishes: z.array(z.object({
+          name: z.string(),
+          description: z.string(),
+        })).min(1).max(4),
+      });
+
+      return dependencies.aiService.generateObject({
         system: prompt.systemPrompt,
         prompt: renderedPrompt,
         provider: prompt.provider,
         model: prompt.model,
         temperature: prompt.temperature,
+        schema: recipeSchema,
       });
     },
   };

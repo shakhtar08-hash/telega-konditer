@@ -10,9 +10,7 @@ type RecipeAgent = {
   execute(input: RecipeAgentInput): Promise<RecipeOutput>;
 };
 
-export function createRecipeService(dependencies: {
-  recipeAgent: RecipeAgent;
-}) {
+export function createRecipeService(dependencies: { recipeAgent: RecipeAgent }) {
   return {
     async createFromIngredients(input: {
       ingredientsText: string;
@@ -20,11 +18,7 @@ export function createRecipeService(dependencies: {
     }): Promise<RecipeOutput> {
       const parsed = recipeInputSchema.parse(input);
       const ingredientsText = parsed.ingredientsText.trim();
-
-      if (!ingredientsText) {
-        throw new Error("Ingredients are required");
-      }
-
+      if (!ingredientsText) throw new Error("Ingredients are required");
       return dependencies.recipeAgent.execute({
         ingredientsText,
         promptSlug: input.promptSlug,

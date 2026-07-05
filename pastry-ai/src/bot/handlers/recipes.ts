@@ -1,17 +1,14 @@
 import type { Composer } from "grammy";
-import {
-  clearScenarioSession,
-  type BotSession,
-  type PastryBotContext,
-} from "../context";
+import { clearScenarioSession, type BotSession, type PastryBotContext } from "../context";
 import { parseRecipeIntent } from "./recipe-intent";
 import { applyRecipeIntent, type RecipeStateAction } from "./recipe-state";
+import type { RecipeOutput } from "@/ai/schemas/recipe";
 
 type RecipeService = {
   createFromIngredients(input: {
     ingredientsText: string;
     promptSlug?: string;
-  }): Promise<string>;
+  }): Promise<RecipeOutput>;
 };
 
 const processingMessage =
@@ -105,16 +102,16 @@ async function handleIngredientRecipe(
     ctx.session.lastRecipeRequestText,
     result.promptText,
   );
-  const recipeText = await dependencies.recipeService.createFromIngredients({
+  const recipeOutput = await dependencies.recipeService.createFromIngredients({
     ingredientsText,
     promptSlug: ctx.session.lastPromptSlug,
   });
 
   ctx.session.lastRecipeRequestText = result.promptText;
-  ctx.session.lastRecipeListText = recipeText;
+  ctx.session.lastRecipeListText = recipeOutput.text;
   ctx.session.recipeScenarioStep = "results_shown";
 
-  for (const chunk of splitTelegramText(recipeText)) {
+  for (const chunk of splitTelegramText(recipeOutput.text)) {
     await ctx.reply(chunk);
   }
 }
@@ -126,16 +123,16 @@ async function handleSimpleRecipe(
 ) {
   await ctx.reply(processingBestRecipeMessage);
 
-  const recipeText = await dependencies.recipeService.createFromIngredients({
+  const recipeOutput = await dependencies.recipeService.createFromIngredients({
     ingredientsText: text,
     promptSlug: ctx.session.lastPromptSlug,
   });
 
   ctx.session.lastRecipeRequestText = text;
-  ctx.session.lastRecipeListText = recipeText;
+  ctx.session.lastRecipeListText = recipeOutput.text;
   ctx.session.recipeScenarioStep = "results_shown";
 
-  for (const chunk of splitTelegramText(recipeText)) {
+  for (const chunk of splitTelegramText(recipeOutput.text)) {
     await ctx.reply(chunk);
   }
 }
