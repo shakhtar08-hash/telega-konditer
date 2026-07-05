@@ -25,8 +25,8 @@ Prompts are stored in the `Prompt` table and can be edited in `/admin/prompts`.
 - Model: `openai/gpt-4o-mini`
 - Purpose: create realistic pastry recipes from available ingredients.
 - Bot input: text ingredients.
-- Bot output: plain text generated from the prompt. The bot splits long answers into several Telegram messages.
-- The seeded system prompt asks the model to act as a professional pastry technologist, propose only technologically feasible desserts, return `"Нашел X подходящих вариантов."`, include title, fit reason, ingredients with quantities, full technology, time, difficulty, and chef advice, and handle follow-ups such as `"Покажи все"`.
+- Bot output: structured object `{ text, dishes }` via `generateObject`. The bot sends the text (splitting long answers), then generates 0–4 photo examples from `dishes[].description` using OpenRouter/FLUX.
+- The seeded system prompt asks the model to act as a professional pastry technologist, propose only technologically feasible desserts, return text in the standard format, **and return a `dishes` array with `name` and `description` for each suggested dessert (up to 4) for photo generation.**
 
 Local testing note: this prompt uses OpenRouter by default. A valid `OPENROUTER_API_KEY` must be set through `.env` or `/admin/settings`, or the prompt provider/model should be switched to an available provider in `/admin/prompts`.
 
@@ -34,11 +34,13 @@ Local testing note: this prompt uses OpenRouter by default. A valid `OPENROUTER_
 
 These prompts are seeded from `prisma/prompt-sources/prompts.txt`; their system prompt bodies are copied from that source file.
 
-- `best-recipe-search` - `Поиск лучшего рецепта`, provider `openrouter`, model `google/gemini-2.5-pro`.
-- `recipe-recalculation` - `Пересчет рецепта`, provider `openrouter`, model `google/gemini-2.5-pro`.
+- `best-recipe-search` - `Поиск лучшего рецепта`, provider `openrouter`, model `google/gemini-2.5-pro`. Also returns structured output with `dishes` array for photo generation (same as `recipe-from-ingredients`).
+- `recipe-recalculation` - `Пересчёт рецепта`, provider `openrouter`, model `google/gemini-2.5-pro`.
 - `margin-calculator` - `Калькулятор маржи`, provider `openrouter`, model `google/gemini-2.5-pro`.
 
 The Telegram text handler supports any selected prompt with `feature = recipes`, so these prompts can be attached to existing `/admin/chat-bot` buttons by setting the button action to the matching prompt slug.
+
+Photo generation currently applies only to `recipe-from-ingredients` and `best-recipe-search` (they use `generateObject`). Other recipe prompts still return plain text via `generateText`.
 
 ### Dessert Photo Analysis
 
@@ -54,12 +56,12 @@ The Telegram text handler supports any selected prompt with `feature = recipes`,
 
 - Feature: `photoshoot`
 - Slug: `product-photo`
-- Provider: `openai`
-- Model: `gpt-image-1`
-- Purpose: user sends one dessert photo and receives 7 edited images in active `PhotoStyle` styles.
+- Provider: `kie`
+- Model: `flux-kontext-pro`
+- Purpose: user sends one dessert photo and receives styled images based on active `PhotoStyle` records.
 - Bot input: photo.
 - Photo styles come from `PhotoStyle`, not from hardcoded bot text.
-- Important: this scenario currently calls the OpenAI Images Edit API directly. If you switch the prompt to `provider = openrouter` or another model, `Создать фото` will fail; keep `provider = openai` and `model = gpt-image-1`.
+- Important: the seeded flow uses KIE Flux Kontext and requires `KIE_API_KEY` in `.env` or `/admin/settings`. `PhotoStyle.provider` and `PhotoStyle.model` can override the prompt-level provider/model per style.
 
 ### Instagram Carousel
 
@@ -82,12 +84,23 @@ Seeded active styles:
 6. `Праздничная подача`
 7. `Минимализм`
 
-The photoshoot service loads the first 7 active styles by creation order.
+The photoshoot service loads all active styles by creation order.
+
+## Token-Based Photo Access
+
+Each successfully sent image costs 1 token. Text responses are always free.
+
+- **Recipe flows** (`recipe-from-ingredients`, `best-recipe-search`): text is always sent. Photo count = min(dishes.length, remainingTokens, 4).
+- **Photoshoot** (multi-style): all required tokens checked before any generation; if insufficient, none sent.
+- **Single-style photoshoot**: 1 token checked before generation.
+
+Token state is managed by `TokenGuardService` at `src/features/tariffs/token-guard-service.ts`.
 
 ## Provider Notes
 
-- OpenRouter is used for strong multimodal and text reasoning.
-- OpenAI is used for image edits/generation.
+- OpenRouter is used for strong multimodal and text reasoning, and for FLUX text-to-image generation (recipe photos).
+- KIE is used for the seeded dessert photo styling flow (`flux-kontext-pro`).
+- OpenAI remains available for direct image edits/generation.
 - Fal AI was removed from the active system.
 
 ## Prompt Editing Rule

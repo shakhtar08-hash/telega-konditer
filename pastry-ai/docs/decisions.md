@@ -83,3 +83,35 @@ Reason: it is an operational surface for repeated management tasks, not a landin
 Decision: do not commit/push unless explicitly requested.
 
 Reason: user wants to review larger local changes before GitHub updates.
+
+## Tariff/Token Access Instead of Plan Model
+
+Decision: replace FREE/PRO/TEAM plan enum with editable `TariffPlan` records and token-based image access.
+
+Reason: the old three-plan model was rigid and couldn't be changed without code. The new system lets admins create/edit tariffs with custom token amounts and durations, charge 1 token per sent image, and keep text responses always free. Business rules (batch token check, recipe flow exceptions, full tariff replacement on purchase) are centralized in `TokenGuardService`.
+
+Key rules:
+- 1 sent image = 1 token, charged AFTER successful `ctx.replyWithPhoto()`.
+- Text responses are never charged.
+- Batch image flows (photoshoot) check all required tokens before ANY generation.
+- Recipe flows use special logic: text always sent, photos up to min(dishes.length, remainingTokens, 4).
+- New purchase fully replaces old tariff (tokens and expiry discarded).
+- Expired tariff → images blocked, unused tokens lost.
+
+## KIE for Seeded Dessert Photo Styling
+
+Decision: the seeded `Создать фото` flow uses KIE `flux-kontext-pro`.
+
+Reason: the feature takes an input dessert photo and returns styled variants, and the current seeded prompt/photo-style setup is configured around KIE image-to-image generation.
+
+## OpenRouter FLUX for Recipe Photo Generation
+
+Decision: recipe photo examples use OpenRouter/FLUX for text-to-image generation.
+
+Reason: FLUX provides high-quality food photography from text descriptions at lower cost than DALL-E 3. The `generateImage` provider in the AI service already supports OpenRouter with FLUX.
+
+## Structured Recipe Output
+
+Decision: recipe agents return `{ text, dishes }` (via `generateObject`) instead of plain text.
+
+Reason: the recipe flow now generates photo examples of suggested desserts. Structured output (`dishes[]` with `name` and `description`) gives the handler deterministic access to dish data for image generation, avoiding brittle text parsing.

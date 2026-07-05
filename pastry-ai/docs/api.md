@@ -57,7 +57,7 @@ src/app/api/payments/cloudpayments/route.ts
 src/features/payments/cloudpayments.ts
 ```
 
-Payment records are stored in `Payment`, and user access is represented by `Subscription`/`User.plan`.
+Payment records are stored in `Payment`, and user access/token balance is represented by `UserTariff` (backed by `TariffPlan`). On successful payment, the webhook assigns the `pastry-chef` tariff plan via `UserTariff.upsert`, replacing the old tariff completely.
 
 ## AI Providers
 
