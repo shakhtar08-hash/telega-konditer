@@ -1,4 +1,4 @@
-import { InputFile, type Composer } from "grammy";
+import { type Composer } from "grammy";
 import type { PhotoshootOutput } from "@/ai/schemas/photoshoot";
 import { UserFacingError } from "@/lib/user-facing-error";
 import type { PastryBotContext } from "../context";

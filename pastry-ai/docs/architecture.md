@@ -67,6 +67,35 @@ Current AI features:
 - Dessert photo style generation.
 - Instagram carousel copy.
 
+## Token Guard System
+
+The `TokenGuardService` at `src/features/tariffs/token-guard-service.ts` centralizes all token checking and charging:
+
+- `ensureSufficientTokens(userId, required)` — throws `UserFacingError` if tariff expired or insufficient tokens. Used by batch flows (photoshoot).
+- `getAvailablePhotoSlots(userId, maxSlots)` — returns `min(maxSlots, remainingTokens)` or 0 if expired. Used by recipe flows.
+- `chargeTokens(userId, feature, promptSlug, imagesSent)` — decrements `remainingTokens` and writes `TokenUsage` record. Called AFTER successful `ctx.replyWithPhoto()`.
+- `getUserTariffState(userId)` — returns tariff name, slug, remaining tokens, expiry, and expiry status.
+
+## Recipe Flow with Photo Generation
+
+Recipe agents (`recipe-from-ingredients`, `best-recipe-search`) now return structured output:
+
+```typescript
+type RecipeOutput = {
+  text: string;          // Human-readable recipe text
+  dishes: Array<{        // 1-4 dishes for photo generation
+    name: string;
+    description: string;
+  }>;
+};
+```
+
+The recipe text handler sends the text first, then checks available token slots via `TokenGuardService`, generates up to `min(dishes.length, remainingTokens, 4)` photos via OpenRouter/FLUX, and charges 1 token per successful send. If 0 tokens remain, only text is sent with a note about the token limit.
+
+## Photoshoot Flow with Token Guard
+
+Before generating styled images, the photoshoot handler calls `ensureSufficientTokens(userId, styleCount)`. If the user has insufficient tokens for the full batch, no images are generated and a limit message is shown. After each successful image send, 1 token is charged.
+
 ## Local Bot Testing
 
 Use a separate Telegram bot token for local testing. Run Next.js locally, expose `localhost:3000` with ngrok, and set the test bot webhook to:

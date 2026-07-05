@@ -26,6 +26,17 @@
 - Bot menu buttons: admin CRUD with Telegram-style preview, callback routing to prompts, URL buttons with `{{baseUrl}}` resolution.
 - Fixed photo handler middleware chain: `photoshoot` and `vision` photo handlers now call `next()` when session doesn't match, preventing blocking of subsequent handlers.
 - Fixed dessert photo analysis: updated AI SDK 7.x `ImagePart` to `FilePart`, added 120s timeout to `generateText`, split long responses to avoid Telegram 4096-char limit, localized error handler to Russian.
+- Tariff/token access system: `TariffPlan`, `UserTariff`, `TokenUsage` models + migration.
+- Admin CRUD for tariffs at `/admin/tariffs`; sidebar nav link fixed.
+- Admin users page shows tariff name, remaining tokens, expiry; admin can manually edit tokens.
+- `TokenGuardService`: `ensureSufficientTokens`, `getAvailablePhotoSlots`, `chargeTokens`, `getUserTariffState`.
+- `TariffPlanRepository`, `UserTariffRepository`, `TokenUsageRepository` with tests.
+- Migration script (`prisma/migrate-legacy-users.mjs`) for existing users.
+- RecipeAgent returns structured output (`RecipeOutput = { text, dishes }`) via `generateObject`.
+- Recipe flows generate 0-4 photo examples via OpenRouter/FLUX, charged 1 token per successful send.
+- Photoshoot and single-style photoshoot: pre-generation token check, post-send charge.
+- CloudPayments webhook assigns `pastry-chef` tariff plan instead of legacy plan/credits.
+- `userHasTokenAccess()` function added to `access.ts`.
 
 ## Current State
 
@@ -33,27 +44,35 @@ The app can run locally and via ngrok. The test bot can point to the local webho
 
 Admin data is stored in Supabase. If local and server use the same database, changes are shared.
 
+**Tariff/token system is implemented.** Key facts:
+- Tariff plans (Промо, Кондитер, Мастер, Шеф-кондитер) are editable at `/admin/tariffs`.
+- TokenGuardService handles all token checking and charging.
+- Text responses are always free.
+- Recipe flows return structured output (`{ text, dishes }`) with up to 4 AI-generated photo examples.
+- Photos use OpenRouter/FLUX for text-to-image, charged at 1 token per successful send.
+- Photoshoot (multi-image) checks all tokens before any generation; if insufficient, none are sent.
+- CloudPayments webhook assigns `pastry-chef` tariff on successful payment.
+- Existing user `credits` are migrated to `UserTariff` tokens via `prisma/migrate-legacy-users.mjs`.
+
 ## Near-Term Next Steps
 
-- Test the local Telegram bot end to end:
-  - `/start`
-  - access/onboarding
-  - dynamic menu buttons
-  - recipe prompt, including long answers and `/stop`
-  - dessert photo analysis
-  - dessert photo styling
-- Verify OpenRouter credentials or switch recipe prompt provider/model in admin for environments that only have `OPENAI_API_KEY`.
-- Decide what to do with the seeded `Мой профиль` URL button. It currently points to `{{baseUrl}}/profile`, but the app does not yet have a full profile page.
-- Add richer admin editing for `PhotoStyle` if needed.
+- Run `prisma migrate deploy` on the production database to apply the new tariff system migration.
+- Run `node prisma/migrate-legacy-users.mjs` to migrate existing users.
+- Test the local Telegram bot end to end with the new tariff system:
+  - `/start` → prompt menu
+  - recipe prompt with photo generation (verify token charging)
+  - dessert photo analysis (text only, no charge)
+  - photoshoot with insufficient tokens (verify limit message)
+  - photoshoot with sufficient tokens (verify charge)
 - Add a deployment checklist for Coolify/Beget.
 - Commit and push the current local changes when approved.
 
 ## Possible Later Features
 
 - Separate development and production Supabase databases.
-- Full web profile page.
-- Subscription tier rules and usage limits.
+- Full web profile page (replace the `{{baseUrl}}/profile` stub).
 - More detailed cost tracking per provider/model.
 - Admin audit log for prompt/menu/settings changes.
 - Bulk broadcasts and trigger chains.
 - Better media storage for generated images.
+- Multi-tariff purchase support (summing tokens, extending expiry).

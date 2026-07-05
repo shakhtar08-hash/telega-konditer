@@ -6,7 +6,6 @@ import {
 import { AdminButton, AdminSelect } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
 import {
-  getPlanLabel,
   isAppPlan,
   subscriptionPlans,
 } from "@/features/subscriptions/plans";

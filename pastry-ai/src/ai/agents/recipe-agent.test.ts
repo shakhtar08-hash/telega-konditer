@@ -3,8 +3,12 @@ import { createRecipeAgent } from "./recipe-agent";
 
 const recipeTitle =
   "\u0420\u0435\u0446\u0435\u043f\u0442 \u043f\u043e \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u0430\u043c";
-const recipeText =
-  "\u041d\u0430\u0448\u0435\u043b 3 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u0432\u0430\u0440\u0438\u0430\u043d\u0442\u0430.";
+const recipeOutput = {
+  text: "\u041d\u0430\u0448\u0435\u043b 3 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u0432\u0430\u0440\u0438\u0430\u043d\u0442\u0430.",
+  dishes: [
+    { name: "\u0422\u0438\u0440\u0430\u043c\u0438\u0441\u0443", description: "\u041a\u043b\u0430\u0441\u0441\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0438\u0442\u0430\u043b\u044c\u044f\u043d\u0441\u043a\u0438\u0439 \u0434\u0435\u0441\u0435\u0440\u0442" },
+  ],
+};
 
 describe("RecipeAgent", () => {
   it("uses prompt loader and AIService to generate recipe text", async () => {
@@ -26,14 +30,12 @@ describe("RecipeAgent", () => {
         }),
       },
       aiService: {
-        generateText: async (input) => {
+        generateText: async () => "",
+        generateImage: async () => ({ url: "" }),
+        generateObject: async (input) => {
           calls.push(input.prompt);
           calls.push(input.provider);
-          return recipeText;
-        },
-        generateImage: async () => ({ url: "" }),
-        generateObject: async () => {
-          throw new Error("generateObject should not be used for recipe text");
+          return recipeOutput;
         },
       },
     });
@@ -44,7 +46,7 @@ describe("RecipeAgent", () => {
 
     expect(calls[0]).toBe("Ingredients: eggs, butter, flour");
     expect(calls[1]).toBe("openrouter");
-    expect(result).toBe(recipeText);
+    expect(result).toEqual(recipeOutput);
   });
 
   it("loads the selected recipe prompt slug", async () => {
@@ -70,11 +72,9 @@ describe("RecipeAgent", () => {
         },
       },
       aiService: {
-        generateText: async () => recipeText,
+        generateText: async () => "",
         generateImage: async () => ({ url: "" }),
-        generateObject: async () => {
-          throw new Error("generateObject should not be used for recipe text");
-        },
+        generateObject: async () => recipeOutput,
       },
     });
 
