@@ -1,70 +1,36 @@
-﻿### Task 2: Migration script for existing users
+﻿# Task 2: Create sizeConfig and shared render utils
 
-**Files:**
-- Create: `prisma/migrate-legacy-users.mjs`
+**Files to create:**
+- `src/components/recipe-card/templates/size-config.ts`
+- `src/components/recipe-card/templates/utils.ts`
+- `src/components/recipe-card/templates/utils.test.ts`
 
-**Interfaces:**
-- Consumes: `User.credits`, `User.plan`, `Subscription`
-- Produces: `UserTariff` rows for existing users
+**Interfaces produced:**
+- `CardSize = "compact" | "normal" | "long"`
+- `sizeConfig: Record<CardSize, SizeConfigEntry>` with width/minHeight/padding/titleFontSize/bodyFontSize/stepFontSize/gap/heroHeight/maxTips
+- `determineCardSize(recipeText: string): CardSize`
+- `renderMetaHtml(meta: RecipeCardOutput["meta"]): string`
+- `renderIngredientRows(ingredients): string`
+- `renderStepItems(steps): string`
+- `renderTipItems(tips, maxTips): string`
+- `sizeCssVars(size: CardSize): string`
 
-- [ ] **Step 1: Create migration script**
+**Steps (TDD):**
+1. Write failing tests in `utils.test.ts`
+2. Create `size-config.ts`
+3. Create `utils.ts`
+4. Run tests to pass
+5. Commit
 
-Create `prisma/migrate-legacy-users.mjs`:
-```javascript
-// Run once to migrate existing users from credits/plan to UserTariff.
-// Usage: node prisma/migrate-legacy-users.mjs
-import "dotenv/config";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+**Key requirements:**
+- `determineCardSize`: ≤1000 → compact, 1001-2500 → normal, >2500 → long
+- `renderMetaHtml`: only show non-null fields, use emoji icons (⏱ ⭐ 🍪 ⚖️ 📦)
+- `renderTipItems`: limit to `maxTips`, return "" for empty input
+- `sizeCssVars`: returns CSS custom properties string for `:root`
+- Output format: string functions only (no JSX, no runtime deps)
+- All text in Russian
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
-});
-const prisma = new PrismaClient({ adapter });
-
-async function migrate() {
-  const promoPlan = await prisma.tariffPlan.findUnique({ where: { slug: "promo" } });
-  if (!promoPlan) {
-    console.error("Tariff 'promo' not found. Run seed first.");
-    process.exit(1);
-  }
-
-  const users = await prisma.user.findMany({
-    select: { id: true, credits: true },
-  });
-
-  let migrated = 0;
-  for (const user of users) {
-    const existing = await prisma.userTariff.findUnique({ where: { userId: user.id } });
-    if (existing) continue;
-
-    const tokens = user.credits > 0 ? user.credits : 15;
-    await prisma.userTariff.create({
-      data: {
-        userId: user.id,
-        tariffPlanId: promoPlan.id,
-        remainingTokens: tokens,
-        startedAt: new Date(),
-        expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-      },
-    });
-    migrated++;
-  }
-
-  console.log(`Migrated ${migrated} users to UserTariff.`);
-  await prisma.$disconnect();
-}
-
-migrate().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
-```
-
-- [ ] **Step 2: Commit**
-
-```bash
-git add prisma/migrate-legacy-users.mjs
-git commit -m "feat: add legacy user migration script for tariffs"
-```
-
+**sizeConfig values (exact):**
+- compact: width=1080, minHeight=1450, padding=80, titleFontSize=60, bodyFontSize=25, stepFontSize=24, gap=34, heroHeight=320, maxTips=4
+- normal: width=1080, minHeight=1620, padding=70, titleFontSize=56, bodyFontSize=24, stepFontSize=23, gap=30, heroHeight=280, maxTips=3
+- long: width=1080, minHeight=2100, padding=56, titleFontSize=48, bodyFontSize=21, stepFontSize=20, gap=22, heroHeight=220, maxTips=2

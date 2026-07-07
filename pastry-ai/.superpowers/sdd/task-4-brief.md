@@ -1,168 +1,85 @@
-﻿### Task 4: UserTariff repository
+﻿# Task 4: Update dispatcher and remove old templates CSS
 
-**Files:**
-- Create: `src/db/repositories/user-tariff-repository.ts`
-- Create: `src/db/repositories/user-tariff-repository.test.ts`
+**Files to modify:**
+- `src/components/recipe-card/templates.ts` — remove CSS blocks, keep type re-exports + templateNames
+- `src/components/recipe-card/RecipeCard.tsx` — rewrite as dispatcher
 
-**Interfaces:**
-- Produces: `UserTariffRepository` with `findByUserId`, `upsert`, `updateRemainingTokens`
+**Dependencies:**
+- Task 3 created 4 template render functions in `src/components/recipe-card/templates/minimal.ts`, `pinterest.ts`, `luxury.ts`, `dark.ts`
+- Task 2 created `determineCardSize` in `./utils`
 
-- [ ] **Step 1: Write the failing tests**
+**What to do:**
 
-Create `src/db/repositories/user-tariff-repository.test.ts`:
+### templates.ts
+
+Replace the entire file content with:
+
 ```typescript
-import { describe, expect, it, vi } from "vitest";
-import { createUserTariffRepository } from "./user-tariff-repository";
+export type CardTemplate = "minimal" | "pinterest" | "luxury" | "dark";
 
-describe("UserTariffRepository", () => {
-  it("finds user tariff by userId", async () => {
-    const mockDelegate = {
-      findUnique: vi.fn().mockResolvedValue({
-        id: "ut1", userId: "u1", tariffPlanId: "tp1",
-        remainingTokens: 15, startedAt: new Date(), expiresAt: new Date(),
-        tariffPlan: { name: "РџСЂРѕРјРѕ" },
-      }),
-      upsert: vi.fn(),
-      update: vi.fn(),
-    };
-    const repo = createUserTariffRepository(mockDelegate as never);
-    const result = await repo.findByUserId("u1");
-    expect(result?.tariffPlan.name).toBe("РџСЂРѕРјРѕ");
-    expect(result?.remainingTokens).toBe(15);
-  });
+export type { CardSize } from "./size-config";
+export { sizeConfig } from "./size-config";
+export { determineCardSize } from "./utils";
 
-  it("returns null when no tariff found", async () => {
-    const mockDelegate = {
-      findUnique: vi.fn().mockResolvedValue(null),
-      upsert: vi.fn(),
-      update: vi.fn(),
-    };
-    const repo = createUserTariffRepository(mockDelegate as never);
-    const result = await repo.findByUserId("u1");
-    expect(result).toBeNull();
-  });
-
-  it("upserts a user tariff (full replace)", async () => {
-    const mockDelegate = {
-      findUnique: vi.fn(),
-      upsert: vi.fn().mockResolvedValue({
-        id: "ut1", userId: "u1", tariffPlanId: "tp1",
-        remainingTokens: 100, startedAt: new Date(), expiresAt: new Date(Date.now() + 30 * 86400000),
-      }),
-      update: vi.fn(),
-    };
-    const repo = createUserTariffRepository(mockDelegate as never);
-    const result = await repo.upsert("u1", { tariffPlanId: "tp1", remainingTokens: 100, expiresAt: new Date(Date.now() + 30 * 86400000) });
-    expect(result.remainingTokens).toBe(100);
-    expect(mockDelegate.upsert).toHaveBeenCalledWith({
-      where: { userId: "u1" },
-      update: expect.objectContaining({ tariffPlanId: "tp1", remainingTokens: 100 }),
-      create: expect.objectContaining({ userId: "u1", tariffPlanId: "tp1", remainingTokens: 100 }),
-    });
-  });
-});
+export const templateNames: Record<CardTemplate, string> = {
+  minimal: "Minimal",
+  pinterest: "Pinterest",
+  luxury: "Luxury",
+  dark: "Dark Premium",
+};
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+### RecipeCard.tsx
 
-```bash
-npm run test -- src/db/repositories/user-tariff-repository.test.ts
-```
+Replace the entire file content with:
 
-Expected: FAIL
-
-- [ ] **Step 3: Write minimal implementation**
-
-Create `src/db/repositories/user-tariff-repository.ts`:
 ```typescript
-export type UserTariffRecord = {
-  id: string;
-  userId: string;
-  tariffPlanId: string;
-  remainingTokens: number;
-  startedAt: Date;
-  expiresAt: Date;
-  tariffPlan: { name: string; slug: string };
+import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
+import type { CardTemplate, CardSize } from "./templates";
+import { renderMinimalHtml } from "./templates/minimal";
+import { renderPinterestHtml } from "./templates/pinterest";
+import { renderLuxuryHtml } from "./templates/luxury";
+import { renderDarkHtml } from "./templates/dark";
+import { determineCardSize } from "./utils";
+
+const renderers: Record<CardTemplate, typeof renderMinimalHtml> = {
+  minimal: renderMinimalHtml,
+  pinterest: renderPinterestHtml,
+  luxury: renderLuxuryHtml,
+  dark: renderDarkHtml,
 };
 
-type UserTariffDelegate = {
-  findUnique(args: {
-    where: { userId: string };
-    include?: { tariffPlan: { select: { name: boolean; slug: boolean } } };
-  }): Promise<UserTariffRecord | null>;
-  upsert(args: {
-    where: { userId: string };
-    update: {
-      tariffPlanId: string;
-      remainingTokens: number;
-      startedAt: Date;
-      expiresAt: Date;
-    };
-    create: {
-      userId: string;
-      tariffPlanId: string;
-      remainingTokens: number;
-      startedAt: Date;
-      expiresAt: Date;
-    };
-  }): Promise<UserTariffRecord>;
-  update(args: {
-    where: { userId: string };
-    data: { remainingTokens?: number };
-  }): Promise<UserTariffRecord>;
-};
-
-export function createUserTariffRepository(delegate: UserTariffDelegate) {
-  return {
-    findByUserId(userId: string): Promise<UserTariffRecord | null> {
-      return delegate.findUnique({
-        where: { userId },
-        include: { tariffPlan: { select: { name: true, slug: true } } },
-      });
-    },
-    upsert(
-      userId: string,
-      data: { tariffPlanId: string; remainingTokens: number; expiresAt: Date },
-    ): Promise<UserTariffRecord> {
-      return delegate.upsert({
-        where: { userId },
-        update: {
-          tariffPlanId: data.tariffPlanId,
-          remainingTokens: data.remainingTokens,
-          startedAt: new Date(),
-          expiresAt: data.expiresAt,
-        },
-        create: {
-          userId,
-          tariffPlanId: data.tariffPlanId,
-          remainingTokens: data.remainingTokens,
-          startedAt: new Date(),
-          expiresAt: data.expiresAt,
-        },
-      });
-    },
-    updateRemainingTokens(userId: string, remainingTokens: number): Promise<UserTariffRecord> {
-      return delegate.update({
-        where: { userId },
-        data: { remainingTokens },
-      });
-    },
-  };
+export function renderRecipeCardHtml(
+  data: RecipeCardOutput,
+  template: CardTemplate = "minimal",
+  imageUrl?: string,
+  size?: CardSize,
+): string {
+  const effectiveSize: CardSize = size ?? determineCardSize(
+    [data.title, data.description, ...data.ingredients.map((i) => `${i.name} ${i.amount}`), ...data.steps, ...data.tips].join(" "),
+  );
+  return renderers[template](data, imageUrl, effectiveSize);
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+**Key points:**
+- Import `determineCardSize` from `./utils` (not `./templates`)
+- The `renderers` object maps template name to function
+- If `size` is not provided, auto-detect from combined text content
+- Remove all CSS constants (`sharedBase`, `minimalCss`, `pinterestCss`, `luxuryCss`, `darkCss`, `getTemplateCss`)
 
-```bash
-npm run test -- src/db/repositories/user-tariff-repository.test.ts
-```
+## Your Job
 
-Expected: PASS
+1. Read current `templates.ts` and `RecipeCard.tsx`
+2. Rewrite both files as specified above
+3. Run `npm run typecheck` to verify
+4. Commit with: `git commit -m "feat(recipe-card): rewrite dispatcher with per-template routing"`
 
-- [ ] **Step 5: Commit**
+## Report Format
 
-```bash
-git add src/db/repositories/user-tariff-repository.ts src/db/repositories/user-tariff-repository.test.ts
-git commit -m "feat: add UserTariffRepository"
-```
+Write to `C:\Users\Roof\Documents\Телега\pastry-ai\.superpowers\sdd\task-4-report.md`:
+- What you did
+- typecheck result
+- Any concerns
 
+Report back with: Status, commits, test summary, concerns

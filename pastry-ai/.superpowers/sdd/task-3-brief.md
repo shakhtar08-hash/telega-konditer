@@ -1,134 +1,70 @@
-﻿### Task 3: TariffPlan repository
+﻿# Task 3: Create per-template render functions
 
-**Files:**
-- Create: `src/db/repositories/tariff-plan-repository.ts`
-- Create: `src/db/repositories/tariff-plan-repository.test.ts`
+**Files to create:**
+- `src/components/recipe-card/templates/minimal.ts` — export `renderMinimalHtml(data, imageUrl, size): string`
+- `src/components/recipe-card/templates/pinterest.ts` — export `renderPinterestHtml(data, imageUrl, size): string`
+- `src/components/recipe-card/templates/luxury.ts` — export `renderLuxuryHtml(data, imageUrl, size): string`
+- `src/components/recipe-card/templates/dark.ts` — export `renderDarkHtml(data, imageUrl, size): string`
 
-**Interfaces:**
-- Produces: `TariffPlanRepository` with `listAll`, `findBySlug`, `findById`, `update`, `create`, `toggleActive`
+**Dependencies:**
+- From `./size-config`: `CardSize`, `sizeConfig`
+- From `./utils`: `sizeCssVars`, `renderMetaHtml`, `renderIngredientRows`, `renderStepItems`, `renderTipItems`
+- From `@/ai/schemas/recipe-card`: `RecipeCardOutput`
 
-- [ ] **Step 1: Write the failing tests**
+**Key requirements:**
 
-Create `src/db/repositories/tariff-plan-repository.test.ts`:
-```typescript
-import { describe, expect, it, vi } from "vitest";
-import { createTariffPlanRepository } from "./tariff-plan-repository";
+1. Each function returns a complete HTML document string (DOCTYPE + html + head + style + body)
+2. All CSS is inline in `<style>` tags — no external CSS files
+3. Use `sizeCssVars(size)` at the top of each `<style>` block to inject size-based variables
+4. Image rule: if `imageUrl` is undefined or empty, the hero block is completely omitted (NO placeholder, NO emoji, NO prompt text)
+5. Each template has specific block ordering (see below)
+6. Tips section uses `renderTipItems(data.tips, cfg.maxTips)` and only renders if tips exist
+7. Style sheets include `min-height: var(--card-min-height)` on `.recipe-card`
+8. Font imports: Google Fonts (Inter for all, Playfair Display for luxury)
+9. All text in Russian
 
-describe("TariffPlanRepository", () => {
-  it("lists all tariff plans ordered by sortOrder", async () => {
-    const mockDelegate = {
-      findMany: vi.fn().mockResolvedValue([
-        { id: "1", slug: "promo", name: "РџСЂРѕРјРѕ", tokenAmount: 15, durationDays: 3, active: true, sortOrder: 1 },
-        { id: "2", slug: "pastry-chef", name: "РљРѕРЅРґРёС‚РµСЂ", tokenAmount: 100, durationDays: 30, active: true, sortOrder: 2 },
-      ]),
-      findUnique: vi.fn(),
-      update: vi.fn(),
-      create: vi.fn(),
-    };
-    const repo = createTariffPlanRepository(mockDelegate as never);
-    const result = await repo.listAll();
-    expect(result).toHaveLength(2);
-    expect(mockDelegate.findMany).toHaveBeenCalledWith({ orderBy: { sortOrder: "asc" } });
-  });
+## Block ordering per template
 
-  it("finds by slug", async () => {
-    const mockDelegate = {
-      findMany: vi.fn(),
-      findUnique: vi.fn().mockResolvedValue({ id: "1", slug: "promo", name: "РџСЂРѕРјРѕ", tokenAmount: 15, durationDays: 3, active: true, sortOrder: 1 }),
-      update: vi.fn(),
-      create: vi.fn(),
-    };
-    const repo = createTariffPlanRepository(mockDelegate as never);
-    const result = await repo.findBySlug("promo");
-    expect(result?.name).toBe("РџСЂРѕРјРѕ");
-    expect(mockDelegate.findUnique).toHaveBeenCalledWith({ where: { slug: "promo" } });
-  });
+### Minimal: Название → Описание → Фото+Мета → Ингредиенты → Приготовление → Советы → Footer
+- Hero: imageUrl and/or meta inside a `.hero-block`
+- If no imageUrl AND meta is empty → no hero-block
 
-  it("updates a tariff plan", async () => {
-    const mockDelegate = {
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      update: vi.fn().mockResolvedValue({ id: "1", slug: "promo", name: "РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№", tokenAmount: 20, durationDays: 5, active: true, sortOrder: 1 }),
-      create: vi.fn(),
-    };
-    const repo = createTariffPlanRepository(mockDelegate as never);
-    const result = await repo.update("1", { name: "РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№", tokenAmount: 20, durationDays: 5 });
-    expect(result.name).toBe("РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№");
-    expect(mockDelegate.update).toHaveBeenCalledWith({
-      where: { id: "1" },
-      data: { name: "РџСЂРѕРјРѕ РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№", tokenAmount: 20, durationDays: 5 },
-    });
-  });
-});
-```
+### Pinterest: Фото (40-50%) → Название → Описание → Мета → Ингредиенты → Приготовление → Footer
+- Hero: big image at top inside `.hero-area` (full width, height: var(--hero-height)), then content in `.card-content`
+- If no imageUrl → no hero-area at all
+- Pinterest has NO tips section
 
-- [ ] **Step 2: Run test to verify it fails**
+### Luxury: Название → Описание → Мета → Фото+Мета → Ингредиенты → Приготовление → Советы → Footer
+- Same hero logic as minimal (image and/or meta)
+- Playfair Display font for h1 and h2
+- Gold accents (#B88A44, #C8A97E)
 
-```bash
-npm run test -- src/db/repositories/tariff-plan-repository.test.ts
-```
+### Dark: Название → Фото+Мета → Ингредиенты → Приготовление → Footer
+- No description block, no tips section
+- Dark background (#0D0D0D body, #1A1A1A card)
+- Gold accents (#C8A97E)
 
-Expected: FAIL вЂ” module not found
+## Template complete code
 
-- [ ] **Step 3: Write minimal implementation**
+Read the plan file at `C:\Users\Roof\Documents\Телега\pastry-ai\docs\superpowers\plans\2026-07-07-recipe-card-templates-plan.md`, section **Task 3** for the complete HTML code of each template. Use the code verbatim.
 
-Create `src/db/repositories/tariff-plan-repository.ts`:
-```typescript
-export type TariffPlanRecord = {
-  id: string;
-  slug: string;
-  name: string;
-  tokenAmount: number;
-  durationDays: number;
-  active: boolean;
-  sortOrder: number;
-};
+## Your Job
 
-type TariffPlanDelegate = {
-  findMany(args: { orderBy: Record<string, string> }): Promise<TariffPlanRecord[]>;
-  findUnique(args: { where: { slug?: string; id?: string } }): Promise<TariffPlanRecord | null>;
-  update(args: { where: { id: string }; data: Partial<TariffPlanRecord> }): Promise<TariffPlanRecord>;
-  create(args: { data: Omit<TariffPlanRecord, "id"> }): Promise<TariffPlanRecord>;
-};
+1. Create all 4 files with exact code from the plan
+2. Run `npm run typecheck` to verify
+3. Commit with: `git commit -m "feat(recipe-card): add per-template render functions"`
 
-export function createTariffPlanRepository(delegate: TariffPlanDelegate) {
-  return {
-    listAll(): Promise<TariffPlanRecord[]> {
-      return delegate.findMany({ orderBy: { sortOrder: "asc" } });
-    },
-    findBySlug(slug: string): Promise<TariffPlanRecord | null> {
-      return delegate.findUnique({ where: { slug } });
-    },
-    findById(id: string): Promise<TariffPlanRecord | null> {
-      return delegate.findUnique({ where: { id } });
-    },
-    update(id: string, data: Partial<Omit<TariffPlanRecord, "id" | "slug">>): Promise<TariffPlanRecord> {
-      return delegate.update({ where: { id }, data });
-    },
-    create(data: Omit<TariffPlanRecord, "id">): Promise<TariffPlanRecord> {
-      return delegate.create({ data });
-    },
-    async toggleActive(id: string): Promise<TariffPlanRecord> {
-      const plan = await delegate.findUnique({ where: { id } });
-      if (!plan) throw new Error("Tariff plan not found");
-      return delegate.update({ where: { id }, data: { active: !plan.active } });
-    },
-  };
-}
-```
+## Report Format
 
-- [ ] **Step 4: Run test to verify it passes**
+Write your full report to `C:\Users\Roof\Documents\Телега\pastry-ai\.superpowers\sdd\task-3-report.md`:
+- What you implemented
+- What you tested and test results (typecheck)
+- Files changed
+- Self-review findings
+- Any concerns
 
-```bash
-npm run test -- src/db/repositories/tariff-plan-repository.test.ts
-```
-
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/db/repositories/tariff-plan-repository.ts src/db/repositories/tariff-plan-repository.test.ts
-git commit -m "feat: add TariffPlanRepository"
-```
-
+Then report back with:
+- **Status:** DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED
+- Commits created
+- One-line test summary
+- Concerns

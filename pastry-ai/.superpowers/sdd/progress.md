@@ -7,3 +7,6 @@ Task 6: complete (commits 03049df, skip review — small integration)
 Task 7: complete (commits f80e31b, skip review — small integration)
 Task 8: complete (commits e37bccc, all 105 tests pass, build passes)
 Task 6: complete
+Task 1: complete (commits 6f287afb, schema verified)
+Task 2: complete (commits 1aa5b25, 7/7 tests passing)
+Task 3: complete (commits a30b1ce, typecheck pass)

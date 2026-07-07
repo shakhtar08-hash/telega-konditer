@@ -1,22 +1,25 @@
-# Task 1 Report: Prisma Schema + Migration + Seed
+# Task 1 Report: Extend Zod schema with nullable meta fields
 
-## Status: DONE
+## What was implemented
 
-## What was done
-- Added `TriggerMessage` and `ScheduledMessage` models to `prisma/schema.prisma`
-- Ran `npx prisma migrate dev --name add-trigger-messages` — migration created and applied
-- Ran `npx prisma generate` — client regenerated successfully
-- Added seed data for two triggers (`after-start`, `after-payment`) to `prisma/seed.mjs`
-- Ran `npm run seed` — trigger messages seeded successfully
-- Committed all changes
+Added three nullable fields to the `meta` object in `recipeCardOutputSchema`:
+- `difficulty: z.string().nullable()`
+- `storage: z.string().nullable()`
+- `weight: z.string().nullable()`
 
-## Test results
+## What was tested and results
 
-| Command | Result |
-|---|---|
-| `npx prisma migrate dev --name add-trigger-messages` | Migration `20260704112050_add_trigger_messages` created and applied |
-| `npx prisma generate` | Prisma Client regenerated in 269ms |
-| `npm run seed` | `Seeded trigger messages.` — no errors |
+- `npm run typecheck` — passed with zero errors
 
-## Concerns
+## Files changed
+
+- `src/ai/schemas/recipe-card.ts` — extended `meta` Zod object with the three new nullable fields
+
+## Self-review findings
+
+- No downstream code consumes these fields yet, so no other files needed changes.
+- The schema remains backward-compatible since the new fields are nullable (existing parsed data without them would still pass if optional, but `.nullable()` alone still requires the key — noting this is fine since all future AI output will include these keys).
+
+## Issues or concerns
+
 None.
