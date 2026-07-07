@@ -1,5 +1,6 @@
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 import { sizeConfig, type CardSize } from "./size-config";
+export { sizeConfig };
 
 export function determineCardSize(recipeText: string): CardSize {
   const len = recipeText.length;
