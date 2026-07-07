@@ -34,6 +34,55 @@ function formatCardAsText(data: RecipeCardOutput): string {
   return lines.join("\n");
 }
 
+function estimateContentLength(data: RecipeCardOutput): number {
+  const textParts = [
+    data.title,
+    data.description,
+    ...data.ingredients.map((i) => `${i.name} ${i.amount}`),
+    ...data.steps,
+    ...data.tips,
+  ];
+  return textParts.reduce((acc, p) => acc + p.length, 0);
+}
+
+function splitCardData(data: RecipeCardOutput, pageCount: number): RecipeCardOutput[] {
+  if (pageCount <= 1) return [data];
+
+  const perPage = Math.ceil(data.steps.length / pageCount);
+  const result: RecipeCardOutput[] = [];
+
+  for (let i = 0; i < pageCount; i++) {
+    const start = i * perPage;
+    const end = Math.min(start + perPage, data.steps.length);
+    const isFirst = i === 0;
+
+    result.push({
+      title: isFirst ? data.title : `${data.title} (продолжение ${i + 1}/${pageCount})`,
+      description: isFirst ? data.description : "",
+      ingredients: isFirst ? data.ingredients : [],
+      steps: data.steps.slice(start, end),
+      tips: isFirst ? data.tips : [],
+      meta: isFirst ? data.meta : { ...data.meta, time: "", yield: "" },
+    });
+  }
+
+  return result;
+}
+
+async function renderCardToImage(html: string): Promise<string> {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({
+    viewport: { width: 1080, height: 100 },
+  });
+
+  await page.setContent(html);
+  const screenshot = await page.screenshot({ type: "png", fullPage: true });
+  await browser.close();
+
+  const base64 = screenshot.toString("base64");
+  return `data:image/png;base64,${base64}`;
+}
+
 export function createRecipeCardService(dependencies: {
   recipeCardAgent: RecipeCardAgent;
   aiService: AIService;
@@ -43,7 +92,7 @@ export function createRecipeCardService(dependencies: {
       recipeText: string;
       promptSlug?: string;
       template?: CardTemplate;
-    }): Promise<{ url: string } | { text: string }> {
+    }): Promise<{ urls: string[] } | { text: string }> {
       const parsed = recipeCardInputSchema.parse(input);
       const cardData = await dependencies.recipeCardAgent.execute({
         recipeText: parsed.recipeText,
@@ -66,22 +115,18 @@ export function createRecipeCardService(dependencies: {
       }
 
       const size = determineCardSize(parsed.recipeText);
-      const html = renderRecipeCardHtml(cardData, input.template ?? "minimal", imageUrl, size);
+      const contentLength = estimateContentLength(cardData);
+      const pageCount = contentLength > 6000 ? 3 : contentLength > 3000 ? 2 : 1;
+      const pages = splitCardData(cardData, pageCount);
 
       try {
-        const browser = await chromium.launch();
-        const page = await browser.newPage({
-          viewport: { width: 1080, height: 1620 },
-        });
-
-        await page.setContent(html);
-        const screenshot = await page.screenshot({ type: "png" });
-        await browser.close();
-
-        const base64 = screenshot.toString("base64");
-        const dataUrl = `data:image/png;base64,${base64}`;
-
-        return { url: dataUrl };
+        const urls = await Promise.all(
+          pages.map((page) => {
+            const html = renderRecipeCardHtml(page, input.template ?? "minimal", imageUrl, size);
+            return renderCardToImage(html);
+          }),
+        );
+        return { urls };
       } catch (error) {
         console.warn("Recipe card screenshot failed, sending text", error);
         return { text: formatCardAsText(cardData) };

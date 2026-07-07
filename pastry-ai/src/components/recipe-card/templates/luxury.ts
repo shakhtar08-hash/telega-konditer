@@ -29,7 +29,7 @@ body { display: flex; justify-content: center; align-items: center; font-family:
 h1 { font-family: 'Playfair Display', serif; font-size: var(--title-size); font-weight: 700; color: #1a1a2e; line-height: 1.15; }
 .description { font-size: var(--body-size); color: #8a8a9e; font-style: italic; line-height: 1.5; }
 .hero-block { background: #F8F5F0; border-radius: 28px; padding: 40px; display: flex; flex-direction: column; gap: 24px; border: 1px solid #E0D5C5; }
-.hero-img { width: 100%; height: var(--hero-height); object-fit: cover; border-radius: 20px; }
+.hero-img { width: 100%; height: var(--hero-height); object-fit: contain; border-radius: 20px; }
 .meta-row { display: flex; gap: 20px; flex-wrap: wrap; }
 .meta-item { display: flex; align-items: center; gap: 8px; border: 1px solid #C8A97E; padding: 10px 18px; border-radius: 100px; font-size: 18px; color: #8B7355; font-weight: 500; }
 .meta-item span { font-size: 20px; }
@@ -41,7 +41,9 @@ li::marker { color: #B88A44; }
 .ingredient-row { display: flex; justify-content: space-between; font-size: 22px; padding: 8px 0; border-bottom: 1px solid #EDE6DB; }
 .ingredient-name { color: #2d2d44; }
 .ingredient-amount { color: #B88A44; font-weight: 500; }
+.ingredient-section { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: #B88A44; padding: 12px 0 4px; border-bottom: 1px solid #C8A97E; margin-top: 8px; }
 .step-item { font-size: var(--step-size); color: #2d2d44; padding: 6px 0; }
+.step-section-label { font-family: 'Playfair Display', serif; font-weight: 700; color: #B88A44; }
 .tips-section { background: #F8F5F0; border-radius: 16px; padding: 28px 36px; }
 .tip-item { font-size: 20px; color: #2d2d44; padding: 4px 0; }
 .footer { text-align: center; font-size: 16px; color: #A09DB0; margin-top: auto; padding-top: 20px; border-top: 1px solid #EDE6DB; font-style: italic; }

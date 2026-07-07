@@ -37,7 +37,7 @@ export const sizeConfig: Record<CardSize, SizeConfigEntry> = {
   },
   long: {
     width: 1080,
-    minHeight: 2100,
+    minHeight: 2400,
     padding: 56,
     titleFontSize: 48,
     bodyFontSize: 21,

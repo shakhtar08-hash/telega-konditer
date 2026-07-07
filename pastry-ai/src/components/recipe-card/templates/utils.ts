@@ -32,17 +32,33 @@ export function renderMetaHtml(meta: MetaFields): string {
   return `<div class="meta-row">${parts.join("")}</div>`;
 }
 
+export function isSectionHeading(name: string, amount: string): boolean {
+  const trimmed = name.trim();
+  if (!trimmed || amount.trim()) return false;
+  return trimmed.length < 40 && !/\d/.test(trimmed);
+}
+
 export function renderIngredientRows(ingredients: RecipeCardOutput["ingredients"]): string {
   return ingredients
-    .map(
-      (item) =>
-        `<div class="ingredient-row"><span class="ingredient-name">${item.name}</span><span class="ingredient-amount">${item.amount}</span></div>`,
-    )
+    .map((item) => {
+      if (isSectionHeading(item.name, item.amount)) {
+        return `<div class="ingredient-section">${item.name}</div>`;
+      }
+      return `<div class="ingredient-row"><span class="ingredient-name">${item.name}</span><span class="ingredient-amount">${item.amount}</span></div>`;
+    })
     .join("");
 }
 
 export function renderStepItems(steps: string[]): string {
-  return steps.map((step) => `<li class="step-item">${step}</li>`).join("");
+  return steps
+    .map((step) => {
+      const sectionMatch = step.match(/^([А-Яа-яA-Za-z]+[^:]*?):\s*(.+)/);
+      if (sectionMatch) {
+        return `<li class="step-item"><span class="step-section-label">${sectionMatch[1]}:</span> ${sectionMatch[2]}</li>`;
+      }
+      return `<li class="step-item">${step}</li>`;
+    })
+    .join("");
 }
 
 export function renderTipItems(tips: string[], maxTips: number): string {

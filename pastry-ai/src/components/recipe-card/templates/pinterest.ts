@@ -22,7 +22,7 @@ ${sizeCssVars(size)}
 body { display: flex; justify-content: center; align-items: center; font-family: 'Inter', system-ui, sans-serif; background: #F0EBE3; }
 .recipe-card { width: 1080px; min-height: var(--card-min-height); display: flex; flex-direction: column; background: white; border-radius: 32px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.06); }
 .hero-area { height: var(--hero-height); background: linear-gradient(135deg, #E8DFD0 0%, #D6C9B3 100%); position: relative; overflow: hidden; }
-.hero-img { width: 100%; height: 100%; object-fit: cover; }
+.hero-img { width: 100%; height: 100%; object-fit: contain; }
 .hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(transparent, rgba(0,0,0,0.15)); }
 .card-content { padding: var(--card-padding); display: flex; flex-direction: column; gap: var(--gap); }
 h1 { font-size: var(--title-size); font-weight: 700; color: #1a1a2e; line-height: 1.15; }
@@ -37,7 +37,9 @@ li { font-size: 22px; color: #2d2d44; line-height: 1.5; }
 .ingredient-row { display: flex; justify-content: space-between; font-size: 22px; padding: 6px 0; }
 .ingredient-name { color: #2d2d44; }
 .ingredient-amount { color: #8B7355; font-weight: 500; }
+.ingredient-section { font-size: 20px; font-weight: 700; color: #1a1a2e; padding: 10px 0 4px; border-bottom: 2px solid #C8A97E; margin-top: 6px; }
 .step-item { font-size: var(--step-size); color: #2d2d44; padding: 4px 0; border-bottom: 1px solid #F0EBE3; }
+.step-section-label { font-weight: 700; color: #1a1a2e; }
 .footer { text-align: center; font-size: 16px; color: #A09DB0; margin-top: auto; padding-top: 16px; }
 </style>
 </head>

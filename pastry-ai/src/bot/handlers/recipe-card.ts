@@ -15,7 +15,7 @@ type RecipeCardService = {
     recipeText: string;
     promptSlug?: string;
     template: CardTemplate;
-  }): Promise<{ url: string } | { text: string }>;
+  }): Promise<{ urls: string[] } | { text: string }>;
 };
 
 type TokenGuardService = {
@@ -114,13 +114,17 @@ export function registerRecipeCardTemplateCallback(
         template,
       });
 
-      if ("url" in result) {
-        await ctx.replyWithPhoto(
-          toTelegramPhotoInput(result.url, "recipe-card.png"),
-          {
-            caption: `📋 Карточка рецепта готова! (стиль: ${templateNames[template]})`,
-          },
-        );
+      if ("urls" in result) {
+        for (let i = 0; i < result.urls.length; i++) {
+          const caption =
+            i === 0
+              ? `📋 Карточка рецепта готова! (стиль: ${templateNames[template]})`
+              : `📄 Продолжение (${i + 1}/${result.urls.length})`;
+          await ctx.replyWithPhoto(
+            toTelegramPhotoInput(result.urls[i], "recipe-card.png"),
+            { caption },
+          );
+        }
       } else {
         for (const chunk of splitTelegramText(result.text)) {
           await ctx.reply(chunk, { parse_mode: "Markdown" });
