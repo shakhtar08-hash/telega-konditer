@@ -3,6 +3,7 @@ import type { RecipeCardAgentInput } from "@/ai/agents/recipe-card-agent";
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 import { renderRecipeCardHtml } from "@/components/recipe-card/RecipeCard";
 import type { CardTemplate } from "@/components/recipe-card/templates";
+import { determineCardSize } from "@/components/recipe-card/templates/utils";
 import type { AIService } from "@/ai/provider/ai-service";
 import { chromium } from "playwright";
 
@@ -64,7 +65,8 @@ export function createRecipeCardService(dependencies: {
         console.warn("Recipe card image generation failed, using placeholder", error);
       }
 
-      const html = renderRecipeCardHtml(cardData, input.template ?? "minimal", imageUrl);
+      const size = determineCardSize(parsed.recipeText);
+      const html = renderRecipeCardHtml(cardData, input.template ?? "minimal", imageUrl, size);
 
       try {
         const browser = await chromium.launch();
