@@ -45,6 +45,10 @@
 - "Фото по стилю" bot button: shows all active photo styles as inline keyboard, lets user pick one, then processes photo in that single style.
 - **"Поиск бесплатного урока" feature**: new `free-lesson` bot feature with AI agent, service, text handler, prompt (`free-lesson-search`), and bot menu button (sortOrder 5). Users write a topic and get curated free video lesson recommendations.
 - **"Спросить кондитера" feature**: new `ask-chef` bot feature with AI agent, service, text handler, prompt (`ask-chef`), and bot menu button (sortOrder 6). Users ask any pastry-related question and get expert advice.
+- **Recipe card templates redesign**: per-template layout functions (minimal, pinterest, luxury, dark) with proper block ordering and individual CSS.
+- **Card auto-sizing**: compact/normal/long modes with density configuration (padding, fonts, gaps, hero height, max tips) based on content length.
+- **Extended meta block**: nullable difficulty, storage, weight fields in AI schema + prompt, with strict RECIPE METADATA rules for AI generation.
+- **Image handling fix**: hero block omitted entirely when no imageUrl available (no placeholder text, no emoji fallback).
 
 ## Current State
 

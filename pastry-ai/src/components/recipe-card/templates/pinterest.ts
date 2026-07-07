@@ -1,13 +1,12 @@
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 import type { CardSize } from "./size-config";
-import { sizeCssVars, renderMetaHtml, renderIngredientRows, renderStepItems, sizeConfig } from "./utils";
+import { sizeCssVars, renderMetaHtml, renderIngredientRows, renderStepItems } from "./utils";
 
 export function renderPinterestHtml(
   data: RecipeCardOutput,
   imageUrl: string | undefined,
   size: CardSize,
 ): string {
-  const cfg = sizeConfig[size];
   const meta = renderMetaHtml(data.meta);
   const heroHtml = imageUrl
     ? `<div class="hero-area"><img src="${imageUrl}" alt="${data.title}" class="hero-img" /><div class="hero-overlay"></div></div>`
