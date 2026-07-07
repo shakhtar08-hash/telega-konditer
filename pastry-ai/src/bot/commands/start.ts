@@ -129,6 +129,7 @@ export function registerStartCommand(
     if (await isTariffExpired(ctx)) return;
 
     if (item.feature === "photoshoot-pick-style" || item.slug === "pick-style") {
+      console.log("DEBUG: photoshoot-pick-style matched", { feature: item.feature, slug: item.slug });
       const { prisma } = await import("@/db/prisma");
       const styles = await prisma.photoStyle.findMany({
         orderBy: { createdAt: "asc" },
@@ -154,6 +155,8 @@ export function registerStartCommand(
       );
       return;
     }
+
+    console.log("DEBUG menu: not photoshoot-pick-style, falling through", { feature: item.feature, slug: item.slug });
 
     setActivePrompt(
       ctx.session,
