@@ -64,6 +64,35 @@ export function registerStartCommand(
 
     const feature = ctx.match[1];
     const slug = ctx.match[2];
+
+    if (feature === "photoshoot-pick-style" || slug === "pick-style") {
+      await ctx.answerCallbackQuery();
+      const { prisma } = await import("@/db/prisma");
+      const styles = await prisma.photoStyle.findMany({
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true },
+        where: { active: true },
+      });
+
+      if (styles.length === 0) {
+        await ctx.reply("Нет активных стилей. Создайте стили в админке.");
+        return;
+      }
+
+      const keyboard: InlineKeyboardButton[][] = styles.map((style) => [
+        {
+          callback_data: `photoshoot-style:${style.id}`,
+          text: style.name,
+        },
+      ]);
+
+      await ctx.reply(
+        "Вы выбрали: Фото по стилю\n\nВыберите визуальный стиль для обработки фото:",
+        { reply_markup: { inline_keyboard: keyboard } },
+      );
+      return;
+    }
+
     const item = await findPromptMenuItem(feature, slug);
 
     await ctx.answerCallbackQuery();
