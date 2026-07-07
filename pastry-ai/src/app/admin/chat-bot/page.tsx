@@ -83,6 +83,18 @@ export async function updateBotMenuButton(formData: FormData) {
 
   const target = parsePromptTarget(promptTarget);
 
+  // Если promptTarget не выбран, сохраняем существующие значения
+  let promptFeature = target.feature || null;
+  let promptSlug = target.slug || null;
+  if (!promptFeature && actionTypeRaw === "PROMPT") {
+    const existing = await prisma.botMenuButton.findUnique({
+      where: { id },
+      select: { promptFeature: true, promptSlug: true },
+    });
+    promptFeature = existing?.promptFeature ?? null;
+    promptSlug = existing?.promptSlug ?? null;
+  }
+
   await prisma.botMenuButton.update({
     data: {
       actionType: actionTypeRaw,
@@ -90,8 +102,8 @@ export async function updateBotMenuButton(formData: FormData) {
       description,
       emoji,
       label,
-      promptFeature: actionTypeRaw === "PROMPT" ? target.feature || null : null,
-      promptSlug: actionTypeRaw === "PROMPT" ? target.slug || null : null,
+      promptFeature: actionTypeRaw === "PROMPT" ? promptFeature : null,
+      promptSlug: actionTypeRaw === "PROMPT" ? promptSlug : null,
       sortOrder,
       url: actionTypeRaw === "URL" ? url || null : null,
     },
