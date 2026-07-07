@@ -50,12 +50,12 @@ export function createRecipeCardService(dependencies: {
         promptSlug: input.promptSlug,
       });
 
-      const imagePrompt = `Профессиональная фотография десерта "${cardData.title}" — ${cardData.description}. Реалистичная съёмка, мягкий свет, аппетитная подача, ресторанная презентация.`;
+      const imagePrompt = `Профессиональная фотография десерта "${cardData.title}" — ${cardData.description}. Реалистичная съёмка, мягкий свет, аппетитная подача, ресторанная презентация. Generate a horizontal hero image for a recipe card. Aspect ratio: wide horizontal composition. The dessert must be fully visible. Do not crop the top, sides, or bottom of the dessert. Leave generous margins around the subject. Avoid extreme close-ups. The dessert should occupy approximately 60-70% of the frame. Centered composition. No extreme close-up, no macro shot, no cropped dessert, no partial dessert.`;
 
       let imageUrl: string | undefined;
       try {
         const result = await dependencies.aiService.generateImage({
-          aspectRatio: "3:4",
+          aspectRatio: "16:9",
           provider: "kie",
           model: "flux-kontext-pro",
           prompt: imagePrompt,
