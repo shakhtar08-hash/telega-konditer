@@ -6,8 +6,10 @@ export function renderLuxuryHtml(
   data: RecipeCardOutput,
   imageUrl: string | undefined,
   size: CardSize,
+  pageLabel?: string,
 ): string {
   const cfg = sizeConfig[size];
+  const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
   const meta = renderMetaHtml(data.meta);
   const heroHtml = imageUrl
     ? `<div class="hero-block"><img src="${imageUrl}" alt="${data.title}" class="hero-img" />${meta}</div>`
@@ -65,7 +67,7 @@ ${heroHtml}
 <ol>${renderStepItems(data.steps)}</ol>
 </section>
 ${tipHtml}
-<div class="footer">AI Кондитер · рецепт создан с помощью нейросети</div>
+<div class="footer">${footerText}</div>
 </div>
 </body>
 </html>`;

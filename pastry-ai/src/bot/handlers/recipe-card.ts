@@ -119,7 +119,7 @@ export function registerRecipeCardTemplateCallback(
           const caption =
             i === 0
               ? `📋 Карточка рецепта готова! (стиль: ${templateNames[template]})`
-              : `📄 Продолжение (${i + 1}/${result.urls.length})`;
+              : `📄 ${result.urls.length > 1 ? `Часть ${i + 1}/${result.urls.length}` : ""}`;
           await ctx.replyWithPhoto(
             toTelegramPhotoInput(result.urls[i], "recipe-card.png"),
             { caption },

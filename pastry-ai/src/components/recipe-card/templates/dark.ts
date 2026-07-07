@@ -6,7 +6,9 @@ export function renderDarkHtml(
   data: RecipeCardOutput,
   imageUrl: string | undefined,
   size: CardSize,
+  pageLabel?: string,
 ): string {
+  const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
   const meta = renderMetaHtml(data.meta);
   const heroHtml = imageUrl
     ? `<div class="hero-block"><img src="${imageUrl}" alt="${data.title}" class="hero-img" />${meta}</div>`
@@ -56,7 +58,7 @@ ${heroHtml}
 <h2>Приготовление</h2>
 <ol>${renderStepItems(data.steps)}</ol>
 </section>
-<div class="footer">AI Кондитер · рецепт создан с помощью нейросети</div>
+<div class="footer">${footerText}</div>
 </div>
 </body>
 </html>`;

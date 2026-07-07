@@ -6,6 +6,7 @@ export function renderMinimalHtml(
   data: RecipeCardOutput,
   imageUrl: string | undefined,
   size: CardSize,
+  pageLabel?: string,
 ): string {
   const cfg = sizeConfig[size];
   const meta = renderMetaHtml(data.meta);
@@ -15,6 +16,7 @@ export function renderMinimalHtml(
   const tipHtml = data.tips.length > 0
     ? `<div class="tips-section"><h2>💡 Советы</h2><ul>${renderTipItems(data.tips, cfg.maxTips)}</ul></div>`
     : "";
+  const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
 
   return `<!DOCTYPE html>
 <html>
@@ -65,7 +67,7 @@ ${heroHtml}
 <ol>${renderStepItems(data.steps)}</ol>
 </section>
 ${tipHtml}
-<div class="footer">AI Кондитер · рецепт создан с помощью нейросети</div>
+<div class="footer">${footerText}</div>
 </div>
 </body>
 </html>`;

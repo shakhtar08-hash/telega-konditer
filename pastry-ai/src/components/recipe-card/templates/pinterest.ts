@@ -6,7 +6,9 @@ export function renderPinterestHtml(
   data: RecipeCardOutput,
   imageUrl: string | undefined,
   size: CardSize,
+  pageLabel?: string,
 ): string {
+  const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
   const meta = renderMetaHtml(data.meta);
   const heroHtml = imageUrl
     ? `<div class="hero-area"><img src="${imageUrl}" alt="${data.title}" class="hero-img" /><div class="hero-overlay"></div></div>`
@@ -58,7 +60,7 @@ ${meta}
 <h2>Приготовление</h2>
 <ol>${renderStepItems(data.steps)}</ol>
 </section>
-<div class="footer">AI Кондитер · рецепт создан с помощью нейросети</div>
+<div class="footer">${footerText}</div>
 </div>
 </div>
 </body>

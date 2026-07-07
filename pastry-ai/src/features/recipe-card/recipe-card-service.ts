@@ -45,28 +45,55 @@ function estimateContentLength(data: RecipeCardOutput): number {
   return textParts.reduce((acc, p) => acc + p.length, 0);
 }
 
-function splitCardData(data: RecipeCardOutput, pageCount: number): RecipeCardOutput[] {
-  if (pageCount <= 1) return [data];
+type CardPage = {
+  data: RecipeCardOutput;
+  pageLabel?: string;
+};
 
-  const perPage = Math.ceil(data.steps.length / pageCount);
-  const result: RecipeCardOutput[] = [];
+function buildCardPages(data: RecipeCardOutput): CardPage[] {
+  const totalSteps = data.steps.length;
+  const contentLength = estimateContentLength(data);
 
-  for (let i = 0; i < pageCount; i++) {
-    const start = i * perPage;
-    const end = Math.min(start + perPage, data.steps.length);
-    const isFirst = i === 0;
+  if (contentLength <= 3000 || totalSteps <= 4) {
+    return [{ data }];
+  }
 
-    result.push({
-      title: isFirst ? data.title : `${data.title} (продолжение ${i + 1}/${pageCount})`,
-      description: isFirst ? data.description : "",
-      ingredients: isFirst ? data.ingredients : [],
-      steps: data.steps.slice(start, end),
-      tips: isFirst ? data.tips : [],
-      meta: isFirst ? data.meta : { ...data.meta, time: "", yield: "" },
+  const stepsPerPage = Math.ceil(totalSteps / 2);
+  const needsThirdPage = totalSteps > stepsPerPage * 2;
+  const pageCount = needsThirdPage ? 3 : 2;
+
+  const pages: CardPage[] = [];
+
+  // Page 1: photo, title, description, meta, ingredients
+  pages.push({
+    data: {
+      ...data,
+      steps: [],
+      tips: [],
+    },
+    pageLabel: `Карточка 1/${pageCount}`,
+  });
+
+  // Middle page(s): steps
+  for (let i = 1; i < pageCount; i++) {
+    const start = (i - 1) * stepsPerPage;
+    const end = i < pageCount - 1 ? i * stepsPerPage : totalSteps;
+    const isLast = i === pageCount - 1;
+
+    pages.push({
+      data: {
+        title: data.title,
+        description: "",
+        ingredients: [],
+        steps: data.steps.slice(start, end),
+        tips: isLast ? data.tips : [],
+        meta: { time: "", yield: "", difficulty: null, storage: null, weight: null },
+      },
+      pageLabel: `Карточка ${i + 1}/${pageCount}`,
     });
   }
 
-  return result;
+  return pages;
 }
 
 async function renderCardToImage(html: string): Promise<string> {
@@ -115,14 +142,12 @@ export function createRecipeCardService(dependencies: {
       }
 
       const size = determineCardSize(parsed.recipeText);
-      const contentLength = estimateContentLength(cardData);
-      const pageCount = contentLength > 6000 ? 3 : contentLength > 3000 ? 2 : 1;
-      const pages = splitCardData(cardData, pageCount);
+      const pages = buildCardPages(cardData);
 
       try {
         const urls = await Promise.all(
           pages.map((page) => {
-            const html = renderRecipeCardHtml(page, input.template ?? "minimal", imageUrl, size);
+            const html = renderRecipeCardHtml(page.data, input.template ?? "minimal", imageUrl, size, page.pageLabel);
             return renderCardToImage(html);
           }),
         );

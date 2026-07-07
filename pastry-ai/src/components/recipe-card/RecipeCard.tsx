@@ -18,9 +18,10 @@ export function renderRecipeCardHtml(
   template: CardTemplate = "minimal",
   imageUrl?: string,
   size?: CardSize,
+  pageLabel?: string,
 ): string {
   const effectiveSize: CardSize = size ?? determineCardSize(
     [data.title, data.description, ...data.ingredients.map((i) => `${i.name} ${i.amount}`), ...data.steps, ...data.tips].join(" "),
   );
-  return renderers[template](data, imageUrl, effectiveSize);
+  return renderers[template](data, imageUrl, effectiveSize, pageLabel);
 }
