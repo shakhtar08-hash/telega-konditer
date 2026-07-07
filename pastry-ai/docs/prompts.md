@@ -25,8 +25,8 @@ Prompts are stored in the `Prompt` table and can be edited in `/admin/prompts`.
 - Model: `openai/gpt-4o-mini`
 - Purpose: create realistic pastry recipes from available ingredients.
 - Bot input: text ingredients.
-- Bot output: structured object `{ text, dishes }` via `generateObject`. The bot sends the text (splitting long answers), then generates 0–4 photo examples from `dishes[].description` using OpenRouter/FLUX.
-- The seeded system prompt asks the model to act as a professional pastry technologist, propose only technologically feasible desserts, return text in the standard format, **and return a `dishes` array with `name` and `description` for each suggested dessert (up to 4) for photo generation.**
+- Bot output: structured object `{ text, dishes }` via `generateObject`. The bot sends the text (splitting long answers), then generates 0–4 photo examples from `dishes[].description` using KIE `flux-kontext-pro`.
+- The seeded system prompt is a detailed multi-section prompt that includes role definition, task description, output format (name, ingredients, full technology, time, complexity, chef's tip, image description), selection rules, edge cases handling, and style guidance. It asks the model to return up to 4 dishes with `name` and `description` fields for photo generation.
 
 Local testing note: this prompt uses OpenRouter by default. A valid `OPENROUTER_API_KEY` must be set through `.env` or `/admin/settings`, or the prompt provider/model should be switched to an available provider in `/admin/prompts`.
 
@@ -86,9 +86,14 @@ Seeded active styles:
 
 The photoshoot service loads all active styles by creation order.
 
-## Token-Based Photo Access
+## Tariff Access and Photo Tokens
 
-Each successfully sent image costs 1 token. Text responses are always free.
+Text AI scenarios require an active, non-expired tariff. They do not spend tokens by themselves.
+
+Each successfully sent image costs 1 token.
+
+- New users receive the `promo` tariff on their first `/start`.
+- When a tariff expires, access to both text and image AI scenarios is blocked until a new tariff is assigned or purchased.
 
 - **Recipe flows** (`recipe-from-ingredients`, `best-recipe-search`): text is always sent. Photo count = min(dishes.length, remainingTokens, 4).
 - **Photoshoot** (multi-style): all required tokens checked before any generation; if insufficient, none sent.
@@ -98,8 +103,8 @@ Token state is managed by `TokenGuardService` at `src/features/tariffs/token-gua
 
 ## Provider Notes
 
-- OpenRouter is used for strong multimodal and text reasoning, and for FLUX text-to-image generation (recipe photos).
-- KIE is used for the seeded dessert photo styling flow (`flux-kontext-pro`).
+- OpenRouter is used for strong multimodal and text reasoning.
+- KIE is used for the seeded dessert photo styling flow and recipe photo generation (`flux-kontext-pro`).
 - OpenAI remains available for direct image edits/generation.
 - Fal AI was removed from the active system.
 

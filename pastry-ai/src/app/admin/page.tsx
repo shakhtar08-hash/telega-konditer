@@ -380,7 +380,7 @@ export default async function AdminDashboardPage() {
                 <span className="text-[#97a4b8]">{getPlanLabel(user.plan)}</span>
                 <span>{user.credits} фото</span>
                 <span className="text-xs text-[#97a4b8]">
-                  {user.createdAt.toISOString().slice(0, 10)}
+                  {new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", year: "numeric", month: "2-digit", day: "2-digit" }).format(user.createdAt)}
                 </span>
               </div>
             ))}

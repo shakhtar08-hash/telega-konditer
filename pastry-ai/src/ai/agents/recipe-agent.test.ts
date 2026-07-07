@@ -5,9 +5,19 @@ import { createRecipeAgent } from "./recipe-agent";
 const recipeTitle =
   "\u0420\u0435\u0446\u0435\u043f\u0442 \u043f\u043e \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u0430\u043c";
 const recipeOutput = {
-  text: "\u041d\u0430\u0448\u0435\u043b 3 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u0432\u0430\u0440\u0438\u0430\u043d\u0442\u0430.",
-  dishes: [
-    { name: "\u0422\u0438\u0440\u0430\u043c\u0438\u0441\u0443", description: "\u041a\u043b\u0430\u0441\u0441\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0438\u0442\u0430\u043b\u044c\u044f\u043d\u0441\u043a\u0438\u0439 \u0434\u0435\u0441\u0435\u0440\u0442" },
+  recipes: [
+    {
+      name: "\u0422\u0438\u0440\u0430\u043c\u0438\u0441\u0443",
+      whyFits: "\u041f\u043e\u0434\u0445\u043e\u0434\u0438\u0442 \u043f\u043e \u043d\u0430\u0431\u043e\u0440\u0443 \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u043e\u0432.",
+      ingredients: ["\u041c\u0430\u0441\u043a\u0430\u0440\u043f\u043e\u043d\u0435 - 250 \u0433"],
+      steps: ["\u0421\u043c\u0435\u0448\u0430\u0439\u0442\u0435 \u043e\u0441\u043d\u043e\u0432\u0443.", "\u041e\u0445\u043b\u0430\u0434\u0438\u0442\u0435.", "\u0421\u043e\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0435\u0441\u0435\u0440\u0442."],
+      activeTime: "20 \u043c\u0438\u043d\u0443\u0442",
+      chillingTime: "4 \u0447\u0430\u0441\u0430",
+      totalTime: "4 \u0447\u0430\u0441\u0430 20 \u043c\u0438\u043d\u0443\u0442",
+      difficulty: "easy",
+      pastryTip: "\u041d\u0435 \u043f\u0435\u0440\u0435\u0432\u0437\u0431\u0438\u0432\u0430\u0439\u0442\u0435 \u043a\u0440\u0435\u043c.",
+      imagePrompt: "Luxury tiramisu in an elegant glass cup, ultra realistic pastry photography.",
+    },
   ],
 };
 
@@ -41,6 +51,7 @@ describe("RecipeAgent", () => {
         generateObject: async (input: Record<string, unknown>) => {
           calls.push(input.prompt as string);
           calls.push(input.provider as string);
+          calls.push(input.system as string);
           return recipeOutput;
         },
       } as AIService,
@@ -52,6 +63,7 @@ describe("RecipeAgent", () => {
 
     expect(calls[0]).toBe("Ingredients: eggs, butter, flour");
     expect(calls[1]).toBe("openrouter");
+    expect(calls[2]).toContain("imagePrompt must be one paragraph");
     expect(result).toEqual(recipeOutput);
   });
 

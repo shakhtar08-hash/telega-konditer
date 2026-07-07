@@ -32,7 +32,7 @@ AI Pastry Assistant is a Next.js App Router application with a Telegram bot, adm
 3. The route claims the Telegram `update_id` in `TelegramSession` before handling it. Duplicate retry deliveries return `200 OK` without running handlers again.
 4. The route creates Prisma repositories, prompt loader, AI service, feature services, and the grammY bot.
 5. Bot middleware sets auth/subscription context and uses persistent grammY session storage backed by `TelegramSession`.
-6. `/start` and `/menu` register the user, clear the active scenario state, and either show onboarding or the prompt menu.
+6. `/start` and `/menu` register the user, assign the `promo` tariff if the user has no tariff yet, clear the active scenario state, and either show onboarding or the prompt menu.
 7. The prompt menu is built from `BotMenuButton` rows if they exist; otherwise it falls back to active prompts.
 8. Prompt buttons start a fresh scenario session by setting `ctx.session.lastFeature` and `ctx.session.lastPromptSlug` and clearing stale recipe follow-up context.
 9. Text/photo handlers use that persistent session state to route inputs to recipe, vision, or photoshoot services.
@@ -51,7 +51,7 @@ Admin pages are server-rendered under `/admin` and protected by middleware/sessi
 - `/admin/photo-styles` - photo style records.
 - `/admin/funnel` - onboarding/funnel messages and buttons.
 - `/admin/settings` - API key management and environment status.
-- `/admin/users` - users and manual subscription plan editing.
+- `/admin/users` - users and manual tariff assignment/editing.
 - `/admin/history`, `/admin/usage` - conversations and usage/cost tracking.
 
 ## AI Feature Flow
@@ -66,6 +66,8 @@ Current AI features:
 - Dessert photo analysis.
 - Dessert photo style generation.
 - Instagram carousel copy.
+
+Text AI scenarios now require an active, non-expired `UserTariff`. They do not spend tokens by themselves; token charging is still only for image sends.
 
 ## Token Guard System
 

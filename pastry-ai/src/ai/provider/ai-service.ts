@@ -21,6 +21,7 @@ export type GenerateImageInput = {
   model: string;
   imageUrl?: string;
   size?: "1024x1024" | "1024x1536" | "1536x1024";
+  aspectRatio?: string;
 };
 
 export type AIService = {

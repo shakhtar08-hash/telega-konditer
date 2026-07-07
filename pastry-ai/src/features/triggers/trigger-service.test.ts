@@ -8,7 +8,7 @@ describe("createTriggerService", () => {
     title: "test",
     text: "Hello!",
     delayMinutes: 15,
-    targetPlans: ["FREE"],
+    targetPlans: ["promo"],
     active: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -36,7 +36,7 @@ describe("createTriggerService", () => {
     findActiveBySlugMock.mockResolvedValue(mockTriggerMessage);
     findExistingScheduledMock.mockResolvedValue(null);
 
-    await service.scheduleTrigger("after-start", "12345", "FREE");
+    await service.scheduleTrigger("after-start", "12345", "promo");
 
     expect(createScheduledMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -50,7 +50,7 @@ describe("createTriggerService", () => {
   it("skips scheduling when plan does not match targetPlans", async () => {
     findActiveBySlugMock.mockResolvedValue(mockTriggerMessage);
 
-    await service.scheduleTrigger("after-start", "12345", "PRO");
+    await service.scheduleTrigger("after-start", "12345", "pastry-chef");
 
     expect(createScheduledMock).not.toHaveBeenCalled();
   });
@@ -58,7 +58,7 @@ describe("createTriggerService", () => {
   it("skips scheduling when trigger is not found", async () => {
     findActiveBySlugMock.mockResolvedValue(null);
 
-    await service.scheduleTrigger("nonexistent", "12345", "FREE");
+    await service.scheduleTrigger("nonexistent", "12345", "promo");
 
     expect(createScheduledMock).not.toHaveBeenCalled();
   });
@@ -80,7 +80,7 @@ describe("createTriggerService", () => {
     findActiveBySlugMock.mockResolvedValue(mockTriggerMessage);
     findExistingScheduledMock.mockResolvedValue({ id: "existing" });
 
-    await service.scheduleTrigger("after-start", "12345", "FREE");
+    await service.scheduleTrigger("after-start", "12345", "promo");
 
     expect(createScheduledMock).not.toHaveBeenCalled();
   });

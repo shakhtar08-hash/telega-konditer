@@ -9,7 +9,7 @@ export const photoStyles = [
     prompt:
       "Тёмный премиальный фон, мягкий боковой свет, глубокие тени, богатый контраст, элегантная атмосфера",
     provider: "kie",
-    model: "gpt-image-2",
+    model: "flux-kontext-pro",
   },
   {
     name: "Витрина кондитерской",
@@ -17,7 +17,7 @@ export const photoStyles = [
     prompt:
       "Светлая витрина, мягкие отражения на стекле, уютная атмосфера, аппетитная подача десерта",
     provider: "kie",
-    model: "gpt-image-2",
+    model: "flux-kontext-pro",
   },
   {
     name: "Каталог",
@@ -25,7 +25,7 @@ export const photoStyles = [
     prompt:
       "Белый фон, ракурс 3/4, нейтральный свет, минималистичная сервировка, коммерческая предметная съёмка",
     provider: "kie",
-    model: "gpt-image-2",
+    model: "flux-kontext-pro",
   },
   {
     name: "Крупный план",
@@ -33,7 +33,7 @@ export const photoStyles = [
     prompt:
       "Макросъёмка, видимая текстура десерта, мягкий естественный свет, внимание к слоям и деталям",
     provider: "kie",
-    model: "gpt-image-2",
+    model: "flux-kontext-pro",
   },
   {
     name: "Кофейня",
@@ -41,7 +41,7 @@ export const photoStyles = [
     prompt:
       "Уютное кафе, деревянный стол, тёплый свет, чашка кофе рядом, расслабленная food-съёмка",
     provider: "kie",
-    model: "gpt-image-2",
+    model: "flux-kontext-pro",
   },
   {
     name: "Праздничная подача",
@@ -49,7 +49,7 @@ export const photoStyles = [
     prompt:
       "Праздничный декор, свечи на фоне, богатая подача, золотые акценты, торжественная атмосфера",
     provider: "kie",
-    model: "gpt-image-2",
+    model: "flux-kontext-pro",
   },
   {
     name: "Минимализм",
@@ -57,7 +57,7 @@ export const photoStyles = [
     prompt:
       "Минималистичный интерьер, приглушённый свет, чистые линии, нейтральные тона, акцент на форме",
     provider: "kie",
-    model: "gpt-image-2",
+    model: "flux-kontext-pro",
   },
 ];
 

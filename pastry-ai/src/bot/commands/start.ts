@@ -1,4 +1,5 @@
 import type { Composer } from "grammy";
+import type { InlineKeyboardButton } from "grammy/types";
 import { userHasPromptAccess } from "../access";
 import {
   clearScenarioSession,
@@ -6,9 +7,12 @@ import {
   type PastryBotContext,
 } from "../context";
 import {
+  buildExpiredTariffKeyboard,
   buildOnboardingKeyboard,
   buildPaymentUrl,
   getOnboardingStep,
+  isPublicAppBaseUrl,
+  loadExpiredTariffStep,
   loadOnboardingSteps,
   resolveBuyButtonUrl,
 } from "../onboarding";
@@ -56,6 +60,8 @@ export function registerStartCommand(
   });
 
   composer.callbackQuery(/^prompt:([^:]+):(.+)$/, async (ctx) => {
+    if (await isTariffExpired(ctx)) return;
+
     const feature = ctx.match[1];
     const slug = ctx.match[2];
     const item = await findPromptMenuItem(feature, slug);
@@ -91,6 +97,35 @@ export function registerStartCommand(
       return;
     }
 
+    if (await isTariffExpired(ctx)) return;
+
+    if (item.feature === "photoshoot-pick-style" || item.slug === "pick-style") {
+      const { prisma } = await import("@/db/prisma");
+      const styles = await prisma.photoStyle.findMany({
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true },
+        where: { active: true },
+      });
+
+      if (styles.length === 0) {
+        await ctx.reply("Нет активных стилей. Создайте стили в админке.");
+        return;
+      }
+
+      const keyboard: InlineKeyboardButton[][] = styles.map((style) => [
+        {
+          callback_data: `photoshoot-style:${style.id}`,
+          text: style.name,
+        },
+      ]);
+
+      await ctx.reply(
+        "Вы выбрали: Фото по стилю\n\nВыберите визуальный стиль для обработки фото:",
+        { reply_markup: { inline_keyboard: keyboard } },
+      );
+      return;
+    }
+
     setActivePrompt(
       ctx.session,
       item.feature as NonNullable<PastryBotContext["session"]["lastFeature"]>,
@@ -98,6 +133,31 @@ export function registerStartCommand(
     );
 
     await ctx.reply(getPromptSelectionText(item));
+  });
+
+  composer.callbackQuery(/^photoshoot-style:(.+)$/, async (ctx) => {
+    const styleId = ctx.match[1];
+    const { prisma } = await import("@/db/prisma");
+
+    await ctx.answerCallbackQuery();
+
+    const style = await prisma.photoStyle.findFirst({
+      select: { name: true },
+      where: { id: styleId, active: true },
+    });
+
+    if (!style) {
+      await ctx.reply("Этот стиль больше недоступен. Выберите другой.");
+      return;
+    }
+
+    clearScenarioSession(ctx.session);
+    ctx.session.lastFeature = "photoshoot-single-style";
+    ctx.session.selectedStyleId = styleId;
+
+    await ctx.reply(
+      `Вы выбрали стиль: ${style.name}\n\nТеперь отправьте фото десерта, и я обработаю его в этом стиле.`,
+    );
   });
 }
 
@@ -135,19 +195,72 @@ async function sendAccessAwareEntryPoint(
       markSent: async () => {},
     });
 
+    const userTariff = await prisma.userTariff.findUnique({
+      where: { userId: user.id },
+      select: { tariffPlan: { select: { slug: true } } },
+    });
+    const tariffSlug = userTariff?.tariffPlan?.slug ?? "promo";
+
     await triggerService.scheduleTrigger(
       "after-start",
       telegramId,
-      user.plan,
+      tariffSlug,
     );
 
     if (await userHasPromptAccess(user.id)) {
       await sendPromptMenu(ctx);
       return;
     }
+
+    await sendExpiredTariffMessage(ctx, telegramId);
+    return;
   }
 
   await sendOnboardingStep(ctx, 0, telegramId);
+}
+
+async function sendExpiredTariffMessage(ctx: PastryBotContext, telegramId: string) {
+  const step = await loadExpiredTariffStep();
+  const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+  const paymentUrl = buildPaymentUrl(baseUrl, telegramId);
+  const buyButtonUrl = resolveBuyButtonUrl(step, paymentUrl, { baseUrl, telegramId });
+
+  if (isPublicAppBaseUrl(baseUrl)) {
+    const photoUrl = new URL(step.imagePath, baseUrl).toString();
+
+    await ctx.replyWithPhoto(photoUrl, {
+      caption: step.text,
+      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step),
+    });
+  } else {
+    await ctx.reply(step.text, {
+      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step),
+    });
+  }
+}
+
+async function isTariffExpired(ctx: PastryBotContext): Promise<boolean> {
+  const from = ctx.from;
+  if (!from) return false;
+
+  const user = await prisma.user.findFirst({
+    where: { telegramId: String(from.id) },
+    select: { id: true },
+  });
+
+  if (!user) return false;
+
+  const userTariff = await prisma.userTariff.findUnique({
+    where: { userId: user.id },
+    select: { expiresAt: true },
+  });
+
+  if (!userTariff) return false;
+
+  if (userTariff.expiresAt > new Date()) return false;
+
+  await sendExpiredTariffMessage(ctx, String(from.id));
+  return true;
 }
 
 async function sendOnboardingStep(
@@ -160,11 +273,20 @@ async function sendOnboardingStep(
   const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
   const paymentUrl = buildPaymentUrl(baseUrl, telegramId);
   const buyButtonUrl = resolveBuyButtonUrl(step, paymentUrl, { baseUrl, telegramId });
+  const replyMarkup = buildOnboardingKeyboard(stepIndex, buyButtonUrl, steps);
+
+  if (!isPublicAppBaseUrl(baseUrl)) {
+    await ctx.reply(step.text, {
+      reply_markup: replyMarkup,
+    });
+    return;
+  }
+
   const photoUrl = new URL(step.imagePath, baseUrl).toString();
 
   await ctx.replyWithPhoto(photoUrl, {
     caption: step.text,
-    reply_markup: buildOnboardingKeyboard(stepIndex, buyButtonUrl, steps),
+    reply_markup: replyMarkup,
   });
 }
 
@@ -176,7 +298,7 @@ async function sendPromptMenu(ctx: PastryBotContext) {
     return;
   }
 
-  await ctx.reply(buildPromptMenuMessage(), {
+  await ctx.reply(await buildPromptMenuMessage(), {
     reply_markup: buildPromptMenuKeyboard(items),
   });
 }

@@ -3,9 +3,13 @@ import { registerHelpCommand } from "./commands/help";
 import { registerProfileCommand } from "./commands/profile";
 import { registerStartCommand } from "./commands/start";
 import type { BotSession, PastryBotContext } from "./context";
+import { registerRecipeCardTextHandler, registerRecipeCardTemplateCallback } from "./handlers/recipe-card";
+import { registerFreeLessonTextHandler } from "./handlers/free-lesson";
+import { registerAskChefTextHandler } from "./handlers/ask-chef";
 import { registerPhotoshootPhotoHandler } from "./handlers/photoshoot";
 import { registerSingleStylePhotoshootHandler } from "./handlers/single-style-photoshoot";
 import { registerRecipeTextHandler } from "./handlers/recipes";
+import { registerTextPromptHandler } from "./handlers/text-prompt";
 import { registerVisionPhotoHandler } from "./handlers/vision";
 import { auth } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
@@ -25,6 +29,18 @@ type BotDependencies = {
   >[1]["recipeService"];
   sessionStorage?: StorageAdapter<BotSession>;
   visionService?: Parameters<typeof registerVisionPhotoHandler>[1]["visionService"];
+  freeLessonService?: Parameters<
+    typeof registerFreeLessonTextHandler
+  >[1]["freeLessonService"];
+  askChefService?: Parameters<
+    typeof registerAskChefTextHandler
+  >[1]["askChefService"];
+  recipeCardService?: Parameters<
+    typeof registerRecipeCardTextHandler
+  >[1]["recipeCardService"];
+  textPromptService?: Parameters<
+    typeof registerTextPromptHandler
+  >[1]["textPromptService"];
   tokenGuard?: {
     getAvailablePhotoSlots(userId: string, maxSlots: number): Promise<number>;
     ensureSufficientTokens(userId: string, required: number): Promise<void>;
@@ -70,6 +86,31 @@ export function createPastryBot(
     registerVisionPhotoHandler(bot, {
       botToken: dependencies.token,
       visionService: dependencies.visionService,
+    });
+  }
+  if (dependencies.freeLessonService) {
+    registerFreeLessonTextHandler(bot, {
+      freeLessonService: dependencies.freeLessonService,
+    });
+  }
+  if (dependencies.askChefService) {
+    registerAskChefTextHandler(bot, {
+      askChefService: dependencies.askChefService,
+    });
+  }
+  if (dependencies.recipeCardService) {
+    registerRecipeCardTextHandler(bot, {
+      recipeCardService: dependencies.recipeCardService,
+      tokenGuard: dependencies.tokenGuard!,
+    });
+    registerRecipeCardTemplateCallback(bot, {
+      recipeCardService: dependencies.recipeCardService,
+      tokenGuard: dependencies.tokenGuard!,
+    });
+  }
+  if (dependencies.textPromptService) {
+    registerTextPromptHandler(bot, {
+      textPromptService: dependencies.textPromptService,
     });
   }
 

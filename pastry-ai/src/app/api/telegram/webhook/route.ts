@@ -80,6 +80,7 @@ export async function POST(request: Request): Promise<Response> {
   const [
     { prisma },
     { createUserRepository },
+    { createTariffPlanRepository },
     { createPromptRepository },
     { createUserService },
     { createPromptLoader },
@@ -94,10 +95,19 @@ export async function POST(request: Request): Promise<Response> {
     { createTokenGuardService },
     { createVisionAgent },
     { createVisionService },
+    { createFreeLessonAgent },
+    { createFreeLessonService },
+{ createAskChefAgent },
+    { createAskChefService },
+    { createRecipeCardAgent },
+    { createRecipeCardService },
+    { createTextPromptAgent },
+    { createTextPromptService },
   ] =
     await Promise.all([
       import("@/db/prisma"),
       import("@/db/repositories/user-repository"),
+      import("@/db/repositories/tariff-plan-repository"),
       import("@/db/repositories/prompt-repository"),
       import("@/features/users/user-service"),
       import("@/ai/prompts/prompt-loader"),
@@ -112,6 +122,14 @@ export async function POST(request: Request): Promise<Response> {
       import("@/features/tariffs/token-guard-service"),
       import("@/ai/agents/vision-agent"),
       import("@/features/vision/vision-service"),
+      import("@/ai/agents/free-lesson-agent"),
+      import("@/features/free-lesson/free-lesson-service"),
+      import("@/ai/agents/ask-chef-agent"),
+      import("@/features/ask-chef/ask-chef-service"),
+      import("@/ai/agents/recipe-card-agent"),
+      import("@/features/recipe-card/recipe-card-service"),
+      import("@/ai/agents/text-prompt-agent"),
+      import("@/features/text-prompt/text-prompt-service"),
     ]);
 
   if (updateId !== null) {
@@ -125,12 +143,19 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const userRepository = createUserRepository(prisma.user);
+  const tariffPlanRepository = createTariffPlanRepository(
+    prisma.tariffPlan as never,
+  );
   const promptRepository = createPromptRepository(prisma.prompt);
   const promptLoader = createPromptLoader(promptRepository);
   const aiService = createOpenAIAIService();
   const sessionStorage = createPrismaSessionStorage(prisma.telegramSession);
-  const userService = createUserService({ userRepository });
   const userTariffRepository = createUserTariffRepository(prisma.userTariff as never);
+  const userService = createUserService({
+    userRepository,
+    tariffPlanRepository,
+    userTariffRepository,
+  });
   const tokenUsageRepository = createTokenUsageRepository(prisma.tokenUsage as never);
   const tokenGuard = createTokenGuardService(userTariffRepository, tokenUsageRepository);
   const photoshootAgent = createPhotoshootAgent({ aiService, promptLoader });
@@ -169,6 +194,14 @@ photoStyleRepository: {
   const recipeService = createRecipeService({ recipeAgent });
   const visionAgent = createVisionAgent({ aiService, promptLoader });
   const visionService = createVisionService({ visionAgent });
+  const freeLessonAgent = createFreeLessonAgent({ aiService, promptLoader });
+  const freeLessonService = createFreeLessonService({ freeLessonAgent });
+  const askChefAgent = createAskChefAgent({ aiService, promptLoader });
+  const askChefService = createAskChefService({ askChefAgent });
+  const recipeCardAgent = createRecipeCardAgent({ aiService, promptLoader });
+  const recipeCardService = createRecipeCardService({ recipeCardAgent, aiService });
+  const textPromptAgent = createTextPromptAgent({ aiService, promptLoader });
+  const textPromptService = createTextPromptService({ textPromptAgent });
   const bot = createPastryBot({
     token: env.TELEGRAM_BOT_TOKEN,
     userService,
@@ -176,6 +209,10 @@ photoStyleRepository: {
     recipeService,
     sessionStorage,
     visionService,
+    freeLessonService,
+    askChefService,
+    recipeCardService,
+    textPromptService,
     tokenGuard,
     aiService,
   });

@@ -15,10 +15,18 @@ export type PromptMenuItem = {
 };
 
 const promptTitles: Record<string, string> = {
+  "ask-chef": "Спросить кондитера",
   carousel: "Карусель для Instagram",
   "dessert-identification": "Разобрать десерт по фото",
+  "free-lesson": "Поиск бесплатного урока",
+  "free-lesson-search": "Поиск бесплатного урока",
+  "margin-calculator": "Калькулятор маржи",
   photoshoot: "Стилизация фото десерта",
+  "photoshoot-pick-style": "Фото по стилю",
   "product-photo": "Стилизация фото десерта",
+  "recipe-card": "Создать карточку рецепта",
+  "recipe-margin": "Калькулятор маржи",
+  "recipe-recalculation": "Пересчёт рецепта",
   recipes: "Рецепт по ингредиентам",
   "recipe-from-ingredients": "Рецепт по ингредиентам",
   vision: "Разобрать десерт по фото",
@@ -63,8 +71,7 @@ export function buildPromptMenuKeyboard(
   };
 }
 
-export function buildPromptMenuMessage() {
-  return `👋 Добро пожаловать в ИИ Кондитер!
+const menuIntroFallback = `👋 Добро пожаловать в ИИ Кондитер!
 
 Это ваш помощник для создания рецептов, анализа десертов и генерации красивых фотографий.
 
@@ -76,6 +83,17 @@ export function buildPromptMenuMessage() {
 И это лишь часть возможностей. Внутри вас ждет еще множество полезных функций для работы, творчества и развития вашего кондитерского дела.
 
 👇 Выберите нужный раздел в меню ниже и протестируйте все возможности вашего помощника.`;
+
+export async function buildPromptMenuMessage() {
+  try {
+    const { prisma } = await import("@/db/prisma");
+    const block = await prisma.botTextBlock.findUnique({
+      where: { key: "prompt_menu_intro" },
+      select: { text: true },
+    });
+    if (block?.text) return block.text;
+  } catch {}
+  return menuIntroFallback;
 }
 
 export function getPromptSelectionText(item: PromptMenuItem) {
@@ -87,6 +105,18 @@ export function getPromptSelectionText(item: PromptMenuItem) {
 
   if (item.feature === "vision") {
     return `Вы выбрали: ${item.title}\n\nОтправьте фото десерта, а я определю, что изображено, разберу состав, технологии и предложу похожий рецепт.`;
+  }
+
+  if (item.feature === "free-lesson") {
+    return `Вы выбрали: ${item.title}\n\nНапишите тему для поиска бесплатных видеоуроков. Например: «муссовые торты», «работа с шоколадом», «капкейки».`;
+  }
+
+  if (item.feature === "ask-chef") {
+    return `Вы выбрали: ${item.title}\n\nЗадайте любой вопрос по кондитерскому делу. Я помогу с рецептами, технологиями, ингредиентами, поиском ошибок и организацией работы.`;
+  }
+
+  if (item.feature === "recipe-card") {
+    return `Вы выбрали: ${item.title}\n\nНапишите рецепт с названием, ингредиентами и пошаговым приготовлением, и я создам дизайнерскую карточку рецепта.`;
   }
 
   if (item.feature === "photoshoot") {

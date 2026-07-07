@@ -131,8 +131,10 @@ export async function generateFluxKontextImage(input: {
   prompt: string;
   imageUrl?: string;
   model?: string;
+  aspectRatio?: string;
 }): Promise<{ url: string }> {
   const taskId = await submitFluxKontextTask({
+    aspectRatio: input.aspectRatio,
     inputImage: input.imageUrl,
     model: input.model,
     prompt: input.prompt,

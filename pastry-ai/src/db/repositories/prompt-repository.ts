@@ -1,4 +1,4 @@
-export type PromptFeature = "recipes" | "vision" | "photoshoot" | "carousel";
+export type PromptFeature = "recipes" | "vision" | "photoshoot" | "carousel" | "free-lesson" | "ask-chef" | "recipe-card" | "recipe-margin" | "recipe-recalculation";
 export type PromptProvider = "openai" | "openrouter" | "kie";
 
 export type PromptRecord = {
@@ -56,7 +56,7 @@ export function createPromptRepository(promptDelegate: PromptDelegate) {
 }
 
 function isPromptFeature(value: string): value is PromptFeature {
-  return ["recipes", "vision", "photoshoot", "carousel"].includes(value);
+  return ["recipes", "vision", "photoshoot", "carousel", "free-lesson", "ask-chef", "recipe-card", "recipe-margin", "recipe-recalculation"].includes(value);
 }
 
 function isPromptProvider(value: string): value is PromptProvider {

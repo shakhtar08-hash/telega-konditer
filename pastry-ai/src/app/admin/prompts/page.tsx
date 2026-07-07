@@ -128,7 +128,7 @@ export default async function AdminPromptsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-[#97a4b8]">
-                    {prompt.updatedAt.toISOString().slice(0, 10)}
+                    {new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", year: "numeric", month: "2-digit", day: "2-digit" }).format(prompt.updatedAt)}
                   </td>
                 </tr>
               ))}

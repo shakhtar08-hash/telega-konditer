@@ -28,15 +28,23 @@
 - Fixed dessert photo analysis: updated AI SDK 7.x `ImagePart` to `FilePart`, added 120s timeout to `generateText`, split long responses to avoid Telegram 4096-char limit, localized error handler to Russian.
 - Tariff/token access system: `TariffPlan`, `UserTariff`, `TokenUsage` models + migration.
 - Admin CRUD for tariffs at `/admin/tariffs`; sidebar nav link fixed.
-- Admin users page shows tariff name, remaining tokens, expiry; admin can manually edit tokens.
+- Admin users page now manages real user tariffs directly: admin can assign/remove tariff, set token balance, and set expiry in one place.
 - `TokenGuardService`: `ensureSufficientTokens`, `getAvailablePhotoSlots`, `chargeTokens`, `getUserTariffState`.
 - `TariffPlanRepository`, `UserTariffRepository`, `TokenUsageRepository` with tests.
 - Migration script (`prisma/migrate-legacy-users.mjs`) for existing users.
+- Prisma migration config now prefers `DIRECT_URL` over pooled `DATABASE_URL`, and the tariff system migration has been applied to the current shared database.
+- New users now receive the `promo` tariff automatically on first `/start` if they do not already have a tariff.
+- Prompt access now depends on an active `UserTariff`; after tariff expiry, both text and image AI scenarios are blocked until a new tariff is assigned or purchased.
 - RecipeAgent returns structured output (`RecipeOutput = { text, dishes }`) via `generateObject`.
 - Recipe flows generate 0-4 photo examples via OpenRouter/FLUX, charged 1 token per successful send.
 - Photoshoot and single-style photoshoot: pre-generation token check, post-send charge.
 - CloudPayments webhook assigns `pastry-chef` tariff plan instead of legacy plan/credits.
 - `userHasTokenAccess()` function added to `access.ts`.
+- Expanded `recipe-from-ingredients` system prompt: detailed role, task, output format (8 sections per variant), selection rules, edge cases, and image description requirements.
+- Admin photo-styles page: full CRUD — create, edit, delete styles with provider/model fields directly from admin panel.
+- "Фото по стилю" bot button: shows all active photo styles as inline keyboard, lets user pick one, then processes photo in that single style.
+- **"Поиск бесплатного урока" feature**: new `free-lesson` bot feature with AI agent, service, text handler, prompt (`free-lesson-search`), and bot menu button (sortOrder 5). Users write a topic and get curated free video lesson recommendations.
+- **"Спросить кондитера" feature**: new `ask-chef` bot feature with AI agent, service, text handler, prompt (`ask-chef`), and bot menu button (sortOrder 6). Users ask any pastry-related question and get expert advice.
 
 ## Current State
 
@@ -45,9 +53,11 @@ The app can run locally and via ngrok. The test bot can point to the local webho
 Admin data is stored in Supabase. If local and server use the same database, changes are shared.
 
 **Tariff/token system is implemented.** Key facts:
+
+**Known fix applied:** KIE API rejects `aspectRatio: "2:3"` (code 422). The `recipe-card` agent now passes `"3:4"` which KIE supports.
 - Tariff plans (Промо, Кондитер, Мастер, Шеф-кондитер) are editable at `/admin/tariffs`.
 - TokenGuardService handles all token checking and charging.
-- Text responses are always free.
+- Text AI scenarios require an active, non-expired tariff, but do not spend tokens themselves.
 - Recipe flows return structured output (`{ text, dishes }`) with up to 4 AI-generated photo examples.
 - Photos use OpenRouter/FLUX for text-to-image, charged at 1 token per successful send.
 - Photoshoot (multi-image) checks all tokens before any generation; if insufficient, none are sent.

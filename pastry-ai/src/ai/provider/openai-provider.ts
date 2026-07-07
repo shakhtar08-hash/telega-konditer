@@ -83,6 +83,7 @@ export function createOpenAIAIService(): AIService {
 
       if (input.provider === "kie") {
         return generateFluxKontextImage({
+          aspectRatio: input.aspectRatio,
           imageUrl: input.imageUrl,
           model: input.model,
           prompt: input.prompt,

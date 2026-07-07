@@ -28,15 +28,24 @@ export function createRecipeAgent(dependencies: {
       );
 
       const recipeSchema = z.object({
-        text: z.string(),
-        dishes: z.array(z.object({
-          name: z.string(),
-          description: z.string(),
-        })).min(1).max(4),
+        recipes: z.array(
+          z.object({
+            name: z.string().min(1),
+            whyFits: z.string().min(1),
+            ingredients: z.array(z.string().min(1)).min(1).max(20),
+            steps: z.array(z.string().min(1)).min(3).max(15),
+            activeTime: z.string().min(1),
+            chillingTime: z.string().min(1),
+            totalTime: z.string().min(1),
+            difficulty: z.enum(["easy", "medium", "hard"]),
+            pastryTip: z.string().min(1),
+            imagePrompt: z.string().min(1),
+          }),
+        ).min(2).max(4),
       });
 
       return dependencies.aiService.generateObject({
-        system: prompt.systemPrompt,
+        system: `${prompt.systemPrompt}\n\n${recipeOutputContract}`,
         prompt: renderedPrompt,
         provider: prompt.provider,
         model: prompt.model,
@@ -46,3 +55,15 @@ export function createRecipeAgent(dependencies: {
     },
   };
 }
+
+const recipeOutputContract = [
+  "Return only structured recipe data that matches the response schema.",
+  "Do not place user-facing prose outside the schema.",
+  "Generate 2 to 4 recipes (recipes array min 2, max 4). Never return fewer than 2 recipes.",
+  "For each recipe, fill every field completely.",
+  "Use Russian for all recipe fields except imagePrompt.",
+  "Use English for imagePrompt.",
+  "imagePrompt must be one paragraph for premium realistic pastry photography.",
+  "imagePrompt must describe only the finished dessert and scene.",
+  "Do not mention AI, prompts, generation, recipe instructions, or ingredient lists inside imagePrompt.",
+].join(" ");

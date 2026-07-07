@@ -1,26 +1,46 @@
+import type { StructuredRecipe } from "@/ai/schemas/recipe";
+import { prisma } from "@/db/prisma";
+import {
+  buildRecipeImagePrompt,
+  formatRecipeOutputForTelegram,
+} from "@/features/recipes/recipe-presenter";
 import type { Composer } from "grammy";
-import { clearScenarioSession, type BotSession, type PastryBotContext } from "../context";
+import {
+  clearScenarioSession,
+  type BotSession,
+  type PastryBotContext,
+} from "../context";
+import { resolveUserIdByTelegramId } from "../user-id";
+import { toTelegramPhotoInput } from "./photoshoot";
 import { parseRecipeIntent } from "./recipe-intent";
 import { applyRecipeIntent, type RecipeStateAction } from "./recipe-state";
-
 
 type RecipeService = {
   createFromIngredients(input: {
     ingredientsText: string;
     promptSlug?: string;
   }): Promise<{
-    text: string;
-    dishes: Array<{ name: string; description: string }>;
+    recipes: StructuredRecipe[];
   }>;
 };
 
 type TokenGuardService = {
   getAvailablePhotoSlots(userId: string, maxSlots: number): Promise<number>;
-  chargeTokens(userId: string, feature: string, promptSlug: string | null, imagesSent: number): Promise<void>;
+  chargeTokens(
+    userId: string,
+    feature: string,
+    promptSlug: string | null,
+    imagesSent: number,
+  ): Promise<void>;
 };
 
 type ImageService = {
-  generateImage(input: { provider: string; model: string; prompt: string; size?: string }): Promise<{ url: string }>;
+  generateImage(input: {
+    provider: string;
+    model: string;
+    prompt: string;
+    size?: string;
+  }): Promise<{ url: string }>;
 };
 
 const processingMessage =
@@ -30,6 +50,15 @@ const processingBestRecipeMessage =
 const stoppedMessage =
   "Сценарий остановлен. Откройте /menu, чтобы выбрать новый.";
 const telegramMessageLimit = 3900;
+const missingProfileMessage =
+  "Не удалось найти ваш профиль в базе. Нажмите /start и попробуйте ещё раз.";
+
+export function getRecipeImageGenerationConfig() {
+  return {
+    model: "flux-kontext-pro",
+    provider: "kie" as const,
+  };
+}
 
 export function registerRecipeTextHandler(
   composer: Composer<PastryBotContext>,
@@ -71,7 +100,11 @@ export function shouldHandleRecipeText(session: BotSession, text = "") {
 async function handleIngredientRecipe(
   ctx: PastryBotContext,
   text: string,
-  dependencies: { recipeService: RecipeService; tokenGuard: TokenGuardService; imageService: ImageService },
+  dependencies: {
+    recipeService: RecipeService;
+    tokenGuard: TokenGuardService;
+    imageService: ImageService;
+  },
 ) {
   const intent = parseRecipeIntent(text);
   const result = applyRecipeIntent(ctx.session, intent);
@@ -122,48 +155,83 @@ async function handleIngredientRecipe(
     ingredientsText,
     promptSlug: ctx.session.lastPromptSlug,
   });
+  const recipeText = formatRecipeOutputForTelegram(recipeOutput);
 
   ctx.session.lastRecipeRequestText = result.promptText;
-  ctx.session.lastRecipeListText = recipeOutput.text;
+  ctx.session.lastRecipeListText = recipeText;
   ctx.session.recipeScenarioStep = "results_shown";
 
-  for (const chunk of splitTelegramText(recipeOutput.text)) {
+  for (const chunk of splitTelegramText(recipeText)) {
     await ctx.reply(chunk);
   }
 
-  await generateDishPhotos(ctx, recipeOutput.dishes, dependencies);
+  void generateDishPhotos(ctx, recipeOutput.recipes, dependencies);
 }
 
 async function generateDishPhotos(
   ctx: PastryBotContext,
-  dishes: Array<{ name: string; description: string }>,
+  recipes: StructuredRecipe[],
   dependencies: { tokenGuard: TokenGuardService; imageService: ImageService },
 ) {
-  const slots = await dependencies.tokenGuard.getAvailablePhotoSlots(String(ctx.from?.id ?? ""), dishes.length);
-  if (slots === 0) {
-    if (dishes.length > 0) {
-      await ctx.reply(
-        "У вас недостаточно токенов для генерации фото. Пополните баланс в /menu.",
+  try {
+    const userId = await resolveUserIdByTelegramId(
+      prisma.user,
+      String(ctx.from?.id ?? ""),
+    );
+
+    if (!userId) {
+      await ctx.reply(missingProfileMessage);
+      return;
+    }
+
+    const slots = await dependencies.tokenGuard.getAvailablePhotoSlots(
+      userId,
+      recipes.length,
+    );
+    if (slots === 0) {
+      if (recipes.length > 0) {
+        await ctx.reply(
+          "У вас недостаточно токенов для генерации фото. Пополните баланс в /menu.",
+        );
+      }
+      return;
+    }
+
+    for (let i = 0; i < slots; i++) {
+      const recipe = recipes[i];
+      const imageConfig = getRecipeImageGenerationConfig();
+      const image = await dependencies.imageService.generateImage({
+        provider: imageConfig.provider,
+        model: imageConfig.model,
+        prompt: buildRecipeImagePrompt(recipe),
+      });
+      await ctx.replyWithPhoto(
+        toTelegramPhotoInput(image.url, `${recipe.name}.png`),
+        { caption: recipe.name },
+      );
+      await dependencies.tokenGuard.chargeTokens(
+        userId,
+        "recipes",
+        ctx.session.lastPromptSlug ?? null,
+        1,
       );
     }
-    return;
-  }
-  for (let i = 0; i < slots; i++) {
-    const dish = dishes[i];
-    const image = await dependencies.imageService.generateImage({
-      provider: "openai",
-      model: "dall-e-3",
-      prompt: dish.description,
-    });
-    await ctx.replyWithPhoto(image.url, { caption: dish.name });
-    await dependencies.tokenGuard.chargeTokens(String(ctx.from?.id ?? ""), "recipes", ctx.session.lastPromptSlug ?? null, 1);
+  } catch (error) {
+    console.error("Recipe photo generation failed", error);
+    await ctx.reply(
+      "Не удалось сгенерировать фото к рецепту. Текст рецепта уже отправлен.",
+    );
   }
 }
 
 async function handleSimpleRecipe(
   ctx: PastryBotContext,
   text: string,
-  dependencies: { recipeService: RecipeService; tokenGuard: TokenGuardService; imageService: ImageService },
+  dependencies: {
+    recipeService: RecipeService;
+    tokenGuard: TokenGuardService;
+    imageService: ImageService;
+  },
 ) {
   await ctx.reply(processingBestRecipeMessage);
 
@@ -171,16 +239,17 @@ async function handleSimpleRecipe(
     ingredientsText: text,
     promptSlug: ctx.session.lastPromptSlug,
   });
+  const recipeText = formatRecipeOutputForTelegram(recipeOutput);
 
   ctx.session.lastRecipeRequestText = text;
-  ctx.session.lastRecipeListText = recipeOutput.text;
+  ctx.session.lastRecipeListText = recipeText;
   ctx.session.recipeScenarioStep = "results_shown";
 
-  for (const chunk of splitTelegramText(recipeOutput.text)) {
+  for (const chunk of splitTelegramText(recipeText)) {
     await ctx.reply(chunk);
   }
 
-  await generateDishPhotos(ctx, recipeOutput.dishes, dependencies);
+  void generateDishPhotos(ctx, recipeOutput.recipes, dependencies);
 }
 
 export function splitTelegramText(
@@ -226,6 +295,14 @@ export function splitTelegramText(
   return chunks;
 }
 
+export async function replyWithMarkdownSafe(ctx: PastryBotContext, text: string) {
+  try {
+    await ctx.reply(text, { parse_mode: "Markdown" });
+  } catch {
+    await ctx.reply(text);
+  }
+}
+
 export function buildRecipePromptText(
   currentText: string,
   previousRecipeRequestText?: string,
@@ -238,13 +315,13 @@ export function buildRecipePromptText(
   const effectiveIngredients = currentIngredientsText ?? currentText;
 
   return [
-    `\u041f\u0440\u0435\u0434\u044b\u0434\u0443\u0449\u0438\u0435 \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u044b \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f:\n${previousRecipeRequestText}`,
+    `Предыдущие ингредиенты пользователя:\n${previousRecipeRequestText}`,
     "",
-    `\u041d\u043e\u0432\u044b\u0439 \u0437\u0430\u043f\u0440\u043e\u0441 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f:\n${currentText}`,
+    `Новый запрос пользователя:\n${currentText}`,
     "",
-    `\u0410\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u043e\u0432 \u0434\u043b\u044f \u043d\u043e\u0432\u043e\u0433\u043e \u043e\u0442\u0432\u0435\u0442\u0430:\n${effectiveIngredients}`,
+    `Актуальный список ингредиентов для нового ответа:\n${effectiveIngredients}`,
     "",
-    "\u042d\u0442\u043e \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0435\u043d\u0438\u0435 \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0441\u0446\u0435\u043d\u0430\u0440\u0438\u044f. \u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439 \u0438\u043c\u0435\u043d\u043d\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u043e\u0432 \u0438 \u043f\u0435\u0440\u0435\u0441\u043e\u0431\u0435\u0440\u0438 \u043e\u0442\u0432\u0435\u0442. \u041d\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u044f\u0439 \u043f\u0440\u043e\u0448\u043b\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u0431\u0435\u0437 \u0443\u0447\u0451\u0442\u0430 \u043d\u043e\u0432\u043e\u0433\u043e \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f.",
+    "Это продолжение текущего сценария. Используй именно обновлённый список ингредиентов и пересобери ответ. Не повторяй прошлый результат без учёта нового сообщения.",
   ].join("\n");
 }
 
@@ -256,13 +333,13 @@ function isRecipeFollowUp(text: string) {
   const normalized = text.trim().toLowerCase();
 
   return (
-    normalized === "\u043f\u043e\u043a\u0430\u0436\u0438 \u0432\u0441\u0435" ||
-    normalized.startsWith("\u043f\u043e\u043a\u0430\u0436\u0438 \u0440\u0435\u0446\u0435\u043f\u0442") ||
-    normalized.startsWith("\u043f\u043e\u043a\u0430\u0436\u0438 \u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e") ||
-    normalized.startsWith("\u0434\u0430\u0432\u0430\u0439 \u0432\u0441\u0435") ||
-    normalized.startsWith("\u0434\u0430\u0432\u0430\u0439 \u0434\u043e\u0431\u0430\u0432\u0438\u043c") ||
-    normalized.startsWith("\u0430 \u0435\u0441\u043b\u0438 ") ||
-    normalized.startsWith("\u0435\u0441\u043b\u0438 \u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c") ||
-    normalized.includes("\u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432 \u0441\u043f\u0438\u0441\u043e\u043a")
+    normalized === "покажи все" ||
+    normalized.startsWith("покажи рецепт") ||
+    normalized.startsWith("покажи полностью") ||
+    normalized.startsWith("давай все") ||
+    normalized.startsWith("давай добавим") ||
+    normalized.startsWith("а если ") ||
+    normalized.startsWith("если добавить") ||
+    normalized.includes("добавить в список")
   );
 }

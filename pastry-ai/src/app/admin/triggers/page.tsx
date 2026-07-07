@@ -13,6 +13,16 @@ import { prisma } from "@/db/prisma";
 
 export const dynamic = "force-dynamic";
 
+async function parseTargetTariffs(formData: FormData, tariffs: Array<{ slug: string }>) {
+  const targetPlans: string[] = [];
+  for (const tariff of tariffs) {
+    if (formData.get(`target_${tariff.slug}`) === "on") {
+      targetPlans.push(tariff.slug);
+    }
+  }
+  return targetPlans;
+}
+
 export async function createTriggerMessage(formData: FormData) {
   "use server";
 
@@ -20,32 +30,16 @@ export async function createTriggerMessage(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const text = String(formData.get("text") ?? "").trim();
   const delayMinutes = Number(formData.get("delayMinutes"));
-  const targetFree = formData.get("targetFree") === "on";
-  const targetPro = formData.get("targetPro") === "on";
-  const targetTeam = formData.get("targetTeam") === "on";
 
-  if (!slug || !title || !text || Number.isNaN(delayMinutes)) {
-    return;
-  }
+  if (!slug || !title || !text || Number.isNaN(delayMinutes)) return;
 
-  const targetPlans: string[] = [];
-  if (targetFree) targetPlans.push("FREE");
-  if (targetPro) targetPlans.push("PRO");
-  if (targetTeam) targetPlans.push("TEAM");
+  const tariffs = await prisma.tariffPlan.findMany({ select: { slug: true } });
+  const targetPlans = await parseTargetTariffs(formData, tariffs);
 
-  if (targetPlans.length === 0) {
-    return;
-  }
+  if (targetPlans.length === 0) return;
 
   await prisma.triggerMessage.create({
-    data: {
-      slug,
-      title,
-      text,
-      delayMinutes,
-      targetPlans,
-      active: true,
-    },
+    data: { slug, title, text, delayMinutes, targetPlans, active: true },
   });
 
   revalidatePath("/admin/triggers");
@@ -59,22 +53,13 @@ export async function updateTriggerMessage(formData: FormData) {
   const text = String(formData.get("text") ?? "").trim();
   const delayMinutes = Number(formData.get("delayMinutes"));
   const active = formData.get("active") === "on";
-  const targetFree = formData.get("targetFree") === "on";
-  const targetPro = formData.get("targetPro") === "on";
-  const targetTeam = formData.get("targetTeam") === "on";
 
-  if (!id || !title || !text || Number.isNaN(delayMinutes)) {
-    return;
-  }
+  if (!id || !title || !text || Number.isNaN(delayMinutes)) return;
 
-  const targetPlans: string[] = [];
-  if (targetFree) targetPlans.push("FREE");
-  if (targetPro) targetPlans.push("PRO");
-  if (targetTeam) targetPlans.push("TEAM");
+  const tariffs = await prisma.tariffPlan.findMany({ select: { slug: true } });
+  const targetPlans = await parseTargetTariffs(formData, tariffs);
 
-  if (targetPlans.length === 0) {
-    return;
-  }
+  if (targetPlans.length === 0) return;
 
   await prisma.triggerMessage.update({
     data: { title, text, delayMinutes, active, targetPlans },
@@ -88,19 +73,17 @@ export async function deleteTriggerMessage(formData: FormData) {
   "use server";
 
   const id = String(formData.get("id") ?? "");
-
-  if (!id) {
-    return;
-  }
+  if (!id) return;
 
   await prisma.triggerMessage.delete({ where: { id } });
   revalidatePath("/admin/triggers");
 }
 
 export default async function AdminTriggersPage() {
-  const triggers = await prisma.triggerMessage.findMany({
-    orderBy: { createdAt: "asc" },
-  });
+  const [triggers, tariffs] = await Promise.all([
+    prisma.triggerMessage.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.tariffPlan.findMany({ orderBy: { sortOrder: "asc" }, select: { slug: true, name: true } }),
+  ]);
 
   return (
     <section className="space-y-5">
@@ -185,18 +168,15 @@ export default async function AdminTriggersPage() {
               <fieldset className="space-y-1">
                 <legend className="text-sm font-medium text-[#f4f7fb]">Тарифы</legend>
                 <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-sm text-[#97a4b8]">
-                    <input name="targetFree" type="checkbox" />
-                    FREE
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-[#97a4b8]">
-                    <input name="targetPro" type="checkbox" />
-                    PRO
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-[#97a4b8]">
-                    <input name="targetTeam" type="checkbox" />
-                    TEAM
-                  </label>
+                  {tariffs.map((tariff) => (
+                    <label
+                      className="flex items-center gap-2 text-sm text-[#97a4b8]"
+                      key={tariff.slug}
+                    >
+                      <input name={`target_${tariff.slug}`} type="checkbox" />
+                      {tariff.name}
+                    </label>
+                  ))}
                 </div>
               </fieldset>
               <AdminButton type="submit">Создать триггер</AdminButton>
@@ -248,30 +228,19 @@ export default async function AdminTriggersPage() {
                     <fieldset className="space-y-1">
                       <legend className="text-sm font-medium text-[#f4f7fb]">Тарифы</legend>
                       <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center gap-2 text-sm text-[#97a4b8]">
-                          <input
-                            defaultChecked={plans.includes("FREE")}
-                            name="targetFree"
-                            type="checkbox"
-                          />
-                          FREE
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-[#97a4b8]">
-                          <input
-                            defaultChecked={plans.includes("PRO")}
-                            name="targetPro"
-                            type="checkbox"
-                          />
-                          PRO
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-[#97a4b8]">
-                          <input
-                            defaultChecked={plans.includes("TEAM")}
-                            name="targetTeam"
-                            type="checkbox"
-                          />
-                          TEAM
-                        </label>
+                        {tariffs.map((tariff) => (
+                          <label
+                            className="flex items-center gap-2 text-sm text-[#97a4b8]"
+                            key={tariff.slug}
+                          >
+                            <input
+                              defaultChecked={plans.includes(tariff.slug)}
+                              name={`target_${tariff.slug}`}
+                              type="checkbox"
+                            />
+                            {tariff.name}
+                          </label>
+                        ))}
                       </div>
                     </fieldset>
                     <div className="flex flex-wrap items-center justify-between gap-3">

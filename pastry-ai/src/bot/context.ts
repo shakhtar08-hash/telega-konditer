@@ -14,8 +14,11 @@ export type RecipeLastIntent =
   | "refine"
   | "restart";
 
+import type { CardTemplate } from "@/components/recipe-card/templates";
+// ... rest of file
+
 export type BotSession = {
-  lastFeature?: "recipes" | "vision" | "photoshoot" | "carousel" | "photoshoot-single-style";
+  lastFeature?: "recipes" | "vision" | "photoshoot" | "carousel" | "photoshoot-single-style" | "photoshoot-pick-style" | "free-lesson" | "ask-chef" | "recipe-card" | "recipe-margin" | "recipe-recalculation";
   lastPromptSlug?: string;
   lastRecipeRequestText?: string;
   baseIngredientsText?: string;
@@ -25,6 +28,8 @@ export type BotSession = {
   recipeScenarioStep?: RecipeScenarioStep;
   recipeLastIntent?: RecipeLastIntent;
   selectedStyleId?: string;
+  selectedCardTemplate?: "minimal" | "pinterest" | "luxury" | "dark";
+  _pendingRecipeText?: string;
 };
 
 export type PastryBotContext = Context & SessionFlavor<BotSession>;
@@ -43,6 +48,8 @@ export function clearScenarioSession(session: BotSession) {
   clearRecipeScenario(session);
   session.lastFeature = undefined;
   session.lastPromptSlug = undefined;
+  session.selectedStyleId = undefined;
+  session.selectedCardTemplate = undefined;
 }
 
 export function setRecipeIngredients(

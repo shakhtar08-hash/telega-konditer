@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRecipePromptText,
+  getRecipeImageGenerationConfig,
   shouldGenerateRecipeSearch,
   shouldHandleRecipeText,
   splitTelegramText,
@@ -77,10 +78,22 @@ describe("recipe text handler helpers", () => {
   });
 
   it("splits long Telegram messages into chunks", () => {
-    const chunks = splitTelegramText(["A".repeat(2500), "B".repeat(2500)].join("\n\n"), 3000);
+    const chunks = splitTelegramText(
+      ["A".repeat(2500), "B".repeat(2500)].join("\n\n"),
+      3000,
+    );
 
     expect(chunks.length).toBe(2);
     expect(chunks.every((chunk) => chunk.length <= 3000)).toBe(true);
-    expect(chunks.join("\n\n")).toBe(["A".repeat(2500), "B".repeat(2500)].join("\n\n"));
+    expect(chunks.join("\n\n")).toBe(
+      ["A".repeat(2500), "B".repeat(2500)].join("\n\n"),
+    );
+  });
+
+  it("uses the KIE image pipeline for recipe photos", () => {
+    expect(getRecipeImageGenerationConfig()).toEqual({
+      model: "flux-kontext-pro",
+      provider: "kie",
+    });
   });
 });

@@ -88,7 +88,7 @@ Reason: user wants to review larger local changes before GitHub updates.
 
 Decision: replace FREE/PRO/TEAM plan enum with editable `TariffPlan` records and token-based image access.
 
-Reason: the old three-plan model was rigid and couldn't be changed without code. The new system lets admins create/edit tariffs with custom token amounts and durations, charge 1 token per sent image, and keep text responses always free. Business rules (batch token check, recipe flow exceptions, full tariff replacement on purchase) are centralized in `TokenGuardService`.
+Reason: the old three-plan model was rigid and couldn't be changed without code. The new system lets admins create/edit tariffs with custom token amounts and durations, charge 1 token per sent image, and keep text scenarios token-free while access is still governed by an active tariff. Business rules (batch token check, recipe flow exceptions, full tariff replacement on purchase) are centralized in `TokenGuardService`.
 
 Key rules:
 - 1 sent image = 1 token, charged AFTER successful `ctx.replyWithPhoto()`.
@@ -98,17 +98,29 @@ Key rules:
 - New purchase fully replaces old tariff (tokens and expiry discarded).
 - Expired tariff → images blocked, unused tokens lost.
 
+## Prompt Access by Active Tariff
+
+Decision: access to Telegram AI scenarios is determined by active `UserTariff`, not by legacy `FREE/PRO/TEAM` user plan labels.
+
+Reason: the product now sells and administers editable tariffs. Keeping prompt access on the legacy plan model would create conflicting access states between admin UI and bot behavior.
+
+Key rules:
+- New users receive the `promo` tariff on their first `/start` if they do not have a tariff yet.
+- Text AI scenarios require an active, non-expired tariff, but do not spend tokens by themselves.
+- Image scenarios require an active tariff and spend tokens according to the feature rules.
+- Expired tariff в†’ both text and image AI scenario access are blocked until a new tariff is assigned or purchased.
+
 ## KIE for Seeded Dessert Photo Styling
 
 Decision: the seeded `Создать фото` flow uses KIE `flux-kontext-pro`.
 
 Reason: the feature takes an input dessert photo and returns styled variants, and the current seeded prompt/photo-style setup is configured around KIE image-to-image generation.
 
-## OpenRouter FLUX for Recipe Photo Generation
+## KIE Flux Kontext for Recipe Photo Generation
 
-Decision: recipe photo examples use OpenRouter/FLUX for text-to-image generation.
+Decision: recipe photo examples use KIE `flux-kontext-pro` for text-to-image generation.
 
-Reason: FLUX provides high-quality food photography from text descriptions at lower cost than DALL-E 3. The `generateImage` provider in the AI service already supports OpenRouter with FLUX.
+Reason: the current KIE integration accepts `flux-kontext-pro` for recipe photo generation, while the attempted OpenRouter image path was not working in this project setup.
 
 ## Structured Recipe Output
 

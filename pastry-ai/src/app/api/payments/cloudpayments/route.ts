@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     await triggerService.scheduleTrigger(
       "after-payment",
       user.telegramId,
-      "PRO",
+      tariffPlan.slug,
     );
   }
 

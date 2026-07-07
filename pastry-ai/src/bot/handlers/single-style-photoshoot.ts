@@ -1,7 +1,9 @@
 import { type Composer } from "grammy";
 import type { PhotoshootOutput } from "@/ai/schemas/photoshoot";
+import { prisma } from "@/db/prisma";
 import { UserFacingError } from "@/lib/user-facing-error";
 import type { PastryBotContext } from "../context";
+import { resolveUserIdByTelegramId } from "../user-id";
 import { buildTelegramFileUrl, getLargestPhoto } from "./vision";
 import { toTelegramPhotoInput } from "./photoshoot";
 
@@ -16,6 +18,9 @@ type PhotoshootService = {
     styleId: string;
   }): Promise<PhotoshootOutput>;
 };
+
+const missingProfileMessage =
+  "Не удалось найти ваш профиль в базе. Нажмите /start и попробуйте ещё раз.";
 
 export function registerSingleStylePhotoshootHandler(
   composer: Composer<PastryBotContext>,
@@ -64,9 +69,18 @@ export function registerSingleStylePhotoshootHandler(
       file.file_path,
     );
 
-    const userTelegramId = ctx.from ? String(ctx.from.id) : "";
+    const userId = await resolveUserIdByTelegramId(
+      prisma.user,
+      String(ctx.from?.id ?? ""),
+    );
+
+    if (!userId) {
+      await ctx.reply(missingProfileMessage);
+      return;
+    }
+
     try {
-      await dependencies.tokenGuard.ensureSufficientTokens(userTelegramId, 1);
+      await dependencies.tokenGuard.ensureSufficientTokens(userId, 1);
     } catch (error) {
       if (error instanceof UserFacingError) {
         await ctx.reply(error.message);
@@ -99,7 +113,12 @@ export function registerSingleStylePhotoshootHandler(
           caption: `${index + 1}/${result.images.length} - ${image.styleName}`,
         },
       );
-      await dependencies.tokenGuard.chargeTokens(userTelegramId, "photoshoot", styleId, 1);
+      await dependencies.tokenGuard.chargeTokens(
+        userId,
+        "photoshoot",
+        styleId,
+        1,
+      );
     }
   });
 }

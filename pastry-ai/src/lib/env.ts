@@ -17,6 +17,7 @@ const envSchema = z.object({
   CLOUDPAYMENTS_PUBLIC_ID: z.string().min(1).optional(),
   CLOUDPAYMENTS_API_SECRET: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(1),
+  YOUTUBE_API_KEY: z.string().min(1).optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

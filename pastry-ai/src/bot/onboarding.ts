@@ -91,6 +91,20 @@ export function buildPaymentUrl(baseUrl: string, telegramId: string) {
   return url.toString();
 }
 
+export function isPublicAppBaseUrl(baseUrl: string) {
+  try {
+    const hostname = new URL(baseUrl).hostname.toLowerCase();
+
+    return (
+      hostname !== "localhost" &&
+      hostname !== "127.0.0.1" &&
+      hostname !== "::1"
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function resolveBuyButtonUrl(
   step: Pick<OnboardingStep, "buyButtonUrl">,
   fallbackUrl: string,
@@ -130,4 +144,45 @@ export async function loadOnboardingSteps(): Promise<OnboardingStep[]> {
   } catch {
     return onboardingSteps;
   }
+}
+
+const expiredTariffFallback: OnboardingStep = {
+  title: "expired-tariff",
+  imagePath: "/onboarding/offer.png",
+  text: "Срок действия вашего тарифа истёк. Чтобы продолжить пользоваться ботом, оплатите новую подписку.",
+  nextButtonText: "",
+  buyButtonText: "Оплатить",
+  buyButtonUrl: null,
+  offerButtonText: null,
+};
+
+export async function loadExpiredTariffStep(): Promise<OnboardingStep> {
+  try {
+    const { prisma } = await import("@/db/prisma");
+    const step = await prisma.funnelStep.findFirst({
+      where: { slug: "expired-tariff", active: true },
+      select: {
+        buyButtonText: true,
+        buyButtonUrl: true,
+        imagePath: true,
+        nextButtonText: true,
+        offerButtonText: true,
+        text: true,
+        title: true,
+      },
+    });
+
+    return step ?? expiredTariffFallback;
+  } catch {
+    return expiredTariffFallback;
+  }
+}
+
+export function buildExpiredTariffKeyboard(
+  paymentUrl: string,
+  step: OnboardingStep,
+): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [[{ text: step.buyButtonText, url: paymentUrl }]],
+  };
 }

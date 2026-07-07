@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildOnboardingKeyboard,
   getOnboardingStep,
+  isPublicAppBaseUrl,
   onboardingSteps,
   resolveBuyButtonUrl,
 } from "./onboarding";
@@ -72,5 +73,11 @@ describe("onboarding", () => {
         telegramId: "123",
       }),
     ).toBe("https://example.com/pay");
+  });
+
+  it("detects when APP_BASE_URL is only local and not reachable for Telegram", () => {
+    expect(isPublicAppBaseUrl("http://localhost:3000")).toBe(false);
+    expect(isPublicAppBaseUrl("http://127.0.0.1:3000")).toBe(false);
+    expect(isPublicAppBaseUrl("https://example.ngrok-free.app")).toBe(true);
   });
 });

@@ -3,14 +3,14 @@ import { photoStyles, seedPhotoStyles } from "../../../prisma/seed-photo-styles.
 import { vi } from "vitest";
 
 describe("seed photo styles", () => {
-  it("pins all seeded styles to KIE with gpt-image-2", () => {
+  it("pins all seeded styles to KIE with flux-kontext-pro", () => {
     const styles = photoStyles as Array<{ provider: string; model: string }>;
 
     expect(styles.length).toBeGreaterThan(0);
 
     for (const style of styles) {
       expect(style.provider).toBe("kie");
-      expect(style.model).toBe("gpt-image-2");
+      expect(style.model).toBe("flux-kontext-pro");
     }
   });
 

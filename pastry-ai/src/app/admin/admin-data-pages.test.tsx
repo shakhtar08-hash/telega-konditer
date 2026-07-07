@@ -16,6 +16,9 @@ const { prismaMock } = vi.hoisted(() => ({
     user: {
       findMany: vi.fn(),
     },
+    tariffPlan: {
+      findMany: vi.fn(),
+    },
     photoStyle: {
       findMany: vi.fn(),
     },
@@ -56,6 +59,20 @@ describe("admin data pages", () => {
         plan: "PRO",
         credits: 42,
         createdAt: new Date("2026-06-28T00:00:00.000Z"),
+        userTariff: {
+          remainingTokens: 15,
+          expiresAt: new Date("2026-07-08T00:00:00.000Z"),
+          tariffPlan: { id: "tariff_promo", name: "Промо", slug: "promo" },
+        },
+      },
+    ]);
+    prismaMock.tariffPlan.findMany.mockResolvedValue([
+      {
+        id: "tariff_promo",
+        slug: "promo",
+        name: "Промо",
+        active: true,
+        sortOrder: 0,
       },
     ]);
 
@@ -63,13 +80,15 @@ describe("admin data pages", () => {
 
     expect(usersDynamic).toBe("force-dynamic");
     expect(prismaMock.user.findMany).toHaveBeenCalled();
+    expect(prismaMock.tariffPlan.findMany).toHaveBeenCalled();
     expect(text).toContain("\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438");
     expect(text).toContain("chef");
-    expect(text).toContain("\u0411\u0430\u0437\u043e\u0432\u044b\u0439");
     expect(text).toContain("\u0411\u0435\u0437 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0438");
-    expect(text).toContain("\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0439");
+    expect(text).toContain("\u041f\u0440\u043e\u043c\u043e");
     expect(text).toContain("\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c");
-    expect(text).toContain("42");
+    expect(text).toContain("15");
+    expect(text).not.toContain("\u0411\u0430\u0437\u043e\u0432\u044b\u0439");
+    expect(text).not.toContain("\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0439");
     expectNoMojibake(text);
   });
 

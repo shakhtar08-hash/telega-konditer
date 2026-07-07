@@ -1,27 +1,12 @@
-import { planAllowsPromptAccess, type AppPlan } from "@/features/subscriptions/plans";
-
-export type BotSubscriptionAccess = {
-  expiresAt: Date | null;
-  status: string;
+export type BotTariffAccess = {
+  expiresAt: Date;
 };
 
-export type BotUserAccess = {
-  plan: AppPlan;
-  subscription: BotSubscriptionAccess | null;
-};
-
-export function hasUsableAccess(
-  subscription: BotSubscriptionAccess | null,
+export function hasActiveTariffAccess(
+  tariff: BotTariffAccess | null,
   now = new Date(),
 ) {
-  return (
-    subscription?.status === "active" &&
-    (!subscription.expiresAt || subscription.expiresAt > now)
-  );
-}
-
-export function userPlanHasPromptAccess(user: BotUserAccess, now = new Date()) {
-  return planAllowsPromptAccess(user.plan) || hasUsableAccess(user.subscription, now);
+  return tariff !== null && tariff.expiresAt > now;
 }
 
 export async function userHasTokenAccess(userId: string): Promise<boolean> {
@@ -35,20 +20,14 @@ export async function userHasTokenAccess(userId: string): Promise<boolean> {
 
 export async function userHasPromptAccess(userId: string) {
   const { prisma } = await import("@/db/prisma");
-  const user = await prisma.user.findUnique({
+  const userTariff = await prisma.userTariff.findUnique({
     select: {
-      plan: true,
-      subscription: {
-        select: {
-          expiresAt: true,
-          status: true,
-        },
-      },
+      expiresAt: true,
     },
     where: {
-      id: userId,
+      userId,
     },
   });
 
-  return user ? userPlanHasPromptAccess(user) : false;
+  return hasActiveTariffAccess(userTariff);
 }

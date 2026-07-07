@@ -3,72 +3,127 @@ import {
   DataTable,
   formatDate,
 } from "@/components/admin/data-table";
-import { AdminButton, AdminSelect } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
 import {
-  isAppPlan,
-  subscriptionPlans,
-} from "@/features/subscriptions/plans";
+  AdminButton,
+  AdminInput,
+  AdminSelect,
+} from "@/components/admin/form";
+import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
-export async function updateUserPlan(formData: FormData) {
+export async function updateUserTariff(formData: FormData) {
   "use server";
 
   const id = String(formData.get("id") ?? "");
-  const plan = String(formData.get("plan") ?? "");
+  const tariffPlanId = String(formData.get("tariffPlanId") ?? "");
+  const expiresAtValue = String(formData.get("expiresAt") ?? "").trim();
+  const tokensValue = String(formData.get("tokens") ?? "").trim();
 
-  if (!id || !isAppPlan(plan)) {
+  if (!id) {
     return;
   }
 
-  await prisma.user.update({
-    data: { plan },
-    where: { id },
+  if (!tariffPlanId) {
+    await prisma.userTariff.deleteMany({
+      where: { userId: id },
+    });
+    revalidatePath("/admin/users");
+    return;
+  }
+
+  const tariffPlan = await prisma.tariffPlan.findUnique({
+    where: { id: tariffPlanId },
+    select: {
+      durationDays: true,
+      id: true,
+      tokenAmount: true,
+    },
   });
 
-  revalidatePath("/admin/users");
-}
+  if (!tariffPlan) {
+    return;
+  }
 
-export async function updateUserTokens(formData: FormData) {
-  "use server";
-  const id = String(formData.get("id") ?? "");
-  const tokens = Number(formData.get("tokens") ?? 0);
-  if (!id || tokens < 0) return;
-  await prisma.userTariff.update({
+  const remainingTokens =
+    tokensValue === "" ? tariffPlan.tokenAmount : Number(tokensValue);
+  const expiresAt =
+    expiresAtValue === ""
+      ? getDefaultTariffExpiryDate(tariffPlan.durationDays)
+      : new Date(expiresAtValue);
+
+  if (
+    !Number.isFinite(remainingTokens) ||
+    remainingTokens < 0 ||
+    Number.isNaN(expiresAt.getTime())
+  ) {
+    return;
+  }
+
+  const existingTariff = await prisma.userTariff.findUnique({
     where: { userId: id },
-    data: { remainingTokens: tokens },
+    select: { id: true },
   });
+
+  if (existingTariff) {
+    await prisma.userTariff.update({
+      where: { userId: id },
+      data: {
+        expiresAt,
+        remainingTokens,
+        tariffPlanId,
+      },
+    });
+  } else {
+    await prisma.userTariff.create({
+      data: {
+        expiresAt,
+        remainingTokens,
+        startedAt: new Date(),
+        tariffPlanId,
+        userId: id,
+      },
+    });
+  }
+
   revalidatePath("/admin/users");
 }
 
 export default async function AdminUsersPage() {
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      telegramId: true,
-      username: true,
-      name: true,
-      plan: true,
-      credits: true,
-      createdAt: true,
-      userTariff: {
-        select: {
-          remainingTokens: true,
-          expiresAt: true,
-          tariffPlan: { select: { name: true } },
+  const [users, tariffPlans] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        telegramId: true,
+        username: true,
+        name: true,
+        createdAt: true,
+        userTariff: {
+          select: {
+            remainingTokens: true,
+            expiresAt: true,
+            tariffPlan: { select: { id: true, name: true, slug: true } },
+          },
         },
       },
-    },
-    take: 100,
-  });
+      take: 100,
+    }),
+    prisma.tariffPlan.findMany({
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    }),
+  ]);
 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Пользователи Telegram, зарегистрированные через бота. Уровень подписки можно менять вручную."
+        description="Пользователи Telegram, зарегистрированные через бота. Здесь можно вручную назначать тариф, менять токены и дату окончания доступа."
         title="Пользователи"
       />
       <DataTable
@@ -79,54 +134,55 @@ export default async function AdminUsersPage() {
             cell: (user) => user.username ?? user.name ?? "Без имени",
           },
           {
-            header: "Уровень",
+            header: "Тариф",
             cell: (user) => (
-              <form action={updateUserPlan} className="flex items-center gap-2">
+              <form
+                action={updateUserTariff}
+                className="flex min-w-[480px] flex-wrap items-center gap-2"
+              >
                 <input name="id" type="hidden" value={user.id} />
                 <AdminSelect
-                  className="min-w-36 py-1"
-                  defaultValue={user.plan}
-                  name="plan"
+                  className="min-w-40 py-1"
+                  defaultValue={user.userTariff?.tariffPlan?.id ?? ""}
+                  name="tariffPlanId"
                 >
-                  {subscriptionPlans.map((plan) => (
-                    <option key={plan.value} value={plan.value}>
-                      {plan.label}
+                  <option value="">Без подписки</option>
+                  {tariffPlans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name}
                     </option>
                   ))}
                 </AdminSelect>
+                <AdminInput
+                  className="w-24 py-1 text-center"
+                  defaultValue={user.userTariff?.remainingTokens ?? ""}
+                  min="0"
+                  name="tokens"
+                  placeholder="Токены"
+                  type="number"
+                />
+                <AdminInput
+                  className="w-44 py-1"
+                  defaultValue={formatDateTimeLocalValue(user.userTariff?.expiresAt)}
+                  name="expiresAt"
+                  type="datetime-local"
+                />
                 <AdminButton className="py-1" type="submit" variant="secondary">
                   Сохранить
                 </AdminButton>
               </form>
             ),
           },
-          { header: "Кредиты", cell: (user) => user.credits },
           {
-            header: "Тариф",
-            cell: (user) => user.userTariff?.tariffPlan?.name ?? "—",
-          },
-          {
-            header: "Токены",
-            cell: (user) => (
-              <form action={updateUserTokens} className="flex items-center gap-2">
-                <input name="id" type="hidden" value={user.id} />
-                <input
-                  className="w-20 rounded border border-[#223047] bg-[#0d1522] px-2 py-1 text-center text-sm text-[#eef4ff]"
-                  defaultValue={user.userTariff?.remainingTokens ?? 0}
-                  name="tokens"
-                  type="number"
-                  min="0"
-                />
-                <button
-                  className="rounded bg-[#223047] px-2 py-1 text-xs text-[#97a4b8] hover:text-white"
-                  type="submit"
-                >OK</button>
-              </form>
-            ),
+            header: "Статус",
+            cell: (user) => getTariffStatusLabel(user.userTariff),
           },
           {
             header: "Истекает",
-            cell: (user) => user.userTariff?.expiresAt ? formatDate(user.userTariff.expiresAt) : "—",
+            cell: (user) =>
+              user.userTariff?.expiresAt
+                ? formatDate(user.userTariff.expiresAt)
+                : "—",
           },
           { header: "Создан", cell: (user) => formatDate(user.createdAt) },
         ]}
@@ -136,4 +192,32 @@ export default async function AdminUsersPage() {
       />
     </section>
   );
+}
+
+function getDefaultTariffExpiryDate(durationDays: number) {
+  return new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+}
+
+function formatDateTimeLocalValue(date?: Date) {
+  return date ? date.toISOString().slice(0, 16) : "";
+}
+
+function getTariffStatusLabel(
+  userTariff:
+    | {
+        expiresAt: Date;
+        tariffPlan: { name: string; slug: string };
+      }
+    | null
+    | undefined,
+) {
+  if (!userTariff) {
+    return "Без подписки";
+  }
+
+  if (userTariff.expiresAt <= new Date()) {
+    return `Истёк: ${userTariff.tariffPlan.name}`;
+  }
+
+  return userTariff.tariffPlan.name;
 }

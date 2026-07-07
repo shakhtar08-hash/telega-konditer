@@ -3,6 +3,7 @@ import type { PhotoshootOutput } from "@/ai/schemas/photoshoot";
 import { prisma } from "@/db/prisma";
 import { UserFacingError } from "@/lib/user-facing-error";
 import type { PastryBotContext } from "../context";
+import { resolveUserIdByTelegramId } from "../user-id";
 import { buildTelegramFileUrl, getLargestPhoto } from "./vision";
 
 type TokenGuardService = {
@@ -22,6 +23,9 @@ const processingMessage =
   "Готовлю 7 вариантов стилизации десерта. Это может занять пару минут.";
 const missingTelegramFilePathMessage =
   "Telegram не вернул путь к фото. Попробуйте другое изображение.";
+
+const missingProfileMessage =
+  "Не удалось найти ваш профиль в базе. Нажмите /start и попробуйте ещё раз.";
 
 export function registerPhotoshootPhotoHandler(
   composer: Composer<PastryBotContext>,
@@ -57,11 +61,20 @@ export function registerPhotoshootPhotoHandler(
 
     const imageUrl = buildTelegramFileUrl(dependencies.botToken, file.file_path);
 
-    const userTelegramId = ctx.from ? String(ctx.from.id) : "";
+    const userId = await resolveUserIdByTelegramId(
+      prisma.user,
+      String(ctx.from?.id ?? ""),
+    );
+
+    if (!userId) {
+      await ctx.reply(missingProfileMessage);
+      return;
+    }
+
     const styleCount = await prisma.photoStyle.count({ where: { active: true } });
     if (styleCount > 0) {
       try {
-        await dependencies.tokenGuard.ensureSufficientTokens(userTelegramId, styleCount);
+        await dependencies.tokenGuard.ensureSufficientTokens(userId, styleCount);
       } catch (error) {
         if (error instanceof UserFacingError) {
           await ctx.reply(error.message);
@@ -99,7 +112,12 @@ export function registerPhotoshootPhotoHandler(
           ),
         },
       );
-      await dependencies.tokenGuard.chargeTokens(userTelegramId, "photoshoot", "product-photo", 1);
+      await dependencies.tokenGuard.chargeTokens(
+        userId,
+        "photoshoot",
+        "product-photo",
+        1,
+      );
     }
   });
 }

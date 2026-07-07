@@ -81,6 +81,13 @@ export function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
+const moscowDate = new Intl.DateTimeFormat("ru-RU", {
+  timeZone: "Europe/Moscow",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 export function formatDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return moscowDate.format(date);
 }

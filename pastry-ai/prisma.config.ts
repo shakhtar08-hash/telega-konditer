@@ -3,8 +3,8 @@ import { defineConfig } from "prisma/config";
 
 function getMigrationDatabaseUrl(): string {
   const databaseUrl =
-    process.env["DATABASE_URL"] ??
     process.env["DIRECT_URL"] ??
+    process.env["DATABASE_URL"] ??
     "postgresql://user:password@localhost:5432/pastry";
   const url = new URL(databaseUrl);
 

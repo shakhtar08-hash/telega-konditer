@@ -114,8 +114,24 @@ export async function deleteBotMenuButton(formData: FormData) {
   revalidatePath("/admin/chat-bot");
 }
 
+export async function updateMenuIntro(formData: FormData) {
+  "use server";
+
+  const text = String(formData.get("text") ?? "").trim();
+
+  if (!text) return;
+
+  await prisma.botTextBlock.upsert({
+    where: { key: "prompt_menu_intro" },
+    update: { text },
+    create: { key: "prompt_menu_intro", text },
+  });
+
+  revalidatePath("/admin/chat-bot");
+}
+
 export default async function AdminChatBotPage() {
-  const [buttons, prompts] = await Promise.all([
+  const [buttons, prompts, menuIntro] = await Promise.all([
     prisma.botMenuButton.findMany({
       orderBy: { sortOrder: "asc" },
       select: {
@@ -141,6 +157,10 @@ export default async function AdminChatBotPage() {
       where: {
         active: true,
       },
+    }),
+    prisma.botTextBlock.findUnique({
+      where: { key: "prompt_menu_intro" },
+      select: { text: true },
     }),
   ]);
 
@@ -231,10 +251,11 @@ export default async function AdminChatBotPage() {
                   />
                 </AdminField>
               </div>
-              <AdminField label="Описание">
-                <AdminInput
+              <AdminField label="Текст ответа бота">
+                <AdminTextarea
+                  className="min-h-20"
                   name="description"
-                  placeholder="Коротко для администратора"
+                  placeholder="Напишите, что бот ответит пользователю при нажатии на эту кнопку"
                 />
               </AdminField>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -300,7 +321,7 @@ export default async function AdminChatBotPage() {
                     </AdminField>
                   </div>
 
-                  <AdminField label="Описание">
+                  <AdminField label="Текст ответа бота">
                     <AdminTextarea
                       className="min-h-20"
                       defaultValue={button.description}
@@ -363,7 +384,25 @@ export default async function AdminChatBotPage() {
           </div>
         </div>
 
-        <AdminPanel className="space-y-5">
+        <div className="space-y-4">
+          <form action={updateMenuIntro}>
+            <AdminPanel className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-[#f4f7fb]">Текст над меню</h3>
+                <p className="mt-1 text-sm text-[#97a4b8]">
+                  Сообщение, которое видит пользователь при открытии меню.
+                </p>
+              </div>
+              <AdminTextarea
+                className="min-h-40"
+                defaultValue={menuIntro?.text ?? ""}
+                name="text"
+              />
+              <AdminButton type="submit">Сохранить текст</AdminButton>
+            </AdminPanel>
+          </form>
+
+          <AdminPanel className="space-y-5">
           <div>
             <h3 className="font-semibold text-[#f4f7fb]">Предпросмотр меню</h3>
             <p className="mt-1 text-sm text-[#97a4b8]">
@@ -403,6 +442,7 @@ export default async function AdminChatBotPage() {
             боте сохраняются текст, эмодзи, порядок и действие.
           </p>
         </AdminPanel>
+        </div>
       </div>
     </section>
   );
