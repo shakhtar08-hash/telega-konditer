@@ -9,6 +9,8 @@ export function renderDarkHtml(
   pageLabel?: string,
 ): string {
   const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
+  const hasIngredients = data.ingredients.length > 0;
+  const hasSteps = data.steps.length > 0;
   const meta = renderMetaHtml(data.meta);
   const heroHtml = imageUrl
     ? `<div class="hero-block"><img src="${imageUrl}" alt="${data.title}" class="hero-img" />${meta}</div>`
@@ -50,14 +52,14 @@ li::marker { color: #C8A97E; }
 <h1>${data.title}</h1>
 </div>
 ${heroHtml}
-<section>
+${hasIngredients ? `<section>
 <h2>Ингредиенты</h2>
 <div>${renderIngredientRows(data.ingredients)}</div>
-</section>
-<section>
+</section>` : ""}
+${hasSteps ? `<section>
 <h2>Приготовление</h2>
 <ol>${renderStepItems(data.steps)}</ol>
-</section>
+</section>` : ""}
 <div class="footer">${footerText}</div>
 </div>
 </body>

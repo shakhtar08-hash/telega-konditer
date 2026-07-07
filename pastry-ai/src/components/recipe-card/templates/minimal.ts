@@ -17,6 +17,9 @@ export function renderMinimalHtml(
     ? `<div class="tips-section"><h2>💡 Советы</h2><ul>${renderTipItems(data.tips, cfg.maxTips)}</ul></div>`
     : "";
   const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
+  const hasIngredients = data.ingredients.length > 0;
+  const hasSteps = data.steps.length > 0;
+  const hasTitle = data.title || data.description;
 
   return `<!DOCTYPE html>
 <html>
@@ -53,19 +56,19 @@ li::marker { color: #C8A97E; }
 </head>
 <body>
 <div class="recipe-card">
-<div>
+${hasTitle ? `<div>
 <h1>${data.title}</h1>
 ${data.description ? `<p class="description">${data.description}</p>` : ""}
-</div>
+</div>` : ""}
 ${heroHtml}
-<section>
+${hasIngredients ? `<section>
 <h2>Ингредиенты</h2>
 <div>${renderIngredientRows(data.ingredients)}</div>
-</section>
-<section>
+</section>` : ""}
+${hasSteps ? `<section>
 <h2>Приготовление</h2>
 <ol>${renderStepItems(data.steps)}</ol>
-</section>
+</section>` : ""}
 ${tipHtml}
 <div class="footer">${footerText}</div>
 </div>
