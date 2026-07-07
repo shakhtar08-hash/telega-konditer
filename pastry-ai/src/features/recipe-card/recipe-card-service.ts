@@ -7,6 +7,8 @@ import { determineCardSize } from "@/components/recipe-card/templates/utils";
 import type { AIService } from "@/ai/provider/ai-service";
 import { chromium } from "playwright";
 
+const MAX_CARD_HEIGHT = 1800;
+
 const recipeCardInputSchema = z.object({
   recipeText: z.string().trim().min(1, "Recipe text is required"),
 });
@@ -34,17 +36,6 @@ function formatCardAsText(data: RecipeCardOutput): string {
   return lines.join("\n");
 }
 
-function estimateContentLength(data: RecipeCardOutput): number {
-  const textParts = [
-    data.title,
-    data.description,
-    ...data.ingredients.map((i) => `${i.name} ${i.amount}`),
-    ...data.steps,
-    ...data.tips,
-  ];
-  return textParts.reduce((acc, p) => acc + p.length, 0);
-}
-
 type CardPage = {
   data: RecipeCardOutput;
   pageLabel?: string;
@@ -52,9 +43,8 @@ type CardPage = {
 
 function buildCardPages(data: RecipeCardOutput): CardPage[] {
   const totalSteps = data.steps.length;
-  const contentLength = estimateContentLength(data);
 
-  if (contentLength <= 3000 || totalSteps <= 4) {
+  if (totalSteps <= 3) {
     return [{ data }];
   }
 
@@ -64,7 +54,6 @@ function buildCardPages(data: RecipeCardOutput): CardPage[] {
 
   const pages: CardPage[] = [];
 
-  // Page 1: photo, title, description, meta, ingredients
   pages.push({
     data: {
       ...data,
@@ -74,7 +63,6 @@ function buildCardPages(data: RecipeCardOutput): CardPage[] {
     pageLabel: `Карточка 1/${pageCount}`,
   });
 
-  // Middle page(s): steps
   for (let i = 1; i < pageCount; i++) {
     const start = (i - 1) * stepsPerPage;
     const end = i < pageCount - 1 ? i * stepsPerPage : totalSteps;
@@ -142,16 +130,36 @@ export function createRecipeCardService(dependencies: {
       }
 
       const size = determineCardSize(parsed.recipeText);
-      const pages = buildCardPages(cardData);
+      const templateName = input.template ?? "minimal";
 
       try {
-        const urls = await Promise.all(
-          pages.map((page) => {
-            const html = renderRecipeCardHtml(page.data, input.template ?? "minimal", imageUrl, size, page.pageLabel);
-            return renderCardToImage(html);
-          }),
-        );
-        return { urls };
+        const firstHtml = renderRecipeCardHtml(cardData, templateName, imageUrl, size);
+
+        // Меряем высоту первой карты
+        const probeBrowser = await chromium.launch();
+        const probePage = await probeBrowser.newPage({ viewport: { width: 1080, height: 100 } });
+        await probePage.setContent(firstHtml);
+        const cardHeight = await probePage.evaluate(() => {
+          const el = document.querySelector(".recipe-card");
+          return el ? el.scrollHeight : 0;
+        });
+        await probeBrowser.close();
+
+        // Если не влезает — разбиваем на страницы
+        if (cardHeight > MAX_CARD_HEIGHT) {
+          const pages = buildCardPages(cardData);
+          const urls = await Promise.all(
+            pages.map((p) => {
+              const html = renderRecipeCardHtml(p.data, templateName, imageUrl, size, p.pageLabel);
+              return renderCardToImage(html);
+            }),
+          );
+          return { urls };
+        }
+
+        // Влезает — используем готовый HTML
+        const url = await renderCardToImage(firstHtml);
+        return { urls: [url] };
       } catch (error) {
         console.warn("Recipe card screenshot failed, sending text", error);
         return { text: formatCardAsText(cardData) };
