@@ -50,6 +50,7 @@
 - **Extended meta block**: nullable difficulty, storage, weight fields in AI schema + prompt, with strict RECIPE METADATA rules for AI generation.
 - **Image handling fix**: hero block omitted entirely when no imageUrl available (no placeholder text, no emoji fallback).
 - **Recipe card image crop fix**: changed aspect ratio from 3:4 to 16:9 for recipe card hero images; added English composition instructions to the image generation prompt to ensure the full dessert is visible without cropping.
+- **Recipe card never clips content**: fullPage screenshot, auto-height cards, multi-page split for long recipes (2-3 pages), section subheading detection for ingredients/steps.
 
 ## Current State
 
