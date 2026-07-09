@@ -10,6 +10,8 @@ import {
 } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
+import { DeleteUserButton } from "@/components/admin/delete-user-button";
+import { deleteUser } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +187,12 @@ export default async function AdminUsersPage() {
                 : "—",
           },
           { header: "Создан", cell: (user) => formatDate(user.createdAt) },
+          {
+            header: "",
+            cell: (user) => (
+              <DeleteUserButton userId={user.id} telegramId={user.telegramId} />
+            ),
+          },
         ]}
         empty="Пользователей пока нет. Они появятся после запуска Telegram-бота."
         getKey={(user) => user.id}

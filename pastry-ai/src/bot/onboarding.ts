@@ -183,6 +183,9 @@ export function buildExpiredTariffKeyboard(
   step: OnboardingStep,
 ): InlineKeyboardMarkup {
   return {
-    inline_keyboard: [[{ text: step.buyButtonText, url: paymentUrl }]],
+    inline_keyboard: [
+      [{ callback_data: "try_free", text: "Попробовать бесплатно" }],
+      [{ text: step.buyButtonText, url: paymentUrl }],
+    ],
   };
 }

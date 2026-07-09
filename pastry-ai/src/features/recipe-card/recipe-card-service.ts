@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { RecipeCardAgentInput } from "@/ai/agents/recipe-card-agent";
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
+import type { StructuredRecipe } from "@/ai/schemas/recipe";
 import { renderRecipeCardHtml } from "@/components/recipe-card/RecipeCard";
 import type { CardTemplate } from "@/components/recipe-card/templates";
 import { determineCardSize } from "@/components/recipe-card/templates/utils";
@@ -9,9 +10,34 @@ import { chromium } from "playwright";
 
 const MAX_CARD_HEIGHT = 1800;
 
-const recipeCardInputSchema = z.object({
-  recipeText: z.string().trim().min(1, "Recipe text is required"),
+const difficultyLabels = {
+  easy: "🟢 Легко",
+  medium: "🟡 Средне",
+  hard: "🔴 Сложно",
+} as const satisfies Record<StructuredRecipe["difficulty"], string>;
+
+const structuredRecipeSchema = z.object({
+  name: z.string(),
+  whyFits: z.string(),
+  ingredients: z.array(z.string()),
+  steps: z.array(z.string()),
+  activeTime: z.string(),
+  chillingTime: z.string(),
+  totalTime: z.string(),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+  pastryTip: z.string(),
+  imagePrompt: z.string(),
 });
+
+const recipeCardInputSchema = z
+  .object({
+    recipeText: z.string().trim().min(1, "Recipe text is required").optional(),
+    recipeJson: structuredRecipeSchema.optional(),
+    imageUrl: z.string().trim().optional().nullable(),
+  })
+  .refine((value) => value.recipeText || value.recipeJson, {
+    message: "Recipe text or recipe json is required",
+  });
 
 type RecipeCardAgent = {
   execute(input: RecipeCardAgentInput): Promise<RecipeCardOutput>;
@@ -34,6 +60,44 @@ function formatCardAsText(data: RecipeCardOutput): string {
     lines.push(...data.tips.map((t) => `• ${t}`));
   }
   return lines.join("\n");
+}
+
+function formatStructuredRecipeAsText(recipe: StructuredRecipe) {
+  return [
+    "1. Название",
+    recipe.name,
+    "",
+    "2. Почему подходит",
+    recipe.whyFits,
+    "",
+    "3. Ингредиенты",
+    ...recipe.ingredients.map((item) => `- ${item}`),
+    "",
+    "4. Полная технология приготовления",
+    ...recipe.steps.map((step, stepIndex) => `${stepIndex + 1}. ${step}`),
+    "",
+    "5. Время приготовления",
+    `- Активное время: ${recipe.activeTime}`,
+    `- Охлаждение/заморозка: ${recipe.chillingTime}`,
+    `- Общее время: ${recipe.totalTime}`,
+    "",
+    "6. Сложность",
+    difficultyLabels[recipe.difficulty],
+    "",
+    "7. Совет кондитера",
+    recipe.pastryTip,
+  ].join("\n");
+}
+
+function recipeSourceToText(input: {
+  recipeText?: string;
+  recipeJson?: StructuredRecipe;
+}) {
+  if (input.recipeText) {
+    return input.recipeText;
+  }
+
+  return formatStructuredRecipeAsText(input.recipeJson!);
 }
 
 type CardPage = {
@@ -104,38 +168,42 @@ export function createRecipeCardService(dependencies: {
 }) {
   return {
     async createCard(input: {
-      recipeText: string;
+      recipeText?: string;
+      recipeJson?: StructuredRecipe;
+      imageUrl?: string | null;
       promptSlug?: string;
       template?: CardTemplate;
     }): Promise<{ urls: string[] } | { text: string }> {
       const parsed = recipeCardInputSchema.parse(input);
+      const recipeText = recipeSourceToText(parsed);
       const cardData = await dependencies.recipeCardAgent.execute({
-        recipeText: parsed.recipeText,
+        recipeText,
         promptSlug: input.promptSlug,
       });
 
       const imagePrompt = `Профессиональная фотография десерта "${cardData.title}" — ${cardData.description}. Реалистичная съёмка, мягкий свет, аппетитная подача, ресторанная презентация. Generate a horizontal hero image for a recipe card. Aspect ratio: wide horizontal composition. The dessert must be fully visible. Do not crop the top, sides, or bottom of the dessert. Leave generous margins around the subject. Avoid extreme close-ups. The dessert should occupy approximately 60-70% of the frame. Centered composition. No extreme close-up, no macro shot, no cropped dessert, no partial dessert.`;
 
-      let imageUrl: string | undefined;
-      try {
-        const result = await dependencies.aiService.generateImage({
-          aspectRatio: "16:9",
-          provider: "kie",
-          model: "flux-kontext-pro",
-          prompt: imagePrompt,
-        });
-        imageUrl = result.url;
-      } catch (error) {
-        console.warn("Recipe card image generation failed, using placeholder", error);
+      let imageUrl = parsed.imageUrl ?? undefined;
+      if (!imageUrl) {
+        try {
+          const result = await dependencies.aiService.generateImage({
+            aspectRatio: "16:9",
+            provider: "kie",
+            model: "flux-kontext-pro",
+            prompt: imagePrompt,
+          });
+          imageUrl = result.url;
+        } catch (error) {
+          console.warn("Recipe card image generation failed, using placeholder", error);
+        }
       }
 
-      const size = determineCardSize(parsed.recipeText);
-      const templateName = input.template ?? "minimal";
+      const size = determineCardSize(recipeText);
+      const templateName = input.template ?? "dark";
 
       try {
         const firstHtml = renderRecipeCardHtml(cardData, templateName, imageUrl, size);
 
-        // Меряем высоту первой карты
         const probeBrowser = await chromium.launch();
         const probePage = await probeBrowser.newPage({ viewport: { width: 1080, height: 100 } });
         await probePage.setContent(firstHtml);
@@ -145,7 +213,6 @@ export function createRecipeCardService(dependencies: {
         });
         await probeBrowser.close();
 
-        // Если не влезает — разбиваем на страницы
         if (cardHeight > MAX_CARD_HEIGHT) {
           const pages = buildCardPages(cardData);
           const urls = await Promise.all(
@@ -157,7 +224,6 @@ export function createRecipeCardService(dependencies: {
           return { urls };
         }
 
-        // Влезает — используем готовый HTML
         const url = await renderCardToImage(firstHtml);
         return { urls: [url] };
       } catch (error) {

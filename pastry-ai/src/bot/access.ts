@@ -23,11 +23,18 @@ export async function userHasPromptAccess(userId: string) {
   const userTariff = await prisma.userTariff.findUnique({
     select: {
       expiresAt: true,
+      tariffPlan: {
+        select: { tokenAmount: true },
+      },
     },
     where: {
       userId,
     },
   });
 
-  return hasActiveTariffAccess(userTariff);
+  return (
+    userTariff !== null &&
+    userTariff.expiresAt > new Date() &&
+    (userTariff.tariffPlan?.tokenAmount ?? 0) > 0
+  );
 }

@@ -8,6 +8,7 @@ type PromptLoader = {
 export type AskChefAgentInput = {
   question: string;
   promptSlug?: string;
+  recipeContext?: string;
 };
 
 export function createAskChefAgent(dependencies: {
@@ -20,9 +21,11 @@ export function createAskChefAgent(dependencies: {
         "ask-chef",
         input.promptSlug ?? "ask-chef",
       );
-      const renderedPrompt = prompt.userTemplate.replace(
-        "{{question}}",
-        input.question,
+      const renderedPrompt = renderPromptWithRecipeContext(
+        prompt.userTemplate
+          .replace("{{question}}", input.question)
+          .replace("{{recipeContext}}", input.recipeContext ?? ""),
+        input.recipeContext,
       );
 
       return dependencies.aiService.generateText({
@@ -34,4 +37,19 @@ export function createAskChefAgent(dependencies: {
       });
     },
   };
+}
+
+function renderPromptWithRecipeContext(
+  promptText: string,
+  recipeContext?: string,
+) {
+  if (!recipeContext?.trim()) {
+    return promptText;
+  }
+
+  if (promptText.includes(recipeContext)) {
+    return promptText;
+  }
+
+  return `${promptText}\n\nКонтекст рецепта:\n${recipeContext}`;
 }

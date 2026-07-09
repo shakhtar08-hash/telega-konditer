@@ -25,7 +25,7 @@ async function createTariff(formData: FormData) {
   const durationDays = Number(formData.get("durationDays") ?? 0);
   const active = formData.get("active") === "on";
 
-  if (!slug || !name || !tokenAmount || !durationDays) return;
+  if (!slug || !name || tokenAmount < 0 || !durationDays) return;
 
   await prisma.tariffPlan.create({
     data: { slug, name, tokenAmount, durationDays, active },
@@ -43,7 +43,7 @@ async function updateTariff(formData: FormData) {
   const durationDays = Number(formData.get("durationDays") ?? 0);
   const active = formData.get("active") === "on";
 
-  if (!id || !name || !tokenAmount || !durationDays) return;
+  if (!id || !name || tokenAmount < 0 || !durationDays) return;
 
   await prisma.tariffPlan.update({
     data: { name, tokenAmount, durationDays, active },

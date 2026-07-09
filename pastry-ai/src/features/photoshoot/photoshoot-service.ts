@@ -11,7 +11,7 @@ type PhotoshootAgent = {
 };
 
 type PhotoStyleRepository = {
-  listActive(limit: number): Promise<PhotoshootAgentInput["styles"]>;
+  listActive(): Promise<PhotoshootAgentInput["styles"]>;
   findById(id: string): Promise<PhotoshootAgentInput["styles"][number] | null>;
 };
 
@@ -24,7 +24,7 @@ export function createPhotoshootService(dependencies: {
       imageUrl: string;
     }): Promise<PhotoshootOutput> {
       const parsedInput = photoshootInputSchema.parse(input);
-      const styles = await dependencies.photoStyleRepository.listActive(7);
+      const styles = await dependencies.photoStyleRepository.listActive();
 
       if (styles.length === 0) {
         throw new Error("No active photo styles are configured");

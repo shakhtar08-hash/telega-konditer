@@ -17,12 +17,14 @@ export function createTextPromptService(dependencies: {
       feature: "recipe-margin" | "recipe-recalculation";
       text: string;
       promptSlug?: string;
+      recipeContext?: string;
     }): Promise<string> {
       const parsed = textPromptInputSchema.parse(input);
       return dependencies.textPromptAgent.execute({
         feature: input.feature,
         text: parsed.text.trim(),
         promptSlug: input.promptSlug,
+        recipeContext: input.recipeContext,
       });
     },
   };

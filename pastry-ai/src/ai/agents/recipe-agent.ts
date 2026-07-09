@@ -41,7 +41,7 @@ export function createRecipeAgent(dependencies: {
             pastryTip: z.string().min(1),
             imagePrompt: z.string().min(1),
           }),
-        ).min(2).max(4),
+        ).min(1).max(4),
       });
 
       return dependencies.aiService.generateObject({
@@ -59,11 +59,17 @@ export function createRecipeAgent(dependencies: {
 const recipeOutputContract = [
   "Return only structured recipe data that matches the response schema.",
   "Do not place user-facing prose outside the schema.",
-  "Generate 2 to 4 recipes (recipes array min 2, max 4). Never return fewer than 2 recipes.",
+  "Return 1 to 4 recipes.",
+  "1 recipe is a normal valid response.",
+  "2-4 recipes are preferred when there are multiple strong options.",
+  "Do not treat 1 recipe as an error or fallback.",
   "For each recipe, fill every field completely.",
   "Use Russian for all recipe fields except imagePrompt.",
   "Use English for imagePrompt.",
   "imagePrompt must be one paragraph for premium realistic pastry photography.",
   "imagePrompt must describe only the finished dessert and scene.",
   "Do not mention AI, prompts, generation, recipe instructions, or ingredient lists inside imagePrompt.",
+  "INPUT INTERPRETATION RULES:",
+  "If the prompt slug is 'recipe-from-ingredients', the user provides INGREDIENTS. Do not treat a named dish (e.g. 'блины со сгущенкой') as an ingredient list.",
+  "If the prompt slug is 'best-recipe-search', the user provides a DISH NAME or dessert query. Treat 'блины со сгущенкой' as a dish name, not as ingredients. Only consider ingredients if the user explicitly lists them as constraints.",
 ].join(" ");

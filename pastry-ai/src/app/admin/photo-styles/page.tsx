@@ -30,12 +30,14 @@ async function createStyle(formData: FormData) {
   const provider = String(formData.get("provider") ?? "");
   const model = String(formData.get("model") ?? "").trim();
   const preview = String(formData.get("preview") ?? "").trim() || null;
+  const userPreview = String(formData.get("userPreview") ?? "").trim() || null;
+  const userText = String(formData.get("userText") ?? "").trim() || null;
   const active = formData.get("active") === "on";
 
   if (!name || !description || !prompt || !provider || !model) return;
 
   await prisma.photoStyle.create({
-    data: { name, description, prompt, provider, model, preview, active },
+    data: { name, description, prompt, provider, model, preview, userPreview, userText, active },
   });
 
   revalidatePath("/admin/photo-styles");
@@ -51,12 +53,14 @@ async function updateStyle(formData: FormData) {
   const provider = String(formData.get("provider") ?? "");
   const model = String(formData.get("model") ?? "").trim();
   const preview = String(formData.get("preview") ?? "").trim() || null;
+  const userPreview = String(formData.get("userPreview") ?? "").trim() || null;
+  const userText = String(formData.get("userText") ?? "").trim() || null;
   const active = formData.get("active") === "on";
 
   if (!id || !name || !description || !prompt || !provider || !model) return;
 
   await prisma.photoStyle.update({
-    data: { name, description, prompt, provider, model, preview, active },
+    data: { name, description, prompt, provider, model, preview, userPreview, userText, active },
     where: { id },
   });
 
@@ -151,6 +155,19 @@ export default async function AdminPhotoStylesPage() {
               required
             />
           </AdminField>
+          <AdminField label="Текст для пользователя (userText)">
+            <AdminTextarea
+              className="min-h-16"
+              name="userText"
+              placeholder="Сообщение после выбора стиля. Если пусто — используется стандартный fallback"
+            />
+          </AdminField>
+          <AdminField label="Фото-превью для пользователя (userPreview)">
+            <AdminInput
+              name="userPreview"
+              placeholder="/images/style-preview.jpg или https://..."
+            />
+          </AdminField>
           <div className="flex items-center justify-between">
             <AdminToggle defaultChecked name="active">
               Активен
@@ -230,6 +247,21 @@ export default async function AdminPhotoStylesPage() {
                     defaultValue={style.prompt}
                     name="prompt"
                     required
+                  />
+                </AdminField>
+                <AdminField label="Текст для пользователя (userText)">
+                  <AdminTextarea
+                    className="min-h-16"
+                    defaultValue={style.userText ?? ""}
+                    name="userText"
+                    placeholder="Сообщение после выбора стиля. Если пусто — используется стандартный fallback"
+                  />
+                </AdminField>
+                <AdminField label="Фото-превью для пользователя (userPreview)">
+                  <AdminInput
+                    defaultValue={style.userPreview ?? ""}
+                    name="userPreview"
+                    placeholder="/images/style-preview.jpg или https://..."
                   />
                 </AdminField>
                 <AdminToggle defaultChecked={style.active} name="active">

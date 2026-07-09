@@ -3,7 +3,7 @@ import { registerHelpCommand } from "./commands/help";
 import { registerProfileCommand } from "./commands/profile";
 import { registerStartCommand } from "./commands/start";
 import type { BotSession, PastryBotContext } from "./context";
-import { registerRecipeCardTextHandler, registerRecipeCardTemplateCallback } from "./handlers/recipe-card";
+import { registerRecipeCardTextHandler, registerRecipeCardTemplateCallback, registerRecipeContextCallbacks } from "./handlers/recipe-card";
 import { registerFreeLessonTextHandler } from "./handlers/free-lesson";
 import { registerAskChefTextHandler } from "./handlers/ask-chef";
 import { registerPhotoshootPhotoHandler } from "./handlers/photoshoot";
@@ -24,29 +24,22 @@ type BotDependencies = {
     generateStyledDessertPhotos(input: { imageUrl: string }): Promise<import("@/ai/schemas/photoshoot").PhotoshootOutput>;
     generateStyledDessertPhoto(input: { imageUrl: string; styleId: string }): Promise<import("@/ai/schemas/photoshoot").PhotoshootOutput>;
   };
-  recipeService?: Parameters<
-    typeof registerRecipeTextHandler
-  >[1]["recipeService"];
+  recipeService?: Parameters<typeof registerRecipeTextHandler>[1]["recipeService"];
   sessionStorage?: StorageAdapter<BotSession>;
   visionService?: Parameters<typeof registerVisionPhotoHandler>[1]["visionService"];
-  freeLessonService?: Parameters<
-    typeof registerFreeLessonTextHandler
-  >[1]["freeLessonService"];
-  askChefService?: Parameters<
-    typeof registerAskChefTextHandler
-  >[1]["askChefService"];
-  recipeCardService?: Parameters<
-    typeof registerRecipeCardTextHandler
-  >[1]["recipeCardService"];
-  textPromptService?: Parameters<
-    typeof registerTextPromptHandler
-  >[1]["textPromptService"];
+  freeLessonService?: Parameters<typeof registerFreeLessonTextHandler>[1]["freeLessonService"];
+  askChefService?: Parameters<typeof registerAskChefTextHandler>[1]["askChefService"];
+  recipeCardService?: Parameters<typeof registerRecipeCardTextHandler>[1]["recipeCardService"];
+  textPromptService?: Parameters<typeof registerTextPromptHandler>[1]["textPromptService"];
   tokenGuard?: {
     getAvailablePhotoSlots(userId: string, maxSlots: number): Promise<number>;
     ensureSufficientTokens(userId: string, required: number): Promise<void>;
     chargeTokens(userId: string, feature: string, promptSlug: string | null, imagesSent: number): Promise<void>;
   };
-  aiService?: Parameters<typeof registerRecipeTextHandler>[1]["imageService"];
+  aiService?: {
+    generateImage(input: { provider: string; model: string; prompt: string; size?: string }): Promise<{ url: string }>;
+  };
+  generatedRecipeContextRepository?: Parameters<typeof registerRecipeTextHandler>[1]["generatedRecipeContextRepository"];
 };
 
 export function createPastryBot(
@@ -78,8 +71,7 @@ export function createPastryBot(
   if (dependencies.recipeService) {
     registerRecipeTextHandler(bot, {
       recipeService: dependencies.recipeService,
-      tokenGuard: dependencies.tokenGuard!,
-      imageService: dependencies.aiService!,
+      generatedRecipeContextRepository: dependencies.generatedRecipeContextRepository!,
     });
   }
   if (dependencies.visionService) {
@@ -106,6 +98,12 @@ export function createPastryBot(
     registerRecipeCardTemplateCallback(bot, {
       recipeCardService: dependencies.recipeCardService,
       tokenGuard: dependencies.tokenGuard!,
+    });
+    registerRecipeContextCallbacks(bot, {
+      recipeCardService: dependencies.recipeCardService,
+      tokenGuard: dependencies.tokenGuard!,
+      imageService: dependencies.aiService!,
+      generatedRecipeContextRepository: dependencies.generatedRecipeContextRepository!,
     });
   }
   if (dependencies.textPromptService) {

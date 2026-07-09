@@ -20,7 +20,7 @@ export function formatRecipeOutputForTelegram(output: StructuredRecipeOutput) {
   return [intro, ...recipes].join("\n\n");
 }
 
-function formatRecipeForTelegram(recipe: StructuredRecipe, index: number) {
+export function formatRecipeForTelegram(recipe: StructuredRecipe, index: number) {
   return [
     `${index + 1}. Название`,
     recipe.name,

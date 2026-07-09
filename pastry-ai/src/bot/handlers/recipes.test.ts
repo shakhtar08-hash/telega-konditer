@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/db/prisma", () => ({
+  prisma: {},
+}));
+
 import {
   buildRecipePromptText,
+  buildRecipeActionKeyboard,
+  formatSingleRecipeForTelegram,
   getRecipeImageGenerationConfig,
   shouldGenerateRecipeSearch,
   shouldHandleRecipeText,
@@ -10,6 +17,38 @@ import {
 const showAll = "Покажи все";
 const ingredients = "Есть:\n- сливки 33%\n- клубника";
 const previousRequest = "Предыдущие ингредиенты пользователя";
+
+describe("recipe result actions", () => {
+  it("formats one recipe as an isolated message block", () => {
+    const text = formatSingleRecipeForTelegram({
+      name: "Тарт",
+      whyFits: "Подходит",
+      ingredients: ["Ягоды"],
+      steps: ["Смешать"],
+      activeTime: "10 минут",
+      chillingTime: "20 минут",
+      totalTime: "30 минут",
+      difficulty: "easy",
+      pastryTip: "Охладить",
+      imagePrompt: "Berry tart",
+    }, 0);
+
+    expect(text).toContain("1. Название");
+    expect(text).toContain("Тарт");
+    expect(text).not.toContain("Нашел");
+  });
+
+  it("builds recipe-bound callbacks for all four actions", () => {
+    expect(buildRecipeActionKeyboard("recipe_1")).toEqual({
+      inline_keyboard: [
+        [{ text: "📸 Создать фото десерта (1 печенька)", callback_data: "create_recipe_photo:recipe_1" }],
+        [{ text: "✨ Создать карточку рецепта (1 печенька)", callback_data: "create_recipe_card:recipe_1" }],
+        [{ text: "📏 Пересчитать рецепт", callback_data: "recipe_recalculate:recipe_1" }],
+        [{ text: "👨‍🍳 Задать вопрос", callback_data: "ask_chef_recipe:recipe_1" }],
+      ],
+    });
+  });
+});
 
 describe("recipe text handler helpers", () => {
   it("handles text only after the recipe prompt was selected", () => {
@@ -34,6 +73,15 @@ describe("recipe text handler helpers", () => {
     expect(
       shouldHandleRecipeText({
         lastFeature: "recipes",
+        lastPromptSlug: "best-recipe-search",
+      }),
+    ).toBe(true);
+  });
+
+  it("handles best-recipe-search with its own lastFeature", () => {
+    expect(
+      shouldHandleRecipeText({
+        lastFeature: "best-recipe-search",
         lastPromptSlug: "best-recipe-search",
       }),
     ).toBe(true);

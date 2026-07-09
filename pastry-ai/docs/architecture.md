@@ -38,6 +38,8 @@ AI Pastry Assistant is a Next.js App Router application with a Telegram bot, adm
 9. Text/photo handlers use that persistent session state to route inputs to recipe, vision, or photoshoot services.
 10. The `recipes` handler now parses common follow-up intents like add/remove/replace ingredients before any AI call, updates the current ingredient state in session, and only then decides whether to run a new recipe search or answer with a scenario action.
 11. `/stop` clears the current scenario session state.
+12. Recipe results are now delivered per-recipe: each generated recipe is saved as a durable `GeneratedRecipeContext` record, sent as its own text block, followed by its photo (if tokens allow), with inline buttons for `✨ Создать карточку рецепта`, `📏 Пересчитать рецепт`, and `👨‍🍳 Задать вопрос`. Each button is bound to the specific `recipeId` and loads saved context on click.
+13. Callback handlers for `create_recipe_card:<recipeId>`, `recipe_recalculate:<recipeId>`, and `ask_chef_recipe:<recipeId>` load the saved `GeneratedRecipeContext` by `recipeId` with user ownership check. The recipe-card callback reuses the saved `recipeJson`/`recipeText`/`imageUrl` without regenerating the recipe. The recalculation and ask-chef callbacks store the selected recipe context in session fields (`selectedGeneratedRecipeId`, `selectedGeneratedRecipeText`) and switch the scenario. If an editable prompt template omits `{{recipeContext}}`, the corresponding agent appends the selected recipe context automatically at runtime.
 
 Telegram retries webhook updates if the request times out or returns a non-2xx response. The `update_id` claim prevents duplicate AI generations when a slow AI request causes Telegram to retry the same update.
 

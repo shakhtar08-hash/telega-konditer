@@ -9,6 +9,7 @@ type AskChefService = {
   askQuestion(input: {
     question: string;
     promptSlug?: string;
+    recipeContext?: string;
   }): Promise<string>;
 };
 
@@ -35,12 +36,17 @@ export function registerAskChefTextHandler(
       return;
     }
 
-    await ctx.reply(processingMessage);
+    await ctx.reply(ctx.session.processingText || processingMessage);
 
     try {
+      const recipeContext = ctx.session.selectedGeneratedRecipeText;
+      ctx.session.selectedGeneratedRecipeText = undefined;
+      ctx.session.selectedGeneratedRecipeId = undefined;
+
       const result = await dependencies.askChefService.askQuestion({
         question: text,
         promptSlug: ctx.session.lastPromptSlug,
+        recipeContext,
       });
 
       for (const chunk of splitTelegramText(result)) {

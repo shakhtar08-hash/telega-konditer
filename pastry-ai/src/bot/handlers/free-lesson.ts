@@ -35,7 +35,7 @@ export function registerFreeLessonTextHandler(
       return;
     }
 
-    await ctx.reply(processingMessage);
+    await ctx.reply(ctx.session.processingText || processingMessage);
 
     try {
       const result = await dependencies.freeLessonService.searchLessons({

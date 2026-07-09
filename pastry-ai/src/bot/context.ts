@@ -18,8 +18,9 @@ import type { CardTemplate } from "@/components/recipe-card/templates";
 // ... rest of file
 
 export type BotSession = {
-  lastFeature?: "recipes" | "vision" | "photoshoot" | "carousel" | "photoshoot-single-style" | "photoshoot-pick-style" | "free-lesson" | "ask-chef" | "recipe-card" | "recipe-margin" | "recipe-recalculation";
+  lastFeature?: "recipes" | "best-recipe-search" | "vision" | "photoshoot" | "carousel" | "photoshoot-single-style" | "photoshoot-pick-style" | "free-lesson" | "ask-chef" | "recipe-card" | "recipe-margin" | "recipe-recalculation";
   lastPromptSlug?: string;
+  processingText?: string;
   lastRecipeRequestText?: string;
   baseIngredientsText?: string;
   currentIngredientsText?: string;
@@ -30,6 +31,8 @@ export type BotSession = {
   selectedStyleId?: string;
   selectedCardTemplate?: "minimal" | "pinterest" | "luxury" | "dark";
   _pendingRecipeText?: string;
+  selectedGeneratedRecipeId?: string;
+  selectedGeneratedRecipeText?: string;
 };
 
 export type PastryBotContext = Context & SessionFlavor<BotSession>;
@@ -48,8 +51,11 @@ export function clearScenarioSession(session: BotSession) {
   clearRecipeScenario(session);
   session.lastFeature = undefined;
   session.lastPromptSlug = undefined;
+  session.processingText = undefined;
   session.selectedStyleId = undefined;
   session.selectedCardTemplate = undefined;
+  session.selectedGeneratedRecipeId = undefined;
+  session.selectedGeneratedRecipeText = undefined;
 }
 
 export function setRecipeIngredients(

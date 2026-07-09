@@ -2,19 +2,16 @@ import { describe, expect, it } from "vitest";
 import { createPhotoshootService } from "./photoshoot-service";
 
 describe("PhotoshootService", () => {
-  it("loads seven active photo styles before generating dessert variants", async () => {
-    const requestedLimits: number[] = [];
+  it("loads all active photo styles with no limit before generating variants", async () => {
     const agentInputs: unknown[] = [];
+    const mockStyles = Array.from({ length: 10 }, (_, index) => ({
+      id: `style_${index + 1}`,
+      name: `Стиль ${index + 1}`,
+      prompt: `Описание стиля ${index + 1}`,
+    }));
     const service = createPhotoshootService({
       photoStyleRepository: {
-        listActive: async (limit) => {
-          requestedLimits.push(limit);
-          return Array.from({ length: limit }, (_, index) => ({
-            id: `style_${index + 1}`,
-            name: `Стиль ${index + 1}`,
-            prompt: `Описание стиля ${index + 1}`,
-          }));
-        },
+        listActive: async () => mockStyles,
         findById: async () => null,
       },
       photoshootAgent: {
@@ -29,16 +26,29 @@ describe("PhotoshootService", () => {
       imageUrl: "https://example.com/dessert.jpg",
     });
 
-    expect(requestedLimits).toEqual([7]);
     expect(agentInputs).toEqual([
       {
         imageUrl: "https://example.com/dessert.jpg",
-        styles: Array.from({ length: 7 }, (_, index) => ({
-          id: `style_${index + 1}`,
-          name: `Стиль ${index + 1}`,
-          prompt: `Описание стиля ${index + 1}`,
-        })),
+        styles: mockStyles,
       },
     ]);
+  });
+
+  it("throws when no active styles configured", async () => {
+    const service = createPhotoshootService({
+      photoStyleRepository: {
+        listActive: async () => [],
+        findById: async () => null,
+      },
+      photoshootAgent: {
+        execute: async () => ({ images: [] }),
+      },
+    });
+
+    await expect(
+      service.generateStyledDessertPhotos({
+        imageUrl: "https://example.com/dessert.jpg",
+      }),
+    ).rejects.toThrow("No active photo styles are configured");
   });
 });

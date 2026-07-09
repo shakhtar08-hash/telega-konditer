@@ -24,6 +24,7 @@ import {
   getPromptSelectionText,
   loadPromptMenuItems,
 } from "../prompt-menu";
+import { buildFeatureCookieBlock } from "@/features/tariffs/cookie-info";
 import { createTriggerService } from "@/features/triggers/trigger-service";
 import { prisma } from "@/db/prisma";
 
@@ -33,7 +34,26 @@ type UserService = {
     username?: string | null;
     name?: string | null;
   }): Promise<{ id: string; name?: string | null; telegramId: string; plan: "FREE" | "PRO" | "TEAM" }>;
+  assignPromoTariff(userId: string): Promise<unknown>;
 };
+
+export function buildPhotoStyleKeyboard(
+  styles: Array<{ id: string; name: string }>,
+  itemsPerRow = 2,
+): InlineKeyboardButton[][] {
+  const rows: InlineKeyboardButton[][] = [];
+
+  for (let index = 0; index < styles.length; index += itemsPerRow) {
+    rows.push(
+      styles.slice(index, index + itemsPerRow).map((style) => ({
+        callback_data: `photoshoot-style:${style.id}`,
+        text: style.name,
+      })),
+    );
+  }
+
+  return rows;
+}
 
 export function buildStartMessage(name: string): string {
   return `Привет, ${name}!`;
@@ -51,6 +71,31 @@ export function registerStartCommand(
     await sendAccessAwareEntryPoint(ctx, userService);
   });
 
+  composer.command("recipe", async (ctx) => {
+    if (await isTariffExpired(ctx)) return;
+    await openScenarioBySlug(ctx, "recipes", "recipe-from-ingredients");
+  });
+
+  composer.command("bestrecipe", async (ctx) => {
+    if (await isTariffExpired(ctx)) return;
+    await openScenarioBySlug(ctx, "best-recipe-search", "best-recipe-search");
+  });
+
+  composer.command("ask", async (ctx) => {
+    if (await isTariffExpired(ctx)) return;
+    await openScenarioBySlug(ctx, "ask-chef", "ask-chef");
+  });
+
+  composer.command("photo", async (ctx) => {
+    if (await isTariffExpired(ctx)) return;
+    await openScenarioBySlug(ctx, "photoshoot", "product-photo");
+  });
+
+  composer.command("styles", async (ctx) => {
+    if (await isTariffExpired(ctx)) return;
+    await openScenarioBySlug(ctx, "photoshoot-pick-style", "pick-style");
+  });
+
   composer.callbackQuery(/^onboarding:(\d+)$/, async (ctx) => {
     const step = Number(ctx.match[1]);
     const telegramId = ctx.from ? String(ctx.from.id) : "";
@@ -62,60 +107,12 @@ export function registerStartCommand(
   composer.callbackQuery(/^prompt:([^:]+):(.+)$/, async (ctx) => {
     if (await isTariffExpired(ctx)) return;
 
-    const feature = ctx.match[1];
-    const slug = ctx.match[2];
-
-    if (feature === "photoshoot-pick-style" || slug === "pick-style") {
-      await ctx.answerCallbackQuery();
-      const { prisma } = await import("@/db/prisma");
-      const styles = await prisma.photoStyle.findMany({
-        orderBy: { createdAt: "asc" },
-        select: { id: true, name: true },
-        where: { active: true },
-      });
-
-      if (styles.length === 0) {
-        await ctx.reply("Нет активных стилей. Создайте стили в админке.");
-        return;
-      }
-
-      const keyboard: InlineKeyboardButton[][] = styles.map((style) => [
-        {
-          callback_data: `photoshoot-style:${style.id}`,
-          text: style.name,
-        },
-      ]);
-
-      await ctx.reply(
-        "Вы выбрали: Фото по стилю\n\nВыберите визуальный стиль для обработки фото:",
-        { reply_markup: { inline_keyboard: keyboard } },
-      );
-      return;
-    }
-
-    const item = await findPromptMenuItem(feature, slug);
-
     await ctx.answerCallbackQuery();
-
-    if (!item) {
-      await ctx.reply(
-        "Этот сценарий сейчас недоступен. Откройте меню и выберите другой.",
-      );
-      return;
-    }
-
-    setActivePrompt(
-      ctx.session,
-      item.feature as NonNullable<PastryBotContext["session"]["lastFeature"]>,
-      item.slug,
-    );
-
-    await ctx.reply(getPromptSelectionText(item));
+    await openScenarioBySlug(ctx, ctx.match[1], ctx.match[2]);
   });
 
   composer.callbackQuery(/^menu:(.+)$/, async (ctx) => {
-    const buttonId = ctx.match[1];
-    const item = await findBotMenuItem(buttonId);
+    const item = await findBotMenuItem(ctx.match[1]);
 
     await ctx.answerCallbackQuery();
 
@@ -128,40 +125,7 @@ export function registerStartCommand(
 
     if (await isTariffExpired(ctx)) return;
 
-    if (item.feature === "photoshoot-pick-style" || item.slug === "pick-style") {
-      const { prisma } = await import("@/db/prisma");
-      const styles = await prisma.photoStyle.findMany({
-        orderBy: { createdAt: "asc" },
-        select: { id: true, name: true },
-        where: { active: true },
-      });
-
-      if (styles.length === 0) {
-        await ctx.reply("Нет активных стилей. Создайте стили в админке.");
-        return;
-      }
-
-      const keyboard: InlineKeyboardButton[][] = styles.map((style) => [
-        {
-          callback_data: `photoshoot-style:${style.id}`,
-          text: style.name,
-        },
-      ]);
-
-      await ctx.reply(
-        "Вы выбрали: Фото по стилю\n\nВыберите визуальный стиль для обработки фото:",
-        { reply_markup: { inline_keyboard: keyboard } },
-      );
-      return;
-    }
-
-    setActivePrompt(
-      ctx.session,
-      item.feature as NonNullable<PastryBotContext["session"]["lastFeature"]>,
-      item.slug,
-    );
-
-    await ctx.reply(getPromptSelectionText(item));
+    await openScenarioFromItem(ctx, item);
   });
 
   composer.callbackQuery(/^photoshoot-style:(.+)$/, async (ctx) => {
@@ -171,7 +135,7 @@ export function registerStartCommand(
     await ctx.answerCallbackQuery();
 
     const style = await prisma.photoStyle.findFirst({
-      select: { name: true },
+      select: { name: true, userPreview: true, userText: true },
       where: { id: styleId, active: true },
     });
 
@@ -184,9 +148,119 @@ export function registerStartCommand(
     ctx.session.lastFeature = "photoshoot-single-style";
     ctx.session.selectedStyleId = styleId;
 
+    const userText = style.userText?.trim();
+    const fallbackText = `Вы выбрали стиль: ${style.name}\n\nТеперь отправьте фото десерта, и я обработаю его в этом стиле.`;
+    const styleMessage = userText || fallbackText;
+
+    const userPreview = style.userPreview?.trim();
+    if (userPreview) {
+      const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+      const photoUrl = new URL(userPreview, baseUrl).toString();
+      await ctx.replyWithPhoto(photoUrl, { caption: styleMessage });
+    } else {
+      await ctx.reply(styleMessage);
+    }
+  });
+
+  composer.callbackQuery("try_free", async (ctx) => {
+    const from = ctx.from;
+    if (!from) {
+      await ctx.answerCallbackQuery();
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { telegramId: String(from.id) },
+      select: { id: true },
+    });
+
+    if (!user) {
+      await ctx.answerCallbackQuery();
+      await ctx.reply("Нажмите /start, чтобы зарегистрироваться.");
+      return;
+    }
+
+    await ctx.answerCallbackQuery();
+
+    await userService.assignPromoTariff(user.id);
+
+    await sendPromptMenu(ctx);
+  });
+}
+
+async function openScenarioBySlug(
+  ctx: PastryBotContext,
+  feature: string,
+  slug: string,
+) {
+  const item = await findPromptMenuItem(feature, slug);
+
+  if (!item) {
     await ctx.reply(
-      `Вы выбрали стиль: ${style.name}\n\nТеперь отправьте фото десерта, и я обработаю его в этом стиле.`,
+      "Этот сценарий сейчас недоступен. Откройте меню и выберите другой.",
     );
+    return;
+  }
+
+  await openScenarioFromItem(ctx, item);
+}
+
+async function openScenarioFromItem(
+  ctx: PastryBotContext,
+  item: Awaited<ReturnType<typeof findBotMenuItem>>,
+) {
+  if (!item) return;
+
+  setActivePrompt(
+    ctx.session,
+    (item.slug === "best-recipe-search" ? "best-recipe-search" : item.feature) as NonNullable<PastryBotContext["session"]["lastFeature"]>,
+    item.slug,
+  );
+
+  ctx.session.processingText = item.processingText ?? undefined;
+
+  const instructionText = item.instructionText?.trim();
+  const baseMessage = instructionText || getPromptSelectionText(item);
+  const cookieBlock = await buildSelectionCookieBlock(
+    String(ctx.from?.id ?? ""),
+    item.feature,
+  );
+  const fullText = `${baseMessage}\n\n${cookieBlock}`;
+
+  const previewUrl = item.previewImageUrl?.trim();
+  if (previewUrl) {
+    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+    const photoUrl = new URL(previewUrl, baseUrl).toString();
+    await ctx.replyWithPhoto(photoUrl, { caption: fullText });
+  } else {
+    await ctx.reply(fullText);
+  }
+
+  await showStyleKeyboardIfNeeded(ctx, item.feature, item.slug);
+}
+
+async function showStyleKeyboardIfNeeded(
+  ctx: PastryBotContext,
+  feature: string,
+  slug: string,
+) {
+  if (feature !== "photoshoot-pick-style" && slug !== "pick-style") return;
+
+  const { prisma } = await import("@/db/prisma");
+  const styles = await prisma.photoStyle.findMany({
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+    where: { active: true },
+  });
+
+  if (styles.length === 0) {
+    await ctx.reply("Нет активных стилей. Создайте стили в админке.");
+    return;
+  }
+
+  const keyboard = buildPhotoStyleKeyboard(styles);
+  await ctx.reply("Выберите визуальный стиль для обработки фото:", {
+    reply_markup: { inline_keyboard: keyboard },
   });
 }
 
@@ -236,12 +310,18 @@ async function sendAccessAwareEntryPoint(
       tariffSlug,
     );
 
+    const tariffExists = userTariff !== null;
+
     if (await userHasPromptAccess(user.id)) {
       await sendPromptMenu(ctx);
       return;
     }
 
-    await sendExpiredTariffMessage(ctx, telegramId);
+    if (tariffExists) {
+      await sendExpiredTariffMessage(ctx, telegramId);
+    } else {
+      await sendOnboardingStep(ctx, 0, telegramId);
+    }
     return;
   }
 
@@ -281,12 +361,12 @@ async function isTariffExpired(ctx: PastryBotContext): Promise<boolean> {
 
   const userTariff = await prisma.userTariff.findUnique({
     where: { userId: user.id },
-    select: { expiresAt: true },
+    select: { expiresAt: true, tariffPlan: { select: { tokenAmount: true } } },
   });
 
   if (!userTariff) return false;
 
-  if (userTariff.expiresAt > new Date()) return false;
+  if (userTariff.expiresAt > new Date() && (userTariff.tariffPlan?.tokenAmount ?? 0) > 0) return false;
 
   await sendExpiredTariffMessage(ctx, String(from.id));
   return true;
@@ -317,6 +397,34 @@ async function sendOnboardingStep(
     caption: step.text,
     reply_markup: replyMarkup,
   });
+}
+
+async function buildSelectionCookieBlock(
+  telegramId: string,
+  feature: string,
+): Promise<string> {
+  const user = telegramId
+    ? await prisma.user.findUnique({
+        where: { telegramId },
+        select: { id: true },
+      })
+    : null;
+
+  let remainingTokens: number | null = null;
+  if (user) {
+    const tariff = await prisma.userTariff.findUnique({
+      where: { userId: user.id },
+      select: { remainingTokens: true },
+    });
+    remainingTokens = tariff?.remainingTokens ?? null;
+  }
+
+  const activeStyleCount =
+    feature === "photoshoot"
+      ? await prisma.photoStyle.count({ where: { active: true } })
+      : 0;
+
+  return buildFeatureCookieBlock(feature, activeStyleCount, remainingTokens);
 }
 
 async function sendPromptMenu(ctx: PastryBotContext) {

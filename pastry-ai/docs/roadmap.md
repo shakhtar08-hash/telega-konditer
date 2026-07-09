@@ -51,6 +51,16 @@
 - **Image handling fix**: hero block omitted entirely when no imageUrl available (no placeholder text, no emoji fallback).
 - **Recipe card image crop fix**: changed aspect ratio from 3:4 to 16:9 for recipe card hero images; added English composition instructions to the image generation prompt to ensure the full dessert is visible without cropping.
 - **Recipe card never clips content**: fullPage screenshot, structured multi-page split (карточка 1/2, 2/2 etc.), page 1 = photo+title+description+meta+ingredients, subsequent pages = steps+tips, never shrinks fonts or compresses content.
+- **Per-recipe delivery with persistent context**: recipe results are now delivered one by one instead of as a merged text block. Each recipe is saved as a `GeneratedRecipeContext` record, sent as its own text, followed by a photo (if tokens allow), with inline action buttons. Follow-up actions (`create_recipe_card`, `recipe_recalculate`, `ask_chef_recipe`) load the saved context by `recipeId` with user ownership validation.
+- **Recipe card service accepts saved context**: `createCard()` now accepts `recipeJson` and `imageUrl` from stored context. If `imageUrl` is provided, no new image is generated. Falls back to `recipeText` when `recipeJson` is absent.
+- **Callback handlers for recipe-bound actions**: `create_recipe_card:<recipeId>` loads saved context and runs card generation with reuse of stored data. `recipe_recalculate:<recipeId>` and `ask_chef_recipe:<recipeId>` store the selected recipe in session (`selectedGeneratedRecipeId`, `selectedGeneratedRecipeText`) and switch scenario.
+- **Follow-up context fallback fix**: `ask-chef` and `recipe-recalculation` now append the selected saved recipe context at runtime even if the editable prompt template omits `{{recipeContext}}`, which fixes lost-context follow-ups without changing the callback/session flow.
+- **Recipe count contract fix**: recipe generation now targets `2-4` recipes for normal requests, prefers `3-4` when enough realistic options exist, and allows `1` recipe only as a fallback.
+- **Cookie info for menu selection**: after choosing any feature, the bot now shows cookie cost + balance. Centralised in `cookie-info.ts` — paid/free/recipe-special messages with proper Russian pluralisation. Used by `prompt:` and `menu:` callback handlers.
+- **Photoshoot unlimited styles**: the `listActive()` method no longer has a hardcoded limit of 7. The service, token guard, and user-facing text all use the actual count of active styles dynamically.
+- **Explicit best-recipe-search branch**: `best-recipe-search` now has its own handler function (`handleBestRecipeSearch`) with a separate dispatch path, while still sharing the same recipe agent, photo generation, and per-recipe delivery.
+- **Recipe count contract relaxed**: `1-4` recipes allowed; `1` is a normal valid response, not a fallback. The schema already supported this — only the prompt instructions and tests were updated.
+- **New tests**: `cookie-info.test.ts` (16 tests), updated `photoshoot-service.test.ts` (no-limit), `recipe-agent.test.ts` (4-recipe test), `prompt-menu.test.ts` (no hardcoded "7 вариантов").
 
 ## Current State
 
@@ -64,22 +74,20 @@ Admin data is stored in Supabase. If local and server use the same database, cha
 - Tariff plans (Промо, Кондитер, Мастер, Шеф-кондитер) are editable at `/admin/tariffs`.
 - TokenGuardService handles all token checking and charging.
 - Text AI scenarios require an active, non-expired tariff, but do not spend tokens themselves.
-- Recipe flows return structured output (`{ text, dishes }`) with up to 4 AI-generated photo examples.
+- Recipe flows return structured output (`{ text, dishes }`) with photo examples for all generated recipes (up to 4, limited by available tokens).
 - Photos use OpenRouter/FLUX for text-to-image, charged at 1 token per successful send.
-- Photoshoot (multi-image) checks all tokens before any generation; if insufficient, none are sent.
+- Photoshoot (multi-image) uses ALL active styles (no limit); checks all tokens before any generation; if insufficient, none are sent.
 - CloudPayments webhook assigns `pastry-chef` tariff on successful payment.
 - Existing user `credits` are migrated to `UserTariff` tokens via `prisma/migrate-legacy-users.mjs`.
 
 ## Near-Term Next Steps
 
-- Run `prisma migrate deploy` on the production database to apply the new tariff system migration.
-- Run `node prisma/migrate-legacy-users.mjs` to migrate existing users.
-- Test the local Telegram bot end to end with the new tariff system:
-  - `/start` → prompt menu
-  - recipe prompt with photo generation (verify token charging)
-  - dessert photo analysis (text only, no charge)
-  - photoshoot with insufficient tokens (verify limit message)
-  - photoshoot with sufficient tokens (verify charge)
+- End-to-end test of the new per-recipe delivery flow:
+  - recipe prompt → multiple recipes delivered individually
+  - each recipe with inline buttons
+  - `create_recipe_card` callback → card generated from saved context
+  - `recipe_recalculate` callback → scenario switches to recalculation
+  - `ask_chef_recipe` callback → scenario switches to ask-chef
 - Add a deployment checklist for Coolify/Beget.
 - Commit and push the current local changes when approved.
 

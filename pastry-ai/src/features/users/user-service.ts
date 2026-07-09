@@ -41,25 +41,31 @@ export function createUserService(dependencies: {
         telegramUserSchema.parse(input),
       );
 
-      const existingTariff = await dependencies.userTariffRepository.findByUserId(
-        user.id,
+      return user;
+    },
+
+    async assignPromoTariff(userId: string): Promise<UserTariffRecord> {
+      const promoTariff = await dependencies.tariffPlanRepository.findBySlug(
+        "promo",
       );
 
-      if (!existingTariff) {
-        const promoTariff = await dependencies.tariffPlanRepository.findBySlug(
-          "promo",
-        );
-
-        if (promoTariff) {
-          await dependencies.userTariffRepository.upsert(user.id, {
-            tariffPlanId: promoTariff.id,
-            remainingTokens: promoTariff.tokenAmount,
-            expiresAt: getTariffExpiryDate(promoTariff.durationDays),
-          });
-        }
+      if (!promoTariff) {
+        throw new Error("Promo tariff plan not found");
       }
 
-      return user;
+      const existing = await dependencies.userTariffRepository.findByUserId(
+        userId,
+      );
+
+      if (existing) {
+        return existing;
+      }
+
+      return dependencies.userTariffRepository.upsert(userId, {
+        tariffPlanId: promoTariff.id,
+        remainingTokens: promoTariff.tokenAmount,
+        expiresAt: getTariffExpiryDate(promoTariff.durationDays),
+      });
     },
   };
 }

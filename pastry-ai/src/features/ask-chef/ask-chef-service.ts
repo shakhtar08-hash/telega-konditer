@@ -16,11 +16,13 @@ export function createAskChefService(dependencies: {
     async askQuestion(input: {
       question: string;
       promptSlug?: string;
+      recipeContext?: string;
     }): Promise<string> {
       const parsed = askChefInputSchema.parse(input);
       return dependencies.askChefAgent.execute({
         question: parsed.question.trim(),
         promptSlug: input.promptSlug,
+        recipeContext: input.recipeContext,
       });
     },
   };

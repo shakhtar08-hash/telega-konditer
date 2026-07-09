@@ -10,6 +10,7 @@ type TextPromptService = {
     feature: "recipe-margin" | "recipe-recalculation";
     text: string;
     promptSlug?: string;
+    recipeContext?: string;
   }): Promise<string>;
 };
 
@@ -43,10 +44,15 @@ export function registerTextPromptHandler(
     await ctx.reply(processingMessages[feature] ?? "Обрабатываю запрос...");
 
     try {
+      const recipeContext = ctx.session.selectedGeneratedRecipeText;
+      ctx.session.selectedGeneratedRecipeText = undefined;
+      ctx.session.selectedGeneratedRecipeId = undefined;
+
       const result = await dependencies.textPromptService.execute({
         feature: feature as "recipe-margin" | "recipe-recalculation",
         text,
         promptSlug: ctx.session.lastPromptSlug,
+        recipeContext,
       });
 
       for (const chunk of splitTelegramText(result)) {

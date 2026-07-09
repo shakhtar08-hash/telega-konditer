@@ -19,8 +19,6 @@ type PhotoshootService = {
 
 const readPhotoErrorMessage =
   "Не получилось прочитать фото. Попробуйте отправить его ещё раз.";
-const processingMessage =
-  "Готовлю 7 вариантов стилизации десерта. Это может занять пару минут.";
 const missingTelegramFilePathMessage =
   "Telegram не вернул путь к фото. Попробуйте другое изображение.";
 
@@ -43,6 +41,8 @@ export function registerPhotoshootPhotoHandler(
       return next();
     }
 
+    const styleCount = await prisma.photoStyle.count({ where: { active: true } });
+
     const photo = getLargestPhoto(ctx.message.photo);
 
     if (!photo) {
@@ -50,7 +50,9 @@ export function registerPhotoshootPhotoHandler(
       return;
     }
 
-    await ctx.reply(processingMessage);
+    await ctx.reply(
+      `Готовлю ${styleCount} вариантов стилизации десерта. Это может занять пару минут.`,
+    );
 
     const file = await ctx.api.getFile(photo.file_id);
 
@@ -71,8 +73,7 @@ export function registerPhotoshootPhotoHandler(
       return;
     }
 
-    const styleCount = await prisma.photoStyle.count({ where: { active: true } });
-    if (styleCount > 0) {
+if (styleCount > 0) {
       try {
         await dependencies.tokenGuard.ensureSufficientTokens(userId, styleCount);
       } catch (error) {

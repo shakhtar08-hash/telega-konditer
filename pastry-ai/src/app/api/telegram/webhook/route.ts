@@ -103,6 +103,7 @@ export async function POST(request: Request): Promise<Response> {
     { createRecipeCardService },
     { createTextPromptAgent },
     { createTextPromptService },
+    { createGeneratedRecipeContextRepository },
   ] =
     await Promise.all([
       import("@/db/prisma"),
@@ -130,6 +131,7 @@ export async function POST(request: Request): Promise<Response> {
       import("@/features/recipe-card/recipe-card-service"),
       import("@/ai/agents/text-prompt-agent"),
       import("@/features/text-prompt/text-prompt-service"),
+      import("@/db/repositories/generated-recipe-context-repository"),
     ]);
 
   if (updateId !== null) {
@@ -161,7 +163,7 @@ export async function POST(request: Request): Promise<Response> {
   const photoshootAgent = createPhotoshootAgent({ aiService, promptLoader });
   const photoshootService = createPhotoshootService({
 photoStyleRepository: {
-      listActive: (limit) =>
+      listActive: () =>
         prisma.photoStyle.findMany({
           orderBy: { createdAt: "asc" },
           select: {
@@ -171,7 +173,6 @@ photoStyleRepository: {
             provider: true,
             model: true,
           },
-          take: limit,
           where: {
             active: true,
           },
@@ -202,6 +203,9 @@ photoStyleRepository: {
   const recipeCardService = createRecipeCardService({ recipeCardAgent, aiService });
   const textPromptAgent = createTextPromptAgent({ aiService, promptLoader });
   const textPromptService = createTextPromptService({ textPromptAgent });
+  const generatedRecipeContextRepository = createGeneratedRecipeContextRepository(
+    prisma.generatedRecipeContext as never,
+  );
   const bot = createPastryBot({
     token: env.TELEGRAM_BOT_TOKEN,
     userService,
@@ -215,6 +219,7 @@ photoStyleRepository: {
     textPromptService,
     tokenGuard,
     aiService,
+    generatedRecipeContextRepository,
   });
 
   return webhookCallback(bot, "std/http")(request);

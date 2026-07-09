@@ -1,7 +1,8 @@
 import type { StructuredRecipe } from "@/ai/schemas/recipe";
 import { prisma } from "@/db/prisma";
+import { createGeneratedRecipeContextRepository } from "@/db/repositories/generated-recipe-context-repository";
 import {
-  buildRecipeImagePrompt,
+  formatRecipeForTelegram,
   formatRecipeOutputForTelegram,
 } from "@/features/recipes/recipe-presenter";
 import type { Composer } from "grammy";
@@ -11,7 +12,6 @@ import {
   type PastryBotContext,
 } from "../context";
 import { resolveUserIdByTelegramId } from "../user-id";
-import { toTelegramPhotoInput } from "./photoshoot";
 import { parseRecipeIntent } from "./recipe-intent";
 import { applyRecipeIntent, type RecipeStateAction } from "./recipe-state";
 
@@ -24,24 +24,9 @@ type RecipeService = {
   }>;
 };
 
-type TokenGuardService = {
-  getAvailablePhotoSlots(userId: string, maxSlots: number): Promise<number>;
-  chargeTokens(
-    userId: string,
-    feature: string,
-    promptSlug: string | null,
-    imagesSent: number,
-  ): Promise<void>;
-};
-
-type ImageService = {
-  generateImage(input: {
-    provider: string;
-    model: string;
-    prompt: string;
-    size?: string;
-  }): Promise<{ url: string }>;
-};
+type GeneratedRecipeContextRepository = ReturnType<
+  typeof createGeneratedRecipeContextRepository
+>;
 
 const processingMessage =
   "Готовлю варианты десертов по вашим ингредиентам. Это может занять несколько секунд.";
@@ -64,8 +49,7 @@ export function registerRecipeTextHandler(
   composer: Composer<PastryBotContext>,
   dependencies: {
     recipeService: RecipeService;
-    tokenGuard: TokenGuardService;
-    imageService: ImageService;
+    generatedRecipeContextRepository: GeneratedRecipeContextRepository;
   },
 ): void {
   composer.command("stop", async (ctx) => {
@@ -85,6 +69,10 @@ export function registerRecipeTextHandler(
       return handleIngredientRecipe(ctx, text, dependencies);
     }
 
+    if (ctx.session.lastPromptSlug === "best-recipe-search") {
+      return handleBestRecipeSearch(ctx, text, dependencies);
+    }
+
     return handleSimpleRecipe(ctx, text, dependencies);
   });
 }
@@ -92,7 +80,7 @@ export function registerRecipeTextHandler(
 export function shouldHandleRecipeText(session: BotSession, text = "") {
   return (
     !text.trim().startsWith("/") &&
-    session.lastFeature === "recipes" &&
+    (session.lastFeature === "recipes" || session.lastFeature === "best-recipe-search") &&
     Boolean(session.lastPromptSlug)
   );
 }
@@ -102,8 +90,7 @@ async function handleIngredientRecipe(
   text: string,
   dependencies: {
     recipeService: RecipeService;
-    tokenGuard: TokenGuardService;
-    imageService: ImageService;
+    generatedRecipeContextRepository: GeneratedRecipeContextRepository;
   },
 ) {
   const intent = parseRecipeIntent(text);
@@ -144,7 +131,7 @@ async function handleIngredientRecipe(
     return;
   }
 
-  await ctx.reply(processingMessage);
+  await ctx.reply(ctx.session.processingText || processingMessage);
 
   const ingredientsText = buildRecipePromptText(
     text,
@@ -155,72 +142,89 @@ async function handleIngredientRecipe(
     ingredientsText,
     promptSlug: ctx.session.lastPromptSlug,
   });
-  const recipeText = formatRecipeOutputForTelegram(recipeOutput);
 
-  ctx.session.lastRecipeRequestText = result.promptText;
-  ctx.session.lastRecipeListText = recipeText;
-  ctx.session.recipeScenarioStep = "results_shown";
+  const userId = await resolveUserIdByTelegramId(
+    prisma.user,
+    String(ctx.from?.id ?? ""),
+  );
 
-  for (const chunk of splitTelegramText(recipeText)) {
-    await ctx.reply(chunk);
+  if (!userId) {
+    await ctx.reply(missingProfileMessage);
+    return;
   }
 
-  void generateDishPhotos(ctx, recipeOutput.recipes, dependencies);
+  const combinedText = formatRecipeOutputForTelegram(recipeOutput);
+  ctx.session.lastRecipeRequestText = result.promptText;
+  ctx.session.lastRecipeListText = combinedText;
+  ctx.session.recipeScenarioStep = "results_shown";
+
+  for (let i = 0; i < recipeOutput.recipes.length; i++) {
+    const recipe = recipeOutput.recipes[i];
+    const singleText = formatSingleRecipeForTelegram(recipe, i);
+
+    const saved = await dependencies.generatedRecipeContextRepository.create({
+      userId,
+      recipeText: singleText,
+      recipeJson: recipe,
+      imageUrl: null,
+      source: "create_recipe",
+    });
+
+    const chunks = splitTelegramText(singleText);
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const isLast = ci === chunks.length - 1;
+      await ctx.reply(chunks[ci], isLast ? { reply_markup: buildRecipeActionKeyboard(saved.id) } : undefined);
+    }
+  }
 }
 
-async function generateDishPhotos(
+async function handleBestRecipeSearch(
   ctx: PastryBotContext,
-  recipes: StructuredRecipe[],
-  dependencies: { tokenGuard: TokenGuardService; imageService: ImageService },
+  text: string,
+  dependencies: {
+    recipeService: RecipeService;
+    generatedRecipeContextRepository: GeneratedRecipeContextRepository;
+  },
 ) {
-  try {
-    const userId = await resolveUserIdByTelegramId(
-      prisma.user,
-      String(ctx.from?.id ?? ""),
-    );
+  await ctx.reply(ctx.session.processingText || processingBestRecipeMessage);
 
-    if (!userId) {
-      await ctx.reply(missingProfileMessage);
-      return;
-    }
+  const recipeOutput = await dependencies.recipeService.createFromIngredients({
+    ingredientsText: text,
+    promptSlug: ctx.session.lastPromptSlug,
+  });
 
-    const slots = await dependencies.tokenGuard.getAvailablePhotoSlots(
+  const userId = await resolveUserIdByTelegramId(
+    prisma.user,
+    String(ctx.from?.id ?? ""),
+  );
+
+  if (!userId) {
+    await ctx.reply(missingProfileMessage);
+    return;
+  }
+
+  const combinedText = formatRecipeOutputForTelegram(recipeOutput);
+  ctx.session.lastRecipeRequestText = text;
+  ctx.session.lastRecipeListText = combinedText;
+  ctx.session.recipeScenarioStep = "results_shown";
+
+  for (let i = 0; i < recipeOutput.recipes.length; i++) {
+    const recipe = recipeOutput.recipes[i];
+    const singleText = formatSingleRecipeForTelegram(recipe, i);
+
+    const saved = await dependencies.generatedRecipeContextRepository.create({
       userId,
-      recipes.length,
-    );
-    if (slots === 0) {
-      if (recipes.length > 0) {
-        await ctx.reply(
-          "У вас недостаточно токенов для генерации фото. Пополните баланс в /menu.",
-        );
-      }
-      return;
-    }
+      recipeText: singleText,
+      recipeJson: recipe,
+      imageUrl: null,
+      source: "create_recipe",
+    });
 
-    for (let i = 0; i < slots; i++) {
-      const recipe = recipes[i];
-      const imageConfig = getRecipeImageGenerationConfig();
-      const image = await dependencies.imageService.generateImage({
-        provider: imageConfig.provider,
-        model: imageConfig.model,
-        prompt: buildRecipeImagePrompt(recipe),
-      });
-      await ctx.replyWithPhoto(
-        toTelegramPhotoInput(image.url, `${recipe.name}.png`),
-        { caption: recipe.name },
-      );
-      await dependencies.tokenGuard.chargeTokens(
-        userId,
-        "recipes",
-        ctx.session.lastPromptSlug ?? null,
-        1,
-      );
+    const chunks = splitTelegramText(singleText);
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const isLast = ci === chunks.length - 1;
+      await ctx.reply(chunks[ci], isLast ? { reply_markup: buildRecipeActionKeyboard(saved.id) } : undefined);
     }
-  } catch (error) {
-    console.error("Recipe photo generation failed", error);
-    await ctx.reply(
-      "Не удалось сгенерировать фото к рецепту. Текст рецепта уже отправлен.",
-    );
   }
 }
 
@@ -229,27 +233,10 @@ async function handleSimpleRecipe(
   text: string,
   dependencies: {
     recipeService: RecipeService;
-    tokenGuard: TokenGuardService;
-    imageService: ImageService;
+    generatedRecipeContextRepository: GeneratedRecipeContextRepository;
   },
 ) {
-  await ctx.reply(processingBestRecipeMessage);
-
-  const recipeOutput = await dependencies.recipeService.createFromIngredients({
-    ingredientsText: text,
-    promptSlug: ctx.session.lastPromptSlug,
-  });
-  const recipeText = formatRecipeOutputForTelegram(recipeOutput);
-
-  ctx.session.lastRecipeRequestText = text;
-  ctx.session.lastRecipeListText = recipeText;
-  ctx.session.recipeScenarioStep = "results_shown";
-
-  for (const chunk of splitTelegramText(recipeText)) {
-    await ctx.reply(chunk);
-  }
-
-  void generateDishPhotos(ctx, recipeOutput.recipes, dependencies);
+  return handleBestRecipeSearch(ctx, text, dependencies);
 }
 
 export function splitTelegramText(
@@ -323,6 +310,24 @@ export function buildRecipePromptText(
     "",
     "Это продолжение текущего сценария. Используй именно обновлённый список ингредиентов и пересобери ответ. Не повторяй прошлый результат без учёта нового сообщения.",
   ].join("\n");
+}
+
+export function formatSingleRecipeForTelegram(
+  recipe: StructuredRecipe,
+  index: number,
+) {
+  return formatRecipeForTelegram(recipe, index);
+}
+
+export function buildRecipeActionKeyboard(recipeId: string) {
+  return {
+    inline_keyboard: [
+      [{ text: "📸 Создать фото десерта (1 печенька)", callback_data: `create_recipe_photo:${recipeId}` }],
+      [{ text: "✨ Создать карточку рецепта (1 печенька)", callback_data: `create_recipe_card:${recipeId}` }],
+      [{ text: "📏 Пересчитать рецепт", callback_data: `recipe_recalculate:${recipeId}` }],
+      [{ text: "👨‍🍳 Задать вопрос", callback_data: `ask_chef_recipe:${recipeId}` }],
+    ],
+  };
 }
 
 export function shouldGenerateRecipeSearch(action: RecipeStateAction["action"]) {

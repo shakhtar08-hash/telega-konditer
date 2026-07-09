@@ -8,7 +8,11 @@ export type PromptMenuItem = {
   actionType?: "PROMPT" | "URL";
   description?: string | null;
   feature: string;
+  fullWidth?: boolean;
   id?: string;
+  instructionText?: string | null;
+  previewImageUrl?: string | null;
+  processingText?: string | null;
   slug: string;
   title: string;
   url?: string | null;
@@ -53,8 +57,12 @@ export function buildPromptMenuKeyboard(
     .filter((item) => item.id)
     .map((item) =>
       item.actionType === "URL" && item.url
-        ? { text: item.title, url: item.url }
-        : { callbackData: `menu:${item.id}`, text: item.title },
+        ? { fullWidth: item.fullWidth, text: item.title, url: item.url }
+        : {
+            callbackData: `menu:${item.id}`,
+            fullWidth: item.fullWidth,
+            text: item.title,
+          },
     );
 
   if (menuItems.length > 0) {
@@ -120,7 +128,7 @@ export function getPromptSelectionText(item: PromptMenuItem) {
   }
 
   if (item.feature === "photoshoot") {
-    return `Вы выбрали: ${item.title}\n\nОтправьте фото десерта, а я подготовлю 7 вариантов в разных визуальных стилях из раздела «Стили фото».`;
+    return `Вы выбрали: ${item.title}\n\nОтправьте фото десерта, а я подготовлю варианты в разных визуальных стилях из раздела «Стили фото».`;
   }
 
   return `Вы выбрали: ${item.title}\n\nТеперь отправьте данные для этого сценария.`;
@@ -141,16 +149,20 @@ export async function loadPromptMenuItems(): Promise<PromptMenuItem[]> {
   const buttons = await prisma.botMenuButton.findMany({
     orderBy: { sortOrder: "asc" },
     select: {
-      actionType: true,
-      active: true,
-      description: true,
-      emoji: true,
-      id: true,
-      label: true,
-      promptFeature: true,
-      promptSlug: true,
-      sortOrder: true,
-      url: true,
+actionType: true,
+        active: true,
+        description: true,
+        emoji: true,
+        fullWidth: true,
+        id: true,
+        instructionText: true,
+        label: true,
+        previewImageUrl: true,
+        processingText: true,
+        promptFeature: true,
+        promptSlug: true,
+        sortOrder: true,
+        url: true,
     },
     where: {
       active: true,
@@ -165,7 +177,11 @@ export async function loadPromptMenuItems(): Promise<PromptMenuItem[]> {
         actionType: button.actionType,
         description: button.description,
         feature: button.promptFeature ?? "url",
+        fullWidth: button.fullWidth,
         id: button.id,
+        instructionText: button.instructionText,
+        previewImageUrl: button.previewImageUrl,
+        processingText: button.processingText,
         slug: button.promptSlug ?? button.id,
         title: [button.emoji, button.label].filter(Boolean).join(" "),
         url: resolveBotMenuUrl(button.url),
@@ -208,8 +224,12 @@ export async function findBotMenuItem(
       active: true,
       description: true,
       emoji: true,
+      fullWidth: true,
       id: true,
+      instructionText: true,
       label: true,
+      previewImageUrl: true,
+      processingText: true,
       promptFeature: true,
       promptSlug: true,
       url: true,
@@ -228,7 +248,11 @@ export async function findBotMenuItem(
     actionType: button.actionType,
     description: button.description,
     feature: button.promptFeature ?? "",
+    fullWidth: button.fullWidth,
     id: button.id,
+    instructionText: button.instructionText,
+    previewImageUrl: button.previewImageUrl,
+    processingText: button.processingText,
     slug: button.promptSlug ?? "",
     title: [button.emoji, button.label].filter(Boolean).join(" "),
     url: resolveBotMenuUrl(button.url),

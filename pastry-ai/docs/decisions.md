@@ -127,3 +127,16 @@ Reason: the current KIE integration accepts `flux-kontext-pro` for recipe photo 
 Decision: recipe agents return `{ text, dishes }` (via `generateObject`) instead of plain text.
 
 Reason: the recipe flow now generates photo examples of suggested desserts. Structured output (`dishes[]` with `name` and `description`) gives the handler deterministic access to dish data for image generation, avoiding brittle text parsing.
+
+## Generated Recipe Context
+
+Decision: each generated recipe is saved as a durable `GeneratedRecipeContext` record with its own `recipeId`, and follow-up actions are bound to that `recipeId`.
+
+Reason: the old flow merged all recipes into one text block with no persistent reference to individual recipes. Per-recipe delivery improves readability, and durable context with `recipeId` binding ensures follow-up actions (card, recalculation, ask-chef) can load the exact saved recipe without asking the user to re-paste text. Storing context in the database (not session) survives scenario switches and allows future cross-session access.
+
+Key rules:
+- One `GeneratedRecipeContext` record per generated recipe.
+- Callback data encodes the `recipeId` directly so no server-side lookup is needed to find the target.
+- Ownership is validated on every callback: `findByIdForUser(id, userId)` returns null if the record belongs to another user.
+- Recipe-card generation from context reuses saved `recipeJson`/`imageUrl` when available; no new image is generated if one already exists.
+- Recalculation and ask-chef callbacks store `selectedGeneratedRecipeId`/`selectedGeneratedRecipeText` in session to pass context to the text handler.

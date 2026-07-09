@@ -9,6 +9,7 @@ export type TextPromptAgentInput = {
   feature: "recipe-margin" | "recipe-recalculation";
   text: string;
   promptSlug?: string;
+  recipeContext?: string;
 };
 
 export function createTextPromptAgent(dependencies: {
@@ -21,9 +22,11 @@ export function createTextPromptAgent(dependencies: {
         input.feature,
         input.promptSlug ?? input.feature,
       );
-      const renderedPrompt = prompt.userTemplate.replace(
-        "{{text}}",
-        input.text,
+      const renderedPrompt = renderPromptWithRecipeContext(
+        prompt.userTemplate
+          .replace("{{text}}", input.text)
+          .replace("{{recipeContext}}", input.recipeContext ?? ""),
+        input.recipeContext,
       );
 
       return dependencies.aiService.generateText({
@@ -35,4 +38,19 @@ export function createTextPromptAgent(dependencies: {
       });
     },
   };
+}
+
+function renderPromptWithRecipeContext(
+  promptText: string,
+  recipeContext?: string,
+) {
+  if (!recipeContext?.trim()) {
+    return promptText;
+  }
+
+  if (promptText.includes(recipeContext)) {
+    return promptText;
+  }
+
+  return `${promptText}\n\nКонтекст рецепта:\n${recipeContext}`;
 }

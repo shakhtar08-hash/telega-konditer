@@ -32,6 +32,7 @@ model User {
   credits       Int            @default(10)
   createdAt     DateTime       @default(now())
   conversations Conversation[]
+  generatedRecipeContexts GeneratedRecipeContext[]
   usage         Usage[]
   subscription  Subscription?
   payments      Payment[]
@@ -119,18 +120,22 @@ model Prompt {
 }
 
 model BotMenuButton {
-  id            String            @id @default(cuid())
-  label         String
-  emoji         String            @default("")
-  description   String            @default("")
-  actionType    BotMenuActionType @default(PROMPT)
-  promptFeature String?
-  promptSlug    String?
-  url           String?
-  sortOrder     Int
-  active        Boolean           @default(true)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  label           String
+  emoji           String            @default("")
+  description     String            @default("")
+  instructionText String?
+  processingText  String?
+  previewImageUrl String?
+  fullWidth       Boolean           @default(false)
+  actionType      BotMenuActionType @default(PROMPT)
+  promptFeature   String?
+  promptSlug      String?
+  url             String?
+  sortOrder       Int
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([active, sortOrder])
 }
@@ -164,6 +169,8 @@ model PhotoStyle {
   description String
   prompt      String
   preview     String?
+  userPreview String?
+  userText    String?
   provider    String?  @default("openai")
   model       String?  @default("gpt-image-1")
   active      Boolean  @default(true)
@@ -233,6 +240,19 @@ model Subscription {
   startedAt DateTime  @default(now())
   expiresAt DateTime?
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GeneratedRecipeContext {
+  id         String   @id @default(cuid())
+  userId     String
+  recipeText String
+  recipeJson Json?
+  imageUrl   String?
+  source     String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model TriggerMessage {

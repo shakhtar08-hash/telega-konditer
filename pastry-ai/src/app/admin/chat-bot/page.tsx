@@ -35,7 +35,11 @@ export async function createBotMenuButton(formData: FormData) {
 
   const label = String(formData.get("label") ?? "").trim();
   const emoji = String(formData.get("emoji") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
+const description = String(formData.get("description") ?? "").trim();
+  const instructionText = String(formData.get("instructionText") ?? "").trim();
+  const processingText = String(formData.get("processingText") ?? "").trim();
+  const previewImageUrl = String(formData.get("previewImageUrl") ?? "").trim();
+  const fullWidth = formData.get("fullWidth") === "on";
   const actionTypeRaw = String(formData.get("actionType") ?? "");
   const promptTarget = String(formData.get("promptTarget") ?? "");
   const url = String(formData.get("url") ?? "").trim();
@@ -53,7 +57,10 @@ export async function createBotMenuButton(formData: FormData) {
       active: true,
       description,
       emoji,
+      fullWidth,
+      instructionText: instructionText || null,
       label,
+      processingText: processingText || null,
       promptFeature: actionTypeRaw === "PROMPT" ? target.feature || null : null,
       promptSlug: actionTypeRaw === "PROMPT" ? target.slug || null : null,
       sortOrder,
@@ -71,6 +78,10 @@ export async function updateBotMenuButton(formData: FormData) {
   const label = String(formData.get("label") ?? "").trim();
   const emoji = String(formData.get("emoji") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const instructionText = String(formData.get("instructionText") ?? "").trim();
+  const processingText = String(formData.get("processingText") ?? "").trim();
+const previewImageUrl = String(formData.get("previewImageUrl") ?? "").trim();
+  const fullWidth = formData.get("fullWidth") === "on";
   const actionTypeRaw = String(formData.get("actionType") ?? "");
   const promptTarget = String(formData.get("promptTarget") ?? "");
   const url = String(formData.get("url") ?? "").trim();
@@ -83,7 +94,6 @@ export async function updateBotMenuButton(formData: FormData) {
 
   const target = parsePromptTarget(promptTarget);
 
-  // Если promptTarget не выбран, сохраняем существующие значения
   let promptFeature = target.feature || null;
   let promptSlug = target.slug || null;
   if (!promptFeature && actionTypeRaw === "PROMPT") {
@@ -101,7 +111,11 @@ export async function updateBotMenuButton(formData: FormData) {
       active,
       description,
       emoji,
+      fullWidth,
+      instructionText: instructionText || null,
       label,
+      previewImageUrl: previewImageUrl || null,
+      processingText: processingText || null,
       promptFeature: actionTypeRaw === "PROMPT" ? promptFeature : null,
       promptSlug: actionTypeRaw === "PROMPT" ? promptSlug : null,
       sortOrder,
@@ -151,8 +165,12 @@ export default async function AdminChatBotPage() {
         active: true,
         description: true,
         emoji: true,
+        fullWidth: true,
         id: true,
+        instructionText: true,
         label: true,
+        previewImageUrl: true,
+        processingText: true,
         promptFeature: true,
         promptSlug: true,
         sortOrder: true,
@@ -270,6 +288,31 @@ export default async function AdminChatBotPage() {
                   placeholder="Напишите, что бот ответит пользователю при нажатии на эту кнопку"
                 />
               </AdminField>
+              <AdminField label="Текст инструкции (instructionText)">
+                <AdminTextarea
+                  className="min-h-16"
+                  name="instructionText"
+                  placeholder="Текст сразу после нажатия на кнопку. Если пусто — используется Текст ответа бота"
+                />
+              </AdminField>
+              <AdminField label="Текст обработки (processingText)">
+                <AdminTextarea
+                  className="min-h-16"
+                  name="processingText"
+                  placeholder="Сообщение после отправки запроса пользователем. Если пусто — используется стандартный текст функции"
+                />
+              </AdminField>
+              <AdminField label="Фото-превью (previewImageUrl)">
+                <AdminInput
+                  name="previewImageUrl"
+                  placeholder="/images/preview.jpg или https://..."
+                />
+              </AdminField>
+              <div className="flex flex-wrap items-center gap-4 py-2">
+                <AdminToggle name="fullWidth">
+                  Широкая кнопка (на всю строку)
+                </AdminToggle>
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <AdminField label="Действие">
                   <AdminSelect defaultValue="PROMPT" name="actionType">
@@ -340,6 +383,36 @@ export default async function AdminChatBotPage() {
                       name="description"
                     />
                   </AdminField>
+
+                  <AdminField label="Текст инструкции (instructionText)">
+                    <AdminTextarea
+                      className="min-h-16"
+                      defaultValue={button.instructionText ?? ""}
+                      name="instructionText"
+                      placeholder="Текст сразу после нажатия на кнопку. Если пусто — используется Текст ответа бота"
+                    />
+                  </AdminField>
+                  <AdminField label="Текст обработки (processingText)">
+                    <AdminTextarea
+                      className="min-h-16"
+                      defaultValue={button.processingText ?? ""}
+                      name="processingText"
+                      placeholder="Сообщение после отправки запроса пользователем"
+                    />
+                  </AdminField>
+                  <AdminField label="Фото-превью (previewImageUrl)">
+                    <AdminInput
+                      defaultValue={button.previewImageUrl ?? ""}
+                      name="previewImageUrl"
+                      placeholder="/images/preview.jpg или https://..."
+                    />
+                  </AdminField>
+
+                  <div className="flex flex-wrap items-center gap-4 py-2">
+                    <AdminToggle defaultChecked={button.fullWidth} name="fullWidth">
+                      Широкая кнопка (на всю строку)
+                    </AdminToggle>
+                  </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <AdminField label="Действие при нажатии">

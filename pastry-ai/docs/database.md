@@ -42,6 +42,22 @@ npx prisma migrate deploy
 - `TriggerMessage` - automatic scheduled message templates.
 - `ScheduledMessage` - queued messages to be sent by cron trigger processor.
 
+## Generated Recipe Context
+
+`GeneratedRecipeContext` stores each individual recipe result for per-recipe delivery and follow-up actions:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String, cuid | Primary key |
+| `userId` | String, FK→User | Owner |
+| `recipeText` | String | Formatted text for Telegram |
+| `recipeJson` | Json? | Structured recipe object (nullable) |
+| `imageUrl` | String? | Generated photo URL (nullable) |
+| `source` | String | `create_recipe` |
+| `createdAt` | DateTime | Auto-generated |
+
+Indexed on `[userId, createdAt]`. One record per generated recipe. Callback handlers (`create_recipe_card`, `recipe_recalculate`, `ask_chef_recipe`) load by `id + userId` for ownership validation.
+
 ## Tariff Plans
 
 `TariffPlan` defines editable tariff plans:

@@ -44,8 +44,8 @@ describe("prompt menu", () => {
     ).toBe("Разобрать десерт по фото");
   });
 
-  it("uses a Russian working menu message", () => {
-    expect(buildPromptMenuMessage()).toContain("\n\n");
+  it("uses a Russian working menu message", async () => {
+    await expect(buildPromptMenuMessage()).resolves.toContain("\n\n");
   });
 
   it("asks for a photo after selecting the vision prompt", () => {
@@ -65,7 +65,7 @@ describe("prompt menu", () => {
         slug: "product-photo",
         title: "Стилизация фото десерта",
       }),
-    ).toContain("7 вариантов");
+    ).toContain("Отправьте фото десерта");
   });
 
   it("uses the menu button description as the full selection message", () => {
@@ -77,6 +77,41 @@ describe("prompt menu", () => {
         title: "Recipe button",
       }),
     ).toBe("Custom selection message");
+  });
+
+  it("keeps fullWidth menu buttons on their own row", () => {
+    const keyboard = buildPromptMenuKeyboard([
+      {
+        actionType: "PROMPT",
+        feature: "recipes",
+        fullWidth: true,
+        id: "button_recipe",
+        slug: "recipe-from-ingredients",
+        title: "Создать рецепт",
+      },
+      {
+        actionType: "PROMPT",
+        feature: "ask-chef",
+        id: "button_ask",
+        slug: "ask-chef",
+        title: "Спросить кондитера",
+      },
+      {
+        actionType: "PROMPT",
+        feature: "photoshoot",
+        id: "button_photo",
+        slug: "product-photo",
+        title: "Создать фото десерта",
+      },
+    ]);
+
+    expect(keyboard.inline_keyboard).toEqual([
+      [{ callback_data: "menu:button_recipe", text: "Создать рецепт" }],
+      [
+        { callback_data: "menu:button_ask", text: "Спросить кондитера" },
+        { callback_data: "menu:button_photo", text: "Создать фото десерта" },
+      ],
+    ]);
   });
 
   it("resolves base URL placeholders for Telegram URL buttons", () => {
