@@ -86,14 +86,15 @@ export async function POST(request: Request) {
   if (user) {
     const triggerService = createTriggerService({
       findActiveBySlug: async (slug) =>
-        prisma.triggerMessage.findFirst({
+        prisma.triggerMessage.findMany({
           where: { slug, active: true },
-        }) as Promise<TriggerMessageRecord | null>,
+          orderBy: { delayMinutes: "asc" },
+        }) as Promise<TriggerMessageRecord[]>,
       createScheduled: async (data) =>
         prisma.scheduledMessage.create({ data }) as Promise<ScheduledMessageRecord>,
-      findExistingScheduled: async (triggerSlug, chatId) =>
+      findExistingScheduled: async (triggerMessageId, chatId) =>
         prisma.scheduledMessage.findFirst({
-          where: { triggerSlug, chatId, sentAt: null },
+          where: { triggerMessageId, chatId, sentAt: null },
           select: { id: true },
         }),
       findPendingScheduled: async () => [],

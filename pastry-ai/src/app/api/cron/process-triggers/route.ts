@@ -9,12 +9,17 @@ import {
 } from "@/features/triggers/trigger-service";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   const env = loadEnv();
+  const authHeader = request.headers.get("authorization");
 
-  const { searchParams } = new URL(request.url);
-  const token = searchParams.get("token");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const token = authHeader.slice("Bearer ".length).trim();
 
   if (token !== env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,16 +27,17 @@ export async function GET(request: Request) {
 
   const triggerService = createTriggerService({
     findActiveBySlug: async (slug) =>
-      prisma.triggerMessage.findFirst({
+      prisma.triggerMessage.findMany({
         where: { slug, active: true },
-      }) as Promise<TriggerMessageRecord | null>,
+        orderBy: { delayMinutes: "asc" },
+      }) as Promise<TriggerMessageRecord[]>,
 
     createScheduled: async (data) =>
       prisma.scheduledMessage.create({ data }) as Promise<ScheduledMessageRecord>,
 
-    findExistingScheduled: async (triggerSlug, chatId) =>
+    findExistingScheduled: async (triggerMessageId, chatId) =>
       prisma.scheduledMessage.findFirst({
-        where: { triggerSlug, chatId, sentAt: null },
+        where: { triggerMessageId, chatId, sentAt: null },
         select: { id: true },
       }),
 

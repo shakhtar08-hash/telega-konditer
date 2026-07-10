@@ -1,11 +1,8 @@
 import type { Composer } from "grammy";
 import type { InlineKeyboardButton } from "grammy/types";
 import { userHasPromptAccess } from "../access";
-import {
-  clearScenarioSession,
-  setActivePrompt,
-  type PastryBotContext,
-} from "../context";
+import { clearScenarioSession, setActivePrompt, type PastryBotContext } from "../context";
+import { MENU_RETURN_CALLBACK } from "../menu-return";
 import {
   buildExpiredTariffKeyboard,
   buildOnboardingKeyboard,
@@ -14,6 +11,7 @@ import {
   isPublicAppBaseUrl,
   loadExpiredTariffStep,
   loadOnboardingSteps,
+  migrateLegacyStep,
   resolveBuyButtonUrl,
 } from "../onboarding";
 import {
@@ -99,9 +97,60 @@ export function registerStartCommand(
   composer.callbackQuery(/^onboarding:(\d+)$/, async (ctx) => {
     const step = Number(ctx.match[1]);
     const telegramId = ctx.from ? String(ctx.from.id) : "";
+    const from = ctx.from;
+    let shouldOpenMenu = false;
 
     await ctx.answerCallbackQuery();
+
+    if (from) {
+      const steps = await loadOnboardingSteps();
+      const prevStep = getOnboardingStep(step - 1, steps);
+      const migrated = migrateLegacyStep(prevStep);
+
+      if (migrated.nextAction === "activate_promo_and_next") {
+        shouldOpenMenu = true;
+        const user = await prisma.user.findUnique({
+          where: { telegramId: String(from.id) },
+          select: { id: true, promoClaimed: true },
+        });
+
+        if (user && !user.promoClaimed) {
+          await userService.assignPromoTariff(user.id);
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { promoClaimed: true },
+          });
+        }
+      }
+    }
+
+    if (shouldOpenMenu) {
+      await sendAccessAwareEntryPoint(ctx, userService);
+      return;
+    }
+
     await sendOnboardingStep(ctx, step, telegramId);
+  });
+
+  composer.callbackQuery(MENU_RETURN_CALLBACK, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    clearScenarioSession(ctx.session);
+    const user =
+      ctx.from
+        ? await userService.registerTelegramUser({
+            telegramId: String(ctx.from.id),
+            username: ctx.from.username,
+            name:
+              [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(" ") ||
+              null,
+          })
+        : null;
+
+    if (user && (await userHasPromptAccess(user.id))) {
+      await sendPromptMenu(ctx);
+    } else {
+      await sendAccessAwareEntryPoint(ctx, userService);
+    }
   });
 
   composer.callbackQuery(/^prompt:([^:]+):(.+)$/, async (ctx) => {
@@ -184,7 +233,7 @@ export function registerStartCommand(
 
     await userService.assignPromoTariff(user.id);
 
-    await sendPromptMenu(ctx);
+    await sendAccessAwareEntryPoint(ctx, userService);
   });
 }
 
@@ -284,14 +333,15 @@ async function sendAccessAwareEntryPoint(
 
     const triggerService = createTriggerService({
       findActiveBySlug: async (slug) =>
-        prisma.triggerMessage.findFirst({
+        prisma.triggerMessage.findMany({
           where: { slug, active: true },
+          orderBy: { delayMinutes: "asc" },
         }) as Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
       createScheduled: async (data) =>
         prisma.scheduledMessage.create({ data }) as Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-      findExistingScheduled: async (triggerSlug, chatId) =>
+      findExistingScheduled: async (triggerMessageId, chatId) =>
         prisma.scheduledMessage.findFirst({
-          where: { triggerSlug, chatId, sentAt: null },
+          where: { triggerMessageId, chatId, sentAt: null },
           select: { id: true },
         }),
       findPendingScheduled: async () => [],
@@ -304,11 +354,19 @@ async function sendAccessAwareEntryPoint(
     });
     const tariffSlug = userTariff?.tariffPlan?.slug ?? "promo";
 
-    await triggerService.scheduleTrigger(
-      "after-start",
-      telegramId,
-      tariffSlug,
-    );
+    try {
+      await triggerService.scheduleTrigger(
+        "after-start",
+        telegramId,
+        tariffSlug,
+      );
+    } catch (error) {
+      console.error("Failed to schedule after-start trigger", {
+        error,
+        tariffSlug,
+        telegramId,
+      });
+    }
 
     const tariffExists = userTariff !== null;
 
