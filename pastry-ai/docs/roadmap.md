@@ -2,6 +2,15 @@
 
 ## Done
 
+- **Admin navigation overhaul**:
+  - Left sidebar extracted to client component (`sidebar.tsx`) with `usePathname()`-based active-state highlighting.
+  - Nav items cleaned: `База знаний` → `Промты`, `AI-настройки` removed (single `Настройки` kept), `Триггеры` and `Рассылки` removed as top-level items, `История` and `Использование` accessible from sidebar.
+  - New sidebar items order: Дашборд, Чат-бот, Пользователи, Тарифы, Стили фото, Промты, История, Использование, Настройки.
+  - Active-state rules: `/admin/chat-bot`, `/admin/triggers`, `/admin/funnel` all highlight `Чат-бот`. Other sections match their path prefix.
+- **Chat-bot section sub-navigation** (`ChatBotSubNav` component):
+  - Shared local submenu on `/admin/chat-bot`, `/admin/triggers`, `/admin/funnel` with three tabs: `Меню`, `Триггеры`, `Рассылки`.
+  - Active tab correctly highlights based on current pathname.
+
 - Next.js foundation with admin login and protected admin routes.
 - Prisma/Supabase schema and seed.
 - Telegram bot foundation with grammY.
@@ -61,6 +70,62 @@
 - **Explicit best-recipe-search branch**: `best-recipe-search` now has its own handler function (`handleBestRecipeSearch`) with a separate dispatch path, while still sharing the same recipe agent, photo generation, and per-recipe delivery.
 - **Recipe count contract relaxed**: `1-4` recipes allowed; `1` is a normal valid response, not a fallback. The schema already supported this — only the prompt instructions and tests were updated.
 - **New tests**: `cookie-info.test.ts` (16 tests), updated `photoshoot-service.test.ts` (no-limit), `recipe-agent.test.ts` (4-recipe test), `prompt-menu.test.ts` (no hardcoded "7 вариантов").
+- **Security hardening (4 zones)**:
+  - `/api/render-card` secured: requires `x-render-card-secret` header, body size limit (1MB), Playwright timeout (25s), rate limit (20/60s).
+  - `/api/admin/login` protected: rate limit (5 attempts per 15 min per IP), timing-safe credential comparison via `timingSafeCompare`, failed-attempt tracking.
+  - CRON endpoint (`/api/cron/process-triggers`) migrated from `?token=` query param to `Authorization: Bearer` header; changed from GET to POST.
+  - SSRF guard for image URLs: `assertAllowedImageUrl()` validates all URLs before fetch/download. Allowlist includes Telegram file URLs, data URLs, and KIE result URLs. Blocks private IPs (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16), cloud metadata endpoints, localhost, .internal/.local domains.
+  - New test files: `rate-limit.test.ts` (6 tests), `image-url-validator.test.ts` (18 tests). Updated existing provider tests to use allowed Telegram URLs.
+- **Funnel improvements** (`buyButtons` array, `nextAction`, `promoClaimed`):
+  - `FunnelStep.buyButtons` JSONB field for multiple pay buttons per step (text, url, active, sortOrder).
+  - `FunnelStep.nextAction` field: `"next"` or `"activate_promo_and_next"`.
+  - `User.promoClaimed` boolean — one-time promo flag (not tied to tariff status).
+  - `migrateLegacyStep()` — auto-migrates `buyButtonText`/`buyButtonUrl` to `buyButtons` array.
+  - `buildOnboardingKeyboard()` renders Далее + multiple sorted/active buy buttons.
+  - `onboarding:n` callback handles `activate_promo_and_next`: checks `promoClaimed`, issues promo only once, sets `promoClaimed=true`.
+  - Admin `/admin/funnel` UI: `AdminBuyButtonsEditor` — add/remove/edit/reorder/toggle pay buttons, `nextAction` selector.
+  - `prisma/seed.mjs` updated with new fields.
+  - New tests: `onboarding.test.ts` 15 tests (migration, keyboard, multiple buttons, promo), updated `funnel/page.test.tsx`.
+- **"Return to menu" button in bot replies**:
+  - `src/bot/menu-return.ts` — shared helper `addMenuKeyboard()`, `replyChunks()` for adding "📋 В меню" inline button.
+  - Single callback `menu:return` registered in `start.ts` — clears session context, shows main menu.
+  - Applied to: ask-chef, free-lesson, text-prompt (margin-calculator, recipe-recalculation), vision, recipe-card (callback replies, text fallback).
+  - Not applied to: recipe results (already have action keyboards), style selection, photoshoot image sends.
+  - New tests: `menu-return.test.ts` (6 tests).
+- **Single-recipe delivery with "Create another recipe" follow-up**:
+  - `recipe-agent.ts` now returns exactly 1 recipe (was 1-4) and accepts `excludeRecipes` to avoid repeating already-given recipes.
+  - `recipe-service.ts` passes through `excludeRecipes`.
+  - `BotSession` gains `recipeSearchQuery`, `givenRecipeIds`, `givenRecipeNames` — track original query and already-delivered recipes.
+  - `clearScenarioSession()` clears these new fields on `/menu`, `/start`, `/stop`, or scenario switch.
+  - `handleIngredientRecipe`/`handleBestRecipeSearch` now store the original query on first call and pass `givenRecipeNames` as exclusion list to the AI.
+  - `buildRecipeActionKeyboard()` now includes "🍳 Создать ещё 1 рецепт" as the first button (alongside existing photo/card/recalculate/ask buttons).
+  - New callback `create_another_recipe:<recipeId>`: loads stored query + exclusion list, generates a new unique recipe, saves it, updates `givenRecipeIds`/`givenRecipeNames`, sets new recipe as current active, and sends with full action keyboard.
+  - Each new recipe automatically becomes the current active recipe for all follow-up actions.
+  - `GeneratedRecipeContextRepository.create()` accepts `source: "create_recipe" | "create_another"`.
+  - Updated tests: `recipe-agent.test.ts` (6 tests — 1-recipe contract, excludeRecipes), `recipes.test.ts` (5-button keyboard).
+
+**Promo/menu recovery fixes**:
+- `assignPromoTariff()` now reissues the `promo` tariff when an existing `UserTariff` is expired, so `Попробовать бесплатно` restores real access instead of leaving the user on a stale expired tariff row.
+- `menu:return` now resolves the current user and checks prompt access by internal `user.id`, which fixes menu reopening after callback flows.
+- The onboarding callback path with `nextAction = activate_promo_and_next` now opens the main bot menu right after promo activation instead of trying to continue the funnel.
+- Added regression tests in `user-service.test.ts` and `start.test.ts`.
+- **Dashboard real metrics activated**:
+  - `Рецепты создано`: `prisma.generatedRecipeContext.count()` (was fake conversation count).
+  - `Фото сгенерировано`: `prisma.tokenUsage.aggregate({ _sum: { imagesSent: true } })` (was fake computed value).
+  - `Расходы на API`: `prisma.usage.aggregate({ _sum: { cost: true } })`.
+  - `Генерации по типам`: donut from `prisma.usage.groupBy({ by: ["feature"] })` mapped to categories — no hardcoded percentages.
+  - Removed fake delta strings and unused queries.
+- **New tests**: `sidebar.test.ts` (12), `chat-bot-subnav.test.ts` (4); updated `admin-pages.test.ts`, `dashboard-page.test.tsx`, `chat-bot/page.test.tsx`.
+- **History + Usage logging system**:
+  - Extended `Usage` model with fields: `provider`, `model`, `status`, `errorMessage`, `conversationId` — migration applied.
+  - `UsageLogService` (`src/db/repositories/usage-log-service.ts`): centralized AI provider usage logging with `recordSuccess` and `recordError`. Records userId, feature, provider, model, tokens, cost, latency, status, errorMessage, conversationId.
+  - `ConversationLogService` (`src/db/repositories/conversation-log-service.ts`): centralized dialog history logging. `startConversation`, `appendUserMessage` (text or `[photo]`), `appendAssistantMessage` (with nullable model), `appendErrorMessage` (SYSTEM role).
+  - `InstrumentedAIService` (`src/ai/provider/instrumented-ai-service.ts`): wraps any `AIService` to auto-record usage on every `generateText`/`generateObject`/`generateImage` call with latency measurement.
+  - History logging wired into all AI bot handlers: recipes, text-prompt, vision, photoshoot, free-lesson, ask-chef.
+  - Instrumented AI service ready for webhook route integration.
+  - `/admin/usage` page updated with columns: пользователь, функция, провайдер, модель, токены, стоимость, latency, статус, ошибка.
+  - Dashboard API Usage block now shows real per-provider costs (OpenRouter, OpenAI, KIE) from `Usage.groupBy` — no hardcoded data.
+  - New tests: `usage-log-service.test.ts` (4), `conversation-log-service.test.ts` (7), `instrumented-ai-service.test.ts` (5), `logging-integration.test.ts` (2).
 
 ## Current State
 
@@ -68,7 +133,29 @@ The app can run locally and via ngrok. The test bot can point to the local webho
 
 Admin data is stored in Supabase. If local and server use the same database, changes are shared.
 
+**Trigger rules now support multiple messages under one immutable `slug`, with unique `delayMinutes` inside each rule and grouped admin management on `/admin/triggers`.**
+
+**Scheduled-message tracking redesigned:**
+- `ScheduledMessage` now stores `triggerMessageId` and `triggeredAt`, allowing unsent rows to update content and recalculate `sendAt` when trigger delays change.
+- One trigger event can now produce multiple pending scheduled sends (one per matching trigger message).
+- Edit/delete actions on trigger messages synchronize with unsent scheduled rows only; sent rows remain untouched.
+
 **Tariff/token system is implemented.** Key facts:
+
+**Admin navigation is cleaned up:**
+- Left sidebar has correct active-state based on pathname via `usePathname()`.
+- `Чат-бот` section groups `/admin/chat-bot`, `/admin/triggers`, `/admin/funnel` with shared subnav.
+- `База знаний` → `Промты`, removed `AI-настройки`, `Триггеры`, `Рассылки` from sidebar.
+- `История` and `Использование` accessible from sidebar.
+
+**Dashboard uses real metrics:** Рецепты создано (GeneratedRecipeContext), Фото сгенерировано (TokenUsage.imagesSent), Расходы на API (Usage.cost), Генерации по типам (Usage.feature groupBy). API Usage block shows real per-provider costs.
+
+**History and Usage logging system is implemented:**
+- `UsageLogService`, `ConversationLogService`, `InstrumentedAIService` — centralized logging with unit tests.
+- All AI bot handlers log conversation history (user input, assistant response, errors).
+- Usage auto-recorded via instrumented AI service wrapping every provider call.
+- `/admin/history` and `/admin/usage` pages show real data with all required columns.
+- `Usage` model extended with provider, model, status, errorMessage, conversationId.
 
 **Known fix applied:** KIE API rejects `aspectRatio: "2:3"` (code 422). The `recipe-card` agent now passes `"3:4"` which KIE supports.
 - Tariff plans (Промо, Кондитер, Мастер, Шеф-кондитер) are editable at `/admin/tariffs`.
