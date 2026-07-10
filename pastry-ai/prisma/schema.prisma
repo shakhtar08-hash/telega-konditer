@@ -30,6 +30,7 @@ model User {
   name          String?
   plan          Plan           @default(FREE)
   credits       Int            @default(10)
+  promoClaimed  Boolean        @default(false)
   createdAt     DateTime       @default(now())
   conversations Conversation[]
   generatedRecipeContexts GeneratedRecipeContext[]
@@ -187,15 +188,20 @@ model CarouselTemplate {
 }
 
 model Usage {
-  id           String   @id @default(cuid())
-  userId       String
-  feature      String
-  inputTokens  Int
-  outputTokens Int
-  cost         Decimal
-  latency      Int
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String
+  feature        String
+  provider       String   @default("")
+  model          String?
+  inputTokens    Int      @default(0)
+  outputTokens   Int      @default(0)
+  cost           Decimal  @default(0)
+  latency        Int      @default(0)
+  status         String   @default("success")
+  errorMessage   String?
+  conversationId String?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
@@ -223,7 +229,9 @@ model FunnelStep {
   sortOrder         Int
   active            Boolean  @default(true)
   nextButtonText    String   @default("Далее")
-  buyButtonText     String   @default("Купить")
+  nextAction        String   @default("next")
+  buyButtons        Json     @default("[]")
+  buyButtonText     String   @default("")
   buyButtonUrl      String?
   offerButtonText   String?
   createdAt         DateTime @default(now())
@@ -257,24 +265,35 @@ model GeneratedRecipeContext {
 
 model TriggerMessage {
   id           String   @id @default(cuid())
-  slug         String   @unique
+  slug         String
   title        String
   text         String
+  imageUrl     String?
   delayMinutes Int
   targetPlans  Json
   buttons      Json?
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@unique([slug, delayMinutes])
+  @@index([slug, active])
 }
 
 model ScheduledMessage {
-  id          String    @id @default(cuid())
-  triggerSlug String
-  chatId      String
-  text        String
-  buttons     Json?
-  sendAt      DateTime
-  sentAt      DateTime?
-  createdAt   DateTime  @default(now())
+  id               String    @id @default(cuid())
+  triggerMessageId String
+  triggerSlug      String
+  chatId           String
+  text             String
+  imageUrl         String?
+  buttons          Json?
+  triggeredAt      DateTime
+  sendAt           DateTime
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([triggerSlug])
+  @@index([triggerMessageId, chatId, sentAt])
+  @@index([sentAt, sendAt])
 }
