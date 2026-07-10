@@ -1,9 +1,12 @@
 import { Plus, Save, Trash2 } from "lucide-react";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/data-table";
+import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
 import {
   AdminButton,
   AdminField,
+  AdminImageField,
   AdminInput,
   AdminPanel,
   AdminTextarea,
@@ -30,6 +33,7 @@ export async function createTriggerMessage(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const text = String(formData.get("text") ?? "").trim();
   const delayMinutes = Number(formData.get("delayMinutes"));
+  const imageUrl = String(formData.get("imageUrl") ?? "").trim() || null;
 
   if (!slug || !title || !text || Number.isNaN(delayMinutes)) return;
 
@@ -38,8 +42,17 @@ export async function createTriggerMessage(formData: FormData) {
 
   if (targetPlans.length === 0) return;
 
+  const duplicate = await prisma.triggerMessage.findFirst({
+    where: { slug, delayMinutes },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    redirect(`/admin/triggers?error=duplicate-delay&slug=${encodeURIComponent(slug)}&delayMinutes=${delayMinutes}`);
+  }
+
   await prisma.triggerMessage.create({
-    data: { slug, title, text, delayMinutes, targetPlans, active: true },
+    data: { slug, title, text, imageUrl, delayMinutes, targetPlans, active: true },
   });
 
   revalidatePath("/admin/triggers");
@@ -49,10 +62,12 @@ export async function updateTriggerMessage(formData: FormData) {
   "use server";
 
   const id = String(formData.get("id") ?? "");
+  const slug = String(formData.get("slug") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const text = String(formData.get("text") ?? "").trim();
   const delayMinutes = Number(formData.get("delayMinutes"));
   const active = formData.get("active") === "on";
+  const imageUrl = String(formData.get("imageUrl") ?? "").trim() || null;
 
   if (!id || !title || !text || Number.isNaN(delayMinutes)) return;
 
@@ -61,9 +76,36 @@ export async function updateTriggerMessage(formData: FormData) {
 
   if (targetPlans.length === 0) return;
 
-  await prisma.triggerMessage.update({
-    data: { title, text, delayMinutes, active, targetPlans },
-    where: { id },
+  const duplicate = await prisma.triggerMessage.findFirst({
+    where: { slug, delayMinutes, NOT: { id } },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    redirect(`/admin/triggers?error=duplicate-delay&slug=${encodeURIComponent(slug)}&delayMinutes=${delayMinutes}`);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.triggerMessage.update({
+      where: { id },
+      data: { title, text, imageUrl, delayMinutes, active, targetPlans },
+    });
+
+    const unsentRows = await tx.scheduledMessage.findMany({
+      where: { triggerMessageId: id, sentAt: null },
+      select: { id: true, triggeredAt: true },
+    });
+
+    for (const row of unsentRows) {
+      await tx.scheduledMessage.update({
+        where: { id: row.id },
+        data: {
+          text,
+          imageUrl,
+          sendAt: new Date(row.triggeredAt.getTime() + delayMinutes * 60 * 1000),
+        },
+      });
+    }
   });
 
   revalidatePath("/admin/triggers");
@@ -75,15 +117,29 @@ export async function deleteTriggerMessage(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  await prisma.triggerMessage.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.scheduledMessage.deleteMany({
+      where: { triggerMessageId: id, sentAt: null },
+    }),
+    prisma.triggerMessage.delete({ where: { id } }),
+  ]);
+
   revalidatePath("/admin/triggers");
 }
 
-export default async function AdminTriggersPage() {
+export default async function AdminTriggersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string; slug?: string; delayMinutes?: string }>;
+}) {
   const [triggers, tariffs] = await Promise.all([
-    prisma.triggerMessage.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.triggerMessage.findMany({ orderBy: [{ slug: "asc" }, { delayMinutes: "asc" }] }),
     prisma.tariffPlan.findMany({ orderBy: { sortOrder: "asc" }, select: { slug: true, name: true } }),
   ]);
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const error = resolvedSearchParams?.error ?? "";
+  const errorSlug = resolvedSearchParams?.slug ?? "";
+  const errorDelayMinutes = resolvedSearchParams?.delayMinutes ?? "";
 
   return (
     <section className="space-y-5">
@@ -97,13 +153,13 @@ export default async function AdminTriggersPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2 border-b border-[#223047] text-sm">
-        <span className="px-3 py-2 text-[#63718a]">Меню</span>
-        <span className="px-3 py-2 text-[#63718a]">Цепочки</span>
-        <span className="border-b-2 border-[#7257ff] px-3 py-2 font-medium text-[#d8d2ff]">
-          Триггеры
-        </span>
-      </div>
+      {error === "duplicate-delay" ? (
+        <div className="rounded-lg border border-[#7f1d1d] bg-[#2a1218] px-4 py-3 text-sm text-[#fecaca]">
+          В правиле <strong>{errorSlug}</strong> уже есть сообщение с задержкой <strong>{errorDelayMinutes}</strong> мин. Укажите другую задержку.
+        </div>
+      ) : null}
+
+      <ChatBotSubNav />
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.7fr]">
         <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
@@ -158,6 +214,12 @@ export default async function AdminTriggersPage() {
                   placeholder="Текст, который получит пользователь..."
                 />
               </AdminField>
+              <AdminImageField
+                fileName="imageFile"
+                label="Изображение"
+                placeholder="/uploads/admin/triggers/example.webp или https://..."
+                textName="imageUrl"
+              />
               <AdminField label="Задержка (минуты)">
                 <AdminInput
                   defaultValue={15}
@@ -218,6 +280,13 @@ export default async function AdminTriggersPage() {
                         name="text"
                       />
                     </AdminField>
+                    <AdminImageField
+                      defaultValue={trigger.imageUrl ?? ""}
+                      fileName="imageFile"
+                      label="Изображение"
+                      placeholder="/uploads/admin/triggers/example.webp или https://..."
+                      textName="imageUrl"
+                    />
                     <AdminField label="Задержка (минуты)">
                       <AdminInput
                         defaultValue={trigger.delayMinutes}
