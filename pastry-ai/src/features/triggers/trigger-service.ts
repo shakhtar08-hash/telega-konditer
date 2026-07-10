@@ -3,6 +3,7 @@ export type TriggerMessageRecord = {
   slug: string;
   title: string;
   text: string;
+  imageUrl: string | null;
   delayMinutes: number;
   targetPlans: string[];
   active: boolean;
@@ -12,24 +13,31 @@ export type TriggerMessageRecord = {
 
 export type ScheduledMessageRecord = {
   id: string;
+  triggerMessageId: string;
   triggerSlug: string;
   chatId: string;
   text: string;
+  imageUrl: string | null;
+  buttons?: unknown;
+  triggeredAt: Date;
   sendAt: Date;
   sentAt: Date | null;
   createdAt: Date;
 };
 
 type Dependencies = {
-  findActiveBySlug(slug: string): Promise<TriggerMessageRecord | null>;
+  findActiveBySlug(slug: string): Promise<TriggerMessageRecord[]>;
   createScheduled(data: {
+    triggerMessageId: string;
     triggerSlug: string;
     chatId: string;
     text: string;
+    imageUrl?: string | null;
+    triggeredAt: Date;
     sendAt: Date;
   }): Promise<ScheduledMessageRecord>;
   findExistingScheduled(
-    triggerSlug: string,
+    triggerMessageId: string,
     chatId: string,
   ): Promise<{ id: string } | null>;
   findPendingScheduled(
@@ -45,32 +53,34 @@ export function createTriggerService(deps: Dependencies) {
       chatId: string,
       plan: string,
     ): Promise<void> {
-      const trigger = await deps.findActiveBySlug(slug);
+      const triggers = await deps.findActiveBySlug(slug);
 
-      if (!trigger) {
-        return;
+      for (const trigger of triggers) {
+        const plans = Array.isArray(trigger.targetPlans) ? trigger.targetPlans : [];
+
+        if (!plans.includes(plan)) {
+          continue;
+        }
+
+        const existing = await deps.findExistingScheduled(trigger.id, chatId);
+
+        if (existing) {
+          continue;
+        }
+
+        const triggeredAt = new Date();
+        const sendAt = new Date(triggeredAt.getTime() + trigger.delayMinutes * 60 * 1000);
+
+        await deps.createScheduled({
+          triggerMessageId: trigger.id,
+          triggerSlug: slug,
+          chatId,
+          text: trigger.text,
+          imageUrl: trigger.imageUrl ?? null,
+          triggeredAt,
+          sendAt,
+        });
       }
-
-      const plans = Array.isArray(trigger.targetPlans) ? trigger.targetPlans : [];
-
-      if (!plans.includes(plan)) {
-        return;
-      }
-
-      const existing = await deps.findExistingScheduled(slug, chatId);
-
-      if (existing) {
-        return;
-      }
-
-      const sendAt = new Date(Date.now() + trigger.delayMinutes * 60 * 1000);
-
-      await deps.createScheduled({
-        chatId,
-        sendAt,
-        text: trigger.text,
-        triggerSlug: slug,
-      });
     },
 
     async processPendingTriggers(
