@@ -6,6 +6,9 @@ const { prismaMock } = vi.hoisted(() => ({
     triggerRule: {
       findMany: vi.fn(),
     },
+    userGroup: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -22,6 +25,7 @@ import AdminTriggersPage from "./page";
 describe("AdminTriggersPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.userGroup.findMany.mockResolvedValue([]);
   });
 
   it("renders the templates panel and trigger table", async () => {
@@ -99,5 +103,31 @@ describe("AdminTriggersPage", () => {
     expect(html).toContain("/admin/triggers/rule_1");
     expect(html).not.toContain("/admin/triggers/rule_2");
     expect(html).toContain("Search triggers...");
+  });
+
+  it("renders user group conditions with business-friendly Russian labels", async () => {
+    prismaMock.userGroup.findMany.mockResolvedValue([
+      { id: "group_vip", name: "VIP клиенты" },
+    ]);
+    prismaMock.triggerRule.findMany.mockResolvedValue([
+      {
+        id: "rule_group",
+        name: "VIP follow-up",
+        eventKey: "user.started",
+        status: "active",
+        delayValue: 0,
+        delayUnit: "now",
+        messageText: "Hello!",
+        imageUrl: null,
+        buttons: null,
+        conditions: [{ field: "userGroupId", operator: "isMember", value: "group_vip" }],
+        createdAt: new Date("2026-07-11T10:00:00.000Z"),
+        updatedAt: new Date("2026-07-11T10:00:00.000Z"),
+      },
+    ]);
+
+    const html = renderToStaticMarkup(await AdminTriggersPage({}));
+
+    expect(html).toContain("Состоит в группе VIP клиенты");
   });
 });

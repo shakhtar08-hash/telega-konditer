@@ -2,6 +2,7 @@ export type TriggerCondition =
   | { field: "promoClaimed"; operator: "is"; value: boolean }
   | { field: "hasActiveTariff"; operator: "is"; value: boolean }
   | { field: "generationCount"; operator: "equals" | "gte"; value: number }
+  | { field: "userGroupId"; operator: "isMember"; value: string }
   | { field: "groupId"; operator: "contains"; value: string };
 
 export type TriggerUserState = {

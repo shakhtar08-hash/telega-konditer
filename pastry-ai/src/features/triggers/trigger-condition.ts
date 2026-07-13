@@ -25,6 +25,7 @@ export function evaluateConditions(
         return condition.operator === "gte"
           ? state.generationCount >= condition.value
           : state.generationCount === condition.value;
+      case "userGroupId":
       case "groupId":
         return state.groupIds.includes(condition.value);
     }

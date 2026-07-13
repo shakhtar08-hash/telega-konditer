@@ -73,14 +73,19 @@ function summarizeCondition(condition: TriggerCondition) {
       return `Active tariff is ${condition.value ? "Yes" : "No"}`;
     case "generationCount":
       return `Generations count ${condition.operator === "gte" ? "is at least" : "equals"} ${condition.value}`;
+    case "userGroupId":
+      return `Состоит в группе ${condition.value}`;
     case "groupId":
-      return `User group contains ${condition.value}`;
+      return `Состоит в группе ${condition.value}`;
     default:
       return "Custom condition";
   }
 }
 
-function summarizeConditions(rawConditions: TriggerRuleRow["conditions"]) {
+function summarizeConditions(
+  rawConditions: TriggerRuleRow["conditions"],
+  userGroupNames: Map<string, string>,
+) {
   const conditions = Array.isArray(rawConditions)
     ? (rawConditions as TriggerCondition[])
     : [];
@@ -89,7 +94,16 @@ function summarizeConditions(rawConditions: TriggerRuleRow["conditions"]) {
     return "No conditions";
   }
 
-  return conditions.map(summarizeCondition).join(" AND ");
+  return conditions
+    .map((condition) => {
+      if (condition.field === "userGroupId" || condition.field === "groupId") {
+        const label = userGroupNames.get(condition.value) ?? condition.value;
+        return `Состоит в группе ${label}`;
+      }
+
+      return summarizeCondition(condition);
+    })
+    .join(" AND ");
 }
 
 function getStatusBadgeClass(status: TriggerRuleRow["status"]) {
@@ -157,6 +171,11 @@ export default async function AdminTriggersPage({
   const rules = (await prisma.triggerRule.findMany({
     orderBy: { updatedAt: "desc" },
   })) as TriggerRuleRow[];
+  const userGroups = await prisma.userGroup.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+  const userGroupNames = new Map(userGroups.map((group) => [group.id, group.name]));
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const filters = {
     event: resolvedSearchParams.event?.trim() || "all",
@@ -337,7 +356,7 @@ export default async function AdminTriggersPage({
                       </td>
                       <td className="px-4 py-3 text-[#dbe3ef]">{formatDelay(rule.delayValue, rule.delayUnit)}</td>
                       <td className="max-w-[320px] px-4 py-3 text-[#97a4b8]">
-                        {summarizeConditions(rule.conditions)}
+                        {summarizeConditions(rule.conditions, userGroupNames)}
                       </td>
                       <td className="px-4 py-3 text-[#dbe3ef]">
                         <span
