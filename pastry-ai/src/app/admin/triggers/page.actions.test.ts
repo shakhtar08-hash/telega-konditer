@@ -1,13 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  createMock,
+  deleteMock,
   redirectMock,
   revalidatePathMock,
+  updateMock,
 } = vi.hoisted(() => ({
+  createMock: vi.fn(),
+  deleteMock: vi.fn(),
   redirectMock: vi.fn(() => {
     throw new Error("NEXT_REDIRECT");
   }),
   revalidatePathMock: vi.fn(),
+  updateMock: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -18,45 +24,113 @@ vi.mock("next/navigation", () => ({
   redirect: redirectMock,
 }));
 
+vi.mock("@/db/prisma", () => ({
+  prisma: {
+    triggerRule: {
+      create: createMock,
+      delete: deleteMock,
+      update: updateMock,
+    },
+  },
+}));
+
 import {
-  createTriggerMessage,
-  deleteTriggerMessage,
-  updateTriggerMessage,
-} from "./page.legacy-actions";
+  createTriggerRule,
+  deleteTriggerRule,
+  updateTriggerRule,
+} from "./actions";
 
-describe("legacy trigger action compatibility", () => {
-  it("fails loudly for createTriggerMessage", async () => {
-    const formData = new FormData();
-    formData.set("slug", "after-start");
-    formData.set("title", "Legacy");
-
-    await expect(createTriggerMessage(formData)).rejects.toThrow(
-      "Legacy trigger actions moved out of the Task 4 list page. Task 5 replaces this compatibility surface with TriggerRule actions.",
-    );
-    expect(redirectMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
+describe("trigger rule actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createMock.mockResolvedValue(undefined);
+    updateMock.mockResolvedValue(undefined);
+    deleteMock.mockResolvedValue(undefined);
   });
 
-  it("fails loudly for updateTriggerMessage", async () => {
+  it("creates a trigger rule with event, conditions, and delay unit", async () => {
     const formData = new FormData();
-    formData.set("id", "legacy_1");
-    formData.set("title", "Legacy");
-
-    await expect(updateTriggerMessage(formData)).rejects.toThrow(
-      "Legacy trigger actions moved out of the Task 4 list page. Task 5 replaces this compatibility surface with TriggerRule actions.",
+    formData.set("name", "After Start: no promo");
+    formData.set("eventKey", "user.started");
+    formData.set("delayValue", "15");
+    formData.set("delayUnit", "minutes");
+    formData.set("messageText", "Hello!");
+    formData.set(
+      "conditions",
+      JSON.stringify([
+        { field: "promoClaimed", operator: "is", value: false },
+        { field: "hasActiveTariff", operator: "is", value: false },
+      ]),
     );
-    expect(redirectMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
+
+    await expect(createTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          buttons: [],
+          conditions: [
+            { field: "promoClaimed", operator: "is", value: false },
+            { field: "hasActiveTariff", operator: "is", value: false },
+          ],
+          delayUnit: "minutes",
+          delayValue: 15,
+          eventKey: "user.started",
+          imageUrl: null,
+          messageText: "Hello!",
+          name: "After Start: no promo",
+          status: "draft",
+        }),
+      }),
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
+    expect(redirectMock).toHaveBeenCalledWith("/admin/triggers");
   });
 
-  it("fails loudly for deleteTriggerMessage", async () => {
+  it("updates an existing trigger rule with structured fields", async () => {
     const formData = new FormData();
-    formData.set("id", "legacy_1");
-
-    await expect(deleteTriggerMessage(formData)).rejects.toThrow(
-      "Legacy trigger actions moved out of the Task 4 list page. Task 5 replaces this compatibility surface with TriggerRule actions.",
+    formData.set("id", "rule_1");
+    formData.set("name", "Promo expired");
+    formData.set("eventKey", "promo.expired");
+    formData.set("delayValue", "2");
+    formData.set("delayUnit", "hours");
+    formData.set("status", "active");
+    formData.set("messageText", "Come back!");
+    formData.set("imageUrl", "/uploads/admin/triggers/reminder.png");
+    formData.set(
+      "conditions",
+      JSON.stringify([{ field: "generationCount", operator: "gte", value: 3 }]),
     );
-    expect(redirectMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
+
+    await expect(updateTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(updateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        conditions: [{ field: "generationCount", operator: "gte", value: 3 }],
+        delayUnit: "hours",
+        delayValue: 2,
+        eventKey: "promo.expired",
+        imageUrl: "/uploads/admin/triggers/reminder.png",
+        messageText: "Come back!",
+        name: "Promo expired",
+        status: "active",
+      }),
+      where: { id: "rule_1" },
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
+    expect(redirectMock).toHaveBeenCalledWith("/admin/triggers");
+  });
+
+  it("deletes a trigger rule by id", async () => {
+    const formData = new FormData();
+    formData.set("id", "rule_1");
+
+    await expect(deleteTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(deleteMock).toHaveBeenCalledWith({
+      where: { id: "rule_1" },
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
+    expect(redirectMock).toHaveBeenCalledWith("/admin/triggers");
   });
 });
