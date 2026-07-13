@@ -42,10 +42,10 @@ type TriggerFormProps = {
 };
 
 const delayUnitOptions = [
-  { value: "now", label: "Now" },
-  { value: "minutes", label: "Minutes" },
-  { value: "hours", label: "Hours" },
-  { value: "days", label: "Days" },
+  { value: "now", label: "Сразу" },
+  { value: "minutes", label: "Минуты" },
+  { value: "hours", label: "Часы" },
+  { value: "days", label: "Дни" },
 ] as const;
 
 type ConditionFieldKey =
@@ -230,16 +230,41 @@ export function createDefaultConditionDraft(
   };
 }
 
+function getRussianCountWord(value: number, one: string, few: string, many: string) {
+  const abs = Math.abs(value) % 100;
+  const tail = abs % 10;
+
+  if (abs > 10 && abs < 20) {
+    return many;
+  }
+
+  if (tail === 1) {
+    return one;
+  }
+
+  if (tail > 1 && tail < 5) {
+    return few;
+  }
+
+  return many;
+}
+
 export function formatTriggerDelay(
   delayValue: number,
   delayUnit: TriggerRuleRecord["delayUnit"],
 ) {
   if (delayUnit === "now") {
-    return "Send immediately";
+    return "Отправится сразу";
   }
 
-  const unitLabel = delayValue === 1 ? delayUnit.slice(0, -1) : delayUnit;
-  return `Send in ${delayValue} ${unitLabel}`;
+  const unitLabel =
+    delayUnit === "minutes"
+      ? getRussianCountWord(delayValue, "минуту", "минуты", "минут")
+      : delayUnit === "hours"
+        ? getRussianCountWord(delayValue, "час", "часа", "часов")
+        : getRussianCountWord(delayValue, "день", "дня", "дней");
+
+  return `Отправится через ${delayValue} ${unitLabel}`;
 }
 
 function getEventLabel(
@@ -249,12 +274,24 @@ function getEventLabel(
   return eventOptions.find((option) => option.key === eventKey)?.label ?? eventKey;
 }
 
+function getStatusLabel(status: TriggerRuleRecord["status"]) {
+  switch (status) {
+    case "active":
+      return "Активен";
+    case "disabled":
+      return "Отключен";
+    case "draft":
+    default:
+      return "Черновик";
+  }
+}
+
 export function summarizeTriggerConditions(
   conditions: TriggerCondition[],
   userGroupOptions: readonly TriggerUserGroupOption[] = [],
 ) {
   if (conditions.length === 0) {
-    return "No conditions. This trigger runs for everyone on the selected event.";
+    return "Без условий. Триггер сработает для каждого пользователя на выбранном событии.";
   }
 
   return conditions
@@ -273,7 +310,7 @@ export function summarizeTriggerConditions(
           return `Состоит в группе ${getUserGroupLabel(condition.value, userGroupOptions)}`;
       }
     })
-    .join(" AND ");
+    .join(" И ");
 }
 
 function ConditionValueInput({
@@ -292,7 +329,7 @@ function ConditionValueInput({
   if (config.valueType === "select") {
     return (
       <AdminSelect
-        aria-label={`Condition ${index + 1} value`}
+        aria-label={`Условие ${index + 1}: значение`}
         className={config.valueWidth}
         value={draft.value}
         onChange={(event) => onChange(event.target.value)}
@@ -311,7 +348,7 @@ function ConditionValueInput({
 
   return (
     <AdminInput
-      aria-label={`Condition ${index + 1} value`}
+      aria-label={`Условие ${index + 1}: значение`}
       className={config.valueWidth}
       min={config.valueType === "number" ? 0 : undefined}
       placeholder={config.valuePlaceholder}
@@ -360,7 +397,7 @@ export function TriggerForm({
   );
   const conditionsPayload = JSON.stringify(previewConditions);
   const conditionsSummary = summarizeTriggerConditions(previewConditions, userGroupOptions);
-  const previewText = messageText.trim() || "Your Telegram message preview appears here.";
+  const previewText = messageText.trim() || "Здесь появится предпросмотр сообщения Telegram.";
   const previewImageUrl = uploadedPreviewUrl ?? imageUrl.trim();
 
   function updateCondition(index: number, patch: Partial<TriggerConditionDraft>) {
@@ -389,7 +426,7 @@ export function TriggerForm({
             <div>
               <h2 className="text-xl font-semibold text-[#f4f7fb]">{title}</h2>
               <p className="mt-1 text-sm text-[#97a4b8]">
-                Configure the event, delay, message, and audience conditions for this trigger.
+                Настройте событие, задержку, сообщение и условия аудитории для этого триггера.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -397,7 +434,7 @@ export function TriggerForm({
                 href={cancelHref}
                 className="inline-flex rounded-md border border-[#2a3a55] bg-[#192334] px-3 py-2 text-sm font-medium text-[#dbe3ef] transition hover:bg-[#223047]"
               >
-                Back
+                Назад
               </Link>
               <AdminButton type="submit">{submitLabel}</AdminButton>
             </div>
@@ -406,12 +443,12 @@ export function TriggerForm({
           {initial.id ? <input name="id" type="hidden" value={initial.id} /> : null}
           <input name="conditions" type="hidden" value={conditionsPayload} />
 
-          <AdminField label="Trigger name">
+          <AdminField label="Название триггера">
             <AdminInput defaultValue={initial.name} name="name" required />
           </AdminField>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <AdminField label="Event">
+            <AdminField label="Событие">
               <AdminSelect
                 name="eventKey"
                 value={eventKey}
@@ -426,22 +463,22 @@ export function TriggerForm({
             </AdminField>
 
             {initial.id ? (
-              <AdminField label="Status">
+              <AdminField label="Статус">
                 <AdminSelect defaultValue={initial.status} name="status">
-                  <option value="draft">draft</option>
-                  <option value="active">active</option>
-                  <option value="disabled">disabled</option>
+                  <option value="draft">{getStatusLabel("draft")}</option>
+                  <option value="active">{getStatusLabel("active")}</option>
+                  <option value="disabled">{getStatusLabel("disabled")}</option>
                 </AdminSelect>
               </AdminField>
             ) : (
-              <AdminField hint="New triggers are saved as draft first." label="Status">
-                <AdminInput defaultValue="draft" disabled />
+              <AdminField hint="Новый триггер сначала сохраняется как черновик." label="Статус">
+                <AdminInput defaultValue={getStatusLabel("draft")} disabled />
               </AdminField>
             )}
           </div>
 
           <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-            <AdminField label="Delay value">
+            <AdminField label="Задержка">
               <AdminInput
                 min={0}
                 name="delayValue"
@@ -450,7 +487,7 @@ export function TriggerForm({
                 onChange={(event) => setDelayValue(event.target.value)}
               />
             </AdminField>
-            <AdminField label="Delay unit">
+            <AdminField label="Единица задержки">
               <AdminSelect
                 name="delayUnit"
                 value={delayUnit}
@@ -471,9 +508,9 @@ export function TriggerForm({
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-[#f4f7fb]">Conditions</h3>
+                  <h3 className="font-semibold text-[#f4f7fb]">Условия</h3>
                   <p className="mt-1 text-sm text-[#97a4b8]">
-                    All conditions below must match (AND). Supported fields and operators only.
+                    Все условия ниже должны совпасть одновременно. Поддерживаются только заданные поля и операторы.
                   </p>
                 </div>
                 <AdminButton
@@ -486,14 +523,14 @@ export function TriggerForm({
                     ])
                   }
                 >
-                  Add condition
+                  Добавить условие
                 </AdminButton>
               </div>
             </div>
 
             {conditions.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[#2a3a55] bg-[#0d1522] px-4 py-4 text-sm text-[#97a4b8]">
-                No conditions yet. This trigger will run for every user who reaches the selected event.
+                Пока нет условий. Триггер сработает для каждого пользователя, который дойдет до выбранного события.
               </div>
             ) : (
               <div className="space-y-3">
@@ -506,9 +543,9 @@ export function TriggerForm({
                       key={`${condition.field}-${index}`}
                     >
                       <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end">
-                        <AdminField label="Field">
+                        <AdminField label="Поле">
                           <AdminSelect
-                            aria-label={`Condition ${index + 1} field`}
+                            aria-label={`Условие ${index + 1}: поле`}
                             value={condition.field}
                             onChange={(event) =>
                               updateCondition(index, {
@@ -523,9 +560,9 @@ export function TriggerForm({
                             ))}
                           </AdminSelect>
                         </AdminField>
-                        <AdminField label="Operator">
+                        <AdminField label="Оператор">
                           <AdminSelect
-                            aria-label={`Condition ${index + 1} operator`}
+                            aria-label={`Условие ${index + 1}: оператор`}
                             value={condition.operator}
                             onChange={(event) =>
                               updateCondition(index, { operator: event.target.value })
@@ -555,7 +592,7 @@ export function TriggerForm({
                             )
                           }
                         >
-                          Remove
+                          Удалить
                         </AdminButton>
                       </div>
                     </div>
@@ -565,7 +602,7 @@ export function TriggerForm({
             )}
           </div>
 
-          <AdminField label="Message text">
+          <AdminField label="Текст сообщения">
             <AdminTextarea
               className="min-h-40"
               name="messageText"
@@ -575,7 +612,7 @@ export function TriggerForm({
             />
           </AdminField>
 
-          <AdminField label="Image URL or upload">
+          <AdminField label="Ссылка на изображение или загрузка">
             <div className="space-y-3">
               <AdminInput
                 name="imageUrl"
@@ -584,7 +621,7 @@ export function TriggerForm({
                 onChange={(event) => setImageUrl(event.target.value)}
               />
               <div className="space-y-2">
-                <span className="block text-xs text-[#7f8da3]">Or choose an image file</span>
+                <span className="block text-xs text-[#7f8da3]">Или выберите файл изображения</span>
                 <AdminInput
                   accept="image/*"
                   name="imageFile"
@@ -614,24 +651,29 @@ export function TriggerForm({
           </AdminField>
 
           {deleteAction && initial.id ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#223047] pt-4">
-              <p className="text-sm text-[#97a4b8]">
-                Deleting removes this rule from the automation inventory.
-              </p>
-              <div className="flex gap-2">
-                <Link
-                  href={cancelHref}
-                  className="inline-flex rounded-md border border-[#2a3a55] bg-[#192334] px-3 py-2 text-sm font-medium text-[#dbe3ef] transition hover:bg-[#223047]"
-                >
-                  Cancel
-                </Link>
-                <button
-                  className="rounded-md border border-[#7f1d1d] bg-[#2a1218] px-3 py-2 text-sm font-medium text-[#fecaca] transition hover:bg-[#3a1720]"
-                  formAction={deleteAction}
-                  type="submit"
-                >
-                  Delete trigger
-                </button>
+            <div className="rounded-xl border border-[#6b2430] bg-[#1b1116] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-[#fecaca]">Удаление триггера</h3>
+                  <p className="mt-1 text-sm text-[#c7a9b1]">
+                    Удаление уберет правило из автоматизаций и остановит будущие срабатывания.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href={cancelHref}
+                    className="inline-flex rounded-md border border-[#2a3a55] bg-[#192334] px-3 py-2 text-sm font-medium text-[#dbe3ef] transition hover:bg-[#223047]"
+                  >
+                    Отмена
+                  </Link>
+                  <button
+                    className="rounded-md border border-[#7f1d1d] bg-[#2a1218] px-3 py-2 text-sm font-medium text-[#fecaca] transition hover:bg-[#3a1720]"
+                    formAction={deleteAction}
+                    type="submit"
+                  >
+                    Удалить триггер
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -640,27 +682,27 @@ export function TriggerForm({
 
       <AdminPanel className="space-y-5">
         <div>
-          <h3 className="font-semibold text-[#f4f7fb]">Trigger preview</h3>
+          <h3 className="font-semibold text-[#f4f7fb]">Предпросмотр триггера</h3>
           <p className="mt-1 text-sm text-[#97a4b8]">
-            Review the event, send timing, and Telegram message before saving.
+            Проверьте событие, время отправки и сообщение Telegram перед сохранением.
           </p>
         </div>
 
         <div className="space-y-3 rounded-xl border border-[#223047] bg-[#0d1522] p-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#7f8da3]">Event</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#7f8da3]">Событие</p>
             <p className="mt-1 text-sm font-medium text-[#f4f7fb]">
               {getEventLabel(eventKey, eventOptions)}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#7f8da3]">Schedule</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#7f8da3]">Отправка</p>
             <p className="mt-1 text-sm font-medium text-[#f4f7fb]">
               {formatTriggerDelay(previewDelayValue, delayUnit)}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[#7f8da3]">Conditions</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#7f8da3]">Условия</p>
             <p className="mt-1 text-sm leading-6 text-[#dbe3ef]">{conditionsSummary}</p>
           </div>
         </div>

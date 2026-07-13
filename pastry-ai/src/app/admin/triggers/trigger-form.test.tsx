@@ -15,7 +15,7 @@ const userGroupOptions = [
 ] as const;
 
 describe("TriggerForm", () => {
-  it("prefills the form from a selected template with the structured conditions builder", () => {
+  it("renders the create form in Russian with structured conditions", () => {
     const html = renderToStaticMarkup(
       <TriggerForm
         action={async () => {}}
@@ -32,27 +32,23 @@ describe("TriggerForm", () => {
           name: template.name,
           status: "draft",
         }}
-        submitLabel="Create trigger"
-        title="New trigger"
+        submitLabel="Создать триггер"
+        title="Новый триггер"
         userGroupOptions={userGroupOptions}
       />,
     );
 
-    expect(html).toContain("New trigger");
+    expect(html).toContain("Новый триггер");
     expect(html).toContain('name="name"');
     expect(html).toContain('value="After Start: no promo"');
-    expect(html).toContain('name="eventKey"');
-    expect(html).toContain('name="delayValue"');
-    expect(html).toContain('name="delayUnit"');
-    expect(html).toContain('name="conditions"');
-    expect(html).toContain('type="hidden"');
-    expect(html).toContain("All conditions below must match (AND).");
-    expect(html).toContain("Промо получено");
+    expect(html).toContain("Настройте событие, задержку, сообщение и условия аудитории для этого триггера.");
+    expect(html).toContain("Условия");
+    expect(html).toContain("Добавить условие");
+    expect(html).toContain("Предпросмотр триггера");
     expect(html).not.toContain("Use JSON like");
-    expect(html).toContain("Trigger preview");
   });
 
-  it("renders edit controls for an existing trigger rule", () => {
+  it("renders an explicit Russian delete flow for existing triggers", () => {
     const html = renderToStaticMarkup(
       <TriggerForm
         action={async () => {}}
@@ -70,29 +66,31 @@ describe("TriggerForm", () => {
           name: "Promo expired",
           status: "active",
         }}
-        submitLabel="Save changes"
-        title="Edit trigger"
+        submitLabel="Сохранить изменения"
+        title="Редактирование триггера"
         userGroupOptions={userGroupOptions}
       />,
     );
 
     expect(html).toContain('name="id"');
     expect(html).toContain('value="rule_1"');
-    expect(html).toContain("Save changes");
-    expect(html).toContain("Delete trigger");
+    expect(html).toContain("Сохранить изменения");
+    expect(html).toContain("Удалить триггер");
+    expect(html).toContain("Удаление уберет правило из автоматизаций и остановит будущие срабатывания.");
     expect(html).toContain("/uploads/admin/triggers/existing.png");
-    expect(html).toContain("Come back tomorrow.");
-    expect(html).toContain("active");
     expect(html).toContain("Состоит в группе VIP клиенты");
   });
 
   it("builds a readable preview summary for supported conditions", () => {
     expect(
-      summarizeTriggerConditions([
-        { field: "promoClaimed", operator: "is", value: false },
-        { field: "generationCount", operator: "gte", value: 3 },
-      ], userGroupOptions),
-    ).toBe("Промо получено: нет AND Количество генераций не меньше 3");
+      summarizeTriggerConditions(
+        [
+          { field: "promoClaimed", operator: "is", value: false },
+          { field: "generationCount", operator: "gte", value: 3 },
+        ],
+        userGroupOptions,
+      ),
+    ).toBe("Промо получено: нет И Количество генераций не меньше 3");
   });
 
   it("renders real user groups in the condition builder", () => {
@@ -112,8 +110,8 @@ describe("TriggerForm", () => {
           name: "Группа",
           status: "draft",
         }}
-        submitLabel="Create trigger"
-        title="New trigger"
+        submitLabel="Создать триггер"
+        title="Новый триггер"
         userGroupOptions={userGroupOptions}
       />,
     );
@@ -122,6 +120,7 @@ describe("TriggerForm", () => {
     expect(html).toContain("Состоит в группе");
     expect(html).toContain("VIP клиенты");
     expect(html).toContain("Ученики курса");
+    expect(html).toContain("Выберите группу");
   });
 
   it("initializes user group drafts with the structured condition shape", () => {

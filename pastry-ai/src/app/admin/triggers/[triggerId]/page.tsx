@@ -5,45 +5,95 @@ import { prisma } from "@/db/prisma";
 import { getTriggerEventOptions } from "@/features/triggers/trigger-template";
 import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
 import { deleteTriggerRule, updateTriggerRule } from "../actions";
-import { TriggerForm } from "../trigger-form";
+import { TriggerForm, type TriggerUserGroupOption } from "../trigger-form";
 
 type TriggerRulePageProps = {
   params: Promise<{ triggerId: string }> | { triggerId: string };
 };
 
+const eventCopy: Record<
+  string,
+  {
+    description: string;
+    key: string;
+    label: string;
+  }
+> = {
+  "user.started": {
+    key: "user.started",
+    label: "Нажал Start",
+    description: "Запускает follow-up или возвращающую цепочку после команды /start.",
+  },
+  "promo.granted": {
+    key: "promo.granted",
+    label: "Выдан промо-тариф",
+    description: "Помогает догреть пользователя после выдачи промо-доступа.",
+  },
+  "promo.expired": {
+    key: "promo.expired",
+    label: "Промо-тариф закончился",
+    description: "Возвращает пользователя, когда промо-доступ истекает.",
+  },
+  "tariff.paid": {
+    key: "tariff.paid",
+    label: "Оплачен тариф",
+    description: "Подталкивает нового платящего пользователя к активации и первым действиям.",
+  },
+  "user.inactive_7d": {
+    key: "user.inactive_7d",
+    label: "Неактивен 7 дней",
+    description: "Возвращает пользователя, который перестал пользоваться продуктом.",
+  },
+};
+
+function getLocalizedEventOptions() {
+  return getTriggerEventOptions().map((option) => eventCopy[option.key] ?? option);
+}
+
 export default async function TriggerRulePage({ params }: TriggerRulePageProps) {
   const resolvedParams = await params;
-  const rule = await prisma.triggerRule.findUnique({
-    where: { id: resolvedParams.triggerId },
-    select: {
-      conditions: true,
-      delayUnit: true,
-      delayValue: true,
-      eventKey: true,
-      id: true,
-      imageUrl: true,
-      messageText: true,
-      name: true,
-      status: true,
-    },
-  });
+  const [rule, userGroups] = await Promise.all([
+    prisma.triggerRule.findUnique({
+      where: { id: resolvedParams.triggerId },
+      select: {
+        conditions: true,
+        delayUnit: true,
+        delayValue: true,
+        eventKey: true,
+        id: true,
+        imageUrl: true,
+        messageText: true,
+        name: true,
+        status: true,
+      },
+    }),
+    prisma.userGroup.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   if (!rule) {
     notFound();
   }
 
+  const userGroupOptions: TriggerUserGroupOption[] = userGroups.map((group) => ({
+    value: group.id,
+    label: group.name,
+  }));
+
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Update timing, conditions, and message content for an existing trigger rule."
-        title="Edit trigger"
+        description="Обновляйте тайминг, условия и текст сообщения для существующего триггера."
+        title="Редактирование триггера"
       />
       <ChatBotSubNav />
       <TriggerForm
         action={updateTriggerRule}
         cancelHref="/admin/triggers"
         deleteAction={deleteTriggerRule}
-        eventOptions={getTriggerEventOptions()}
+        eventOptions={getLocalizedEventOptions()}
         initial={{
           conditions: Array.isArray(rule.conditions)
             ? (rule.conditions as TriggerCondition[])
@@ -57,8 +107,9 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
           name: rule.name,
           status: rule.status as "draft" | "active" | "disabled",
         }}
-        submitLabel="Save changes"
-        title="Edit trigger"
+        submitLabel="Сохранить изменения"
+        title="Редактирование триггера"
+        userGroupOptions={userGroupOptions}
       />
     </section>
   );
