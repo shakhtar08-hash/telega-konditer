@@ -1,3 +1,4 @@
+import { Prisma, type ScheduledMessage, type TriggerRule } from "@prisma/client";
 import { createTriggerEventService } from "@/features/triggers/trigger-event-service";
 import { createTriggerService, TriggerMessageRecord, ScheduledMessageRecord } from "@/features/triggers/trigger-service";
 import { loadTriggerUserState } from "@/features/triggers/trigger-user-state";
@@ -11,16 +12,38 @@ import {
 
 export const runtime = "nodejs";
 
-const triggerRuleModel = (prisma as unknown as {
-  triggerRule: {
-    findMany(args: unknown): Promise<TriggerMessageRecord[]>;
+function toTriggerRuleRecord(rule: TriggerRule): TriggerMessageRecord {
+  return {
+    ...rule,
+    buttons: rule.buttons,
+    conditions: rule.conditions as TriggerMessageRecord["conditions"],
+    delayUnit: rule.delayUnit as TriggerMessageRecord["delayUnit"],
+    status: rule.status as TriggerMessageRecord["status"],
   };
-}).triggerRule;
+}
 
-const scheduledMessageModel = prisma.scheduledMessage as unknown as {
-  create(args: unknown): Promise<ScheduledMessageRecord>;
-  findFirst(args: unknown): Promise<{ id: string } | null>;
-};
+function toScheduledMessageRecord(
+  scheduledMessage: ScheduledMessage,
+): ScheduledMessageRecord {
+  return {
+    ...scheduledMessage,
+    buttons: scheduledMessage.buttons,
+  };
+}
+
+function toPrismaJsonValue(
+  value: unknown,
+): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return Prisma.JsonNull;
+  }
+
+  return value as Prisma.InputJsonValue;
+}
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -56,7 +79,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ code: 13 });
   }
 
-  await prisma.$transaction([
+  const [payment] = await prisma.$transaction([
     prisma.payment.upsert({
       where: { invoiceId },
       update: {
@@ -98,15 +121,25 @@ export async function POST(request: Request) {
 
   if (user) {
     const triggerService = createTriggerService({
-      findActiveRulesByEvent: async (eventKey) =>
-        triggerRuleModel.findMany({
+      findActiveRulesByEvent: async (eventKey) => {
+        const rules = await prisma.triggerRule.findMany({
           where: { eventKey, status: "active" },
           orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
-        }),
+        });
+
+        return rules.map(toTriggerRuleRecord);
+      },
       createScheduled: async (data) =>
-        scheduledMessageModel.create({ data }),
+        toScheduledMessageRecord(
+          await prisma.scheduledMessage.create({
+            data: {
+              ...data,
+              buttons: toPrismaJsonValue(data.buttons),
+            },
+          }),
+        ),
       findExistingScheduled: async (triggerRuleId, chatId, eventOccurredAt) =>
-        scheduledMessageModel.findFirst({
+        prisma.scheduledMessage.findFirst({
           where: { triggerRuleId, chatId, triggeredAt: eventOccurredAt, sentAt: null },
           select: { id: true },
         }),
@@ -121,6 +154,7 @@ export async function POST(request: Request) {
     await triggerEventService.handleTriggerEvent("tariff.paid", {
       userId: invoice.userId,
       chatId: user.telegramId,
+      occurredAt: payment.createdAt,
     });
   }
 

@@ -93,7 +93,7 @@ import {
 } from "./start";
 
 const menuReplyMarkup = {
-  inline_keyboard: [[{ callback_data: "menu:button_recipe", text: "Создать рецепт" }]],
+  inline_keyboard: [[{ callback_data: "menu:button_recipe", text: "РЎРѕР·РґР°С‚СЊ СЂРµС†РµРїС‚" }]],
 };
 
 function createUserService() {
@@ -168,10 +168,10 @@ describe("registerStartCommand", () => {
         feature: "recipes",
         id: "button_recipe",
         slug: "recipe-from-ingredients",
-        title: "Создать рецепт",
+        title: "РЎРѕР·РґР°С‚СЊ СЂРµС†РµРїС‚",
       },
     ]);
-    buildPromptMenuMessageMock.mockResolvedValue("Главное меню");
+    buildPromptMenuMessageMock.mockResolvedValue("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ");
     buildPromptMenuKeyboardMock.mockReturnValue(menuReplyMarkup);
     handleTriggerEventMock.mockResolvedValue(undefined);
   });
@@ -200,12 +200,13 @@ describe("registerStartCommand", () => {
       telegramId: "123",
       username: "roof09",
     });
-    expect(ctx.reply).toHaveBeenCalledWith("Главное меню", {
+    expect(handleTriggerEventMock).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
       reply_markup: menuReplyMarkup,
     });
   });
 
-  it("still opens the main menu after try_free when user.started trigger dispatch fails", async () => {
+  it("does not dispatch user.started from try_free", async () => {
     handleTriggerEventMock.mockRejectedValueOnce(new Error("trigger failed"));
 
     const callbackHandlers = new Map<string, (ctx: any) => Promise<void>>();
@@ -226,12 +227,13 @@ describe("registerStartCommand", () => {
     await expect(callbackHandlers.get("try_free")?.(ctx)).resolves.toBeUndefined();
 
     expect(userService.assignPromoTariff).toHaveBeenCalledWith("user-1");
-    expect(ctx.reply).toHaveBeenCalledWith("Главное меню", {
+    expect(handleTriggerEventMock).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
       reply_markup: menuReplyMarkup,
     });
   });
 
-  it("opens the main menu on /start when promo access is already active", async () => {
+  it("dispatches user.started on /start when promo access is already active", async () => {
     const commandHandlers = new Map<string, (ctx: any) => Promise<void>>();
     const composer = {
       callbackQuery: vi.fn(),
@@ -251,12 +253,16 @@ describe("registerStartCommand", () => {
       telegramId: "123",
       username: "roof09",
     });
-    expect(ctx.reply).toHaveBeenCalledWith("Главное меню", {
+    expect(handleTriggerEventMock).toHaveBeenCalledWith("user.started", {
+      chatId: "123",
+      userId: "user-1",
+    });
+    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
       reply_markup: menuReplyMarkup,
     });
   });
 
-  it("opens the main menu on /menu when promo access is already active", async () => {
+  it("opens the main menu on /menu without dispatching user.started", async () => {
     const commandHandlers = new Map<string, (ctx: any) => Promise<void>>();
     const composer = {
       callbackQuery: vi.fn(),
@@ -276,12 +282,13 @@ describe("registerStartCommand", () => {
       telegramId: "123",
       username: "roof09",
     });
-    expect(ctx.reply).toHaveBeenCalledWith("Главное меню", {
+    expect(handleTriggerEventMock).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
       reply_markup: menuReplyMarkup,
     });
   });
 
-  it("opens the main menu from menu:return using the registered user id", async () => {
+  it("opens the main menu from menu:return without dispatching user.started", async () => {
     const callbackHandlers = new Map<string, (ctx: any) => Promise<void>>();
     const composer = {
       callbackQuery: vi.fn((pattern, handler) => {
@@ -305,12 +312,13 @@ describe("registerStartCommand", () => {
       username: "roof09",
     });
     expect(userHasPromptAccessMock).toHaveBeenCalledWith("user-1");
-    expect(ctx.reply).toHaveBeenCalledWith("Главное меню", {
+    expect(handleTriggerEventMock).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
       reply_markup: menuReplyMarkup,
     });
   });
 
-  it("opens the main menu after onboarding promo activation", async () => {
+  it("opens the main menu after onboarding promo activation without dispatching user.started", async () => {
     loadOnboardingStepsMock.mockResolvedValue([
       { nextAction: "next" },
       { nextAction: "activate_promo_and_next" },
@@ -346,7 +354,8 @@ describe("registerStartCommand", () => {
       where: { id: "user-1" },
       data: { promoClaimed: true },
     });
-    expect(ctx.reply).toHaveBeenCalledWith("Главное меню", {
+    expect(handleTriggerEventMock).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
       reply_markup: menuReplyMarkup,
     });
   });

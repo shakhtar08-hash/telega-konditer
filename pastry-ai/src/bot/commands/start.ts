@@ -1,5 +1,6 @@
 import type { Composer } from "grammy";
 import type { InlineKeyboardButton } from "grammy/types";
+import { Prisma, type ScheduledMessage, type TriggerRule } from "@prisma/client";
 import { userHasPromptAccess } from "../access";
 import { clearScenarioSession, setActivePrompt, type PastryBotContext } from "../context";
 import { MENU_RETURN_CALLBACK } from "../menu-return";
@@ -32,17 +33,6 @@ import {
 import { loadTriggerUserState } from "@/features/triggers/trigger-user-state";
 import { prisma } from "@/db/prisma";
 
-const triggerRuleModel = (prisma as unknown as {
-  triggerRule: {
-    findMany(args: unknown): Promise<TriggerMessageRecord[]>;
-  };
-}).triggerRule;
-
-const scheduledMessageModel = prisma.scheduledMessage as unknown as {
-  create(args: unknown): Promise<ScheduledMessageRecord>;
-  findFirst(args: unknown): Promise<{ id: string } | null>;
-};
-
 type UserService = {
   registerTelegramUser(input: {
     telegramId: string;
@@ -51,6 +41,39 @@ type UserService = {
   }): Promise<{ id: string; name?: string | null; telegramId: string; plan: "FREE" | "PRO" | "TEAM" }>;
   assignPromoTariff(userId: string): Promise<unknown>;
 };
+
+function toTriggerRuleRecord(rule: TriggerRule): TriggerMessageRecord {
+  return {
+    ...rule,
+    buttons: rule.buttons,
+    conditions: rule.conditions as TriggerMessageRecord["conditions"],
+    delayUnit: rule.delayUnit as TriggerMessageRecord["delayUnit"],
+    status: rule.status as TriggerMessageRecord["status"],
+  };
+}
+
+function toScheduledMessageRecord(
+  scheduledMessage: ScheduledMessage,
+): ScheduledMessageRecord {
+  return {
+    ...scheduledMessage,
+    buttons: scheduledMessage.buttons,
+  };
+}
+
+function toPrismaJsonValue(
+  value: unknown,
+): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return Prisma.JsonNull;
+  }
+
+  return value as Prisma.InputJsonValue;
+}
 
 export function buildPhotoStyleKeyboard(
   styles: Array<{ id: string; name: string }>,
@@ -79,7 +102,9 @@ export function registerStartCommand(
   userService: UserService,
 ): void {
   composer.command("start", async (ctx) => {
-    await sendAccessAwareEntryPoint(ctx, userService);
+    await sendAccessAwareEntryPoint(ctx, userService, {
+      dispatchStartEvent: true,
+    });
   });
 
   composer.command("menu", async (ctx) => {
@@ -254,6 +279,40 @@ export function registerStartCommand(
   });
 }
 
+function createRuntimeTriggerEventService() {
+  const triggerService = createTriggerService({
+    findActiveRulesByEvent: async (eventKey) => {
+      const rules = await prisma.triggerRule.findMany({
+        where: { eventKey, status: "active" },
+        orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
+      });
+
+      return rules.map(toTriggerRuleRecord);
+    },
+    createScheduled: async (data) =>
+      toScheduledMessageRecord(
+        await prisma.scheduledMessage.create({
+          data: {
+            ...data,
+            buttons: toPrismaJsonValue(data.buttons),
+          },
+        }),
+      ),
+    findExistingScheduled: async (triggerRuleId, chatId, eventOccurredAt) =>
+      prisma.scheduledMessage.findFirst({
+        where: { triggerRuleId, chatId, triggeredAt: eventOccurredAt, sentAt: null },
+        select: { id: true },
+      }),
+    findPendingScheduled: async () => [],
+    markSent: async () => {},
+  });
+
+  return createTriggerEventService({
+    loadTriggerUserState,
+    scheduleTrigger: triggerService.scheduleTrigger,
+  });
+}
+
 async function openScenarioBySlug(
   ctx: PastryBotContext,
   feature: string,
@@ -333,6 +392,9 @@ async function showStyleKeyboardIfNeeded(
 async function sendAccessAwareEntryPoint(
   ctx: PastryBotContext,
   userService: UserService,
+  options?: {
+    dispatchStartEvent?: boolean;
+  },
 ) {
   clearScenarioSession(ctx.session);
 
@@ -348,38 +410,21 @@ async function sendAccessAwareEntryPoint(
     });
     telegramId = user.telegramId;
 
-    const triggerService = createTriggerService({
-      findActiveRulesByEvent: async (eventKey) =>
-        triggerRuleModel.findMany({
-          where: { eventKey, status: "active" },
-          orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
-        }),
-      createScheduled: async (data) =>
-        scheduledMessageModel.create({ data }),
-      findExistingScheduled: async (triggerRuleId, chatId, eventOccurredAt) =>
-        scheduledMessageModel.findFirst({
-          where: { triggerRuleId, chatId, triggeredAt: eventOccurredAt, sentAt: null },
-          select: { id: true },
-        }),
-      findPendingScheduled: async () => [],
-      markSent: async () => {},
-    });
-    const triggerEventService = createTriggerEventService({
-      loadTriggerUserState,
-      scheduleTrigger: triggerService.scheduleTrigger,
-    });
+    if (options?.dispatchStartEvent) {
+      const triggerEventService = createRuntimeTriggerEventService();
 
-    try {
-      await triggerEventService.handleTriggerEvent("user.started", {
-        userId: user.id,
-        chatId: telegramId,
-      });
-    } catch (error) {
-      console.error("Failed to dispatch user.started trigger event", {
-        error,
-        telegramId,
-        userId: user.id,
-      });
+      try {
+        await triggerEventService.handleTriggerEvent("user.started", {
+          userId: user.id,
+          chatId: telegramId,
+        });
+      } catch (error) {
+        console.error("Failed to dispatch user.started trigger event", {
+          error,
+          telegramId,
+          userId: user.id,
+        });
+      }
     }
 
     const userTariff = await prisma.userTariff.findUnique({
