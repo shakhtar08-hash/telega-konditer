@@ -150,3 +150,43 @@ Ran:
 `npx eslint src/app/admin/triggers/page.tsx src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.legacy-actions.ts src/features/triggers/trigger-template.ts`
 
 Result: PASS.
+
+---
+
+## Re-Review Follow-Up
+
+The previous compatibility bridge was too risky because it re-exposed legacy action names from the real Task 4 page module.
+
+### What changed
+
+1. Removed legacy action re-exports from `src/app/admin/triggers/page.tsx`
+   - The real trigger list page is now clean again and exposes only the Task 4 list screen runtime.
+
+2. Replaced the dedicated compatibility module with an honest inert placeholder
+   - `src/app/admin/triggers/page.legacy-actions.ts` now exports import-compatible async placeholders only.
+   - These placeholders do not touch Prisma at all.
+   - They do not reference deleted `triggerMessage` or `scheduledMessage.triggerMessageId` schema paths.
+
+3. Moved the neighboring legacy test onto the dedicated compatibility module
+   - `src/app/admin/triggers/page.actions.test.ts` now imports from `./page.legacy-actions`
+   - The adjacent suite now verifies that the temporary compatibility exports remain callable and inert instead of exercising deleted legacy persistence behavior through the real page module.
+
+### Why this is safer
+
+- The Task 4 page runtime is no longer coupled to legacy action names.
+- No compatibility path points at removed Prisma models or fields.
+- The remaining compatibility module is explicit about being temporary until Task 5 replaces it with the new TriggerRule action flow.
+
+## Fresh Verification Evidence For The Re-Review Fix
+
+Ran:
+
+`npm test -- src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.actions.test.ts`
+
+Result: PASS, 5 tests passed.
+
+Ran:
+
+`npx eslint src/app/admin/triggers/page.tsx src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.legacy-actions.ts src/app/admin/triggers/page.actions.test.ts src/features/triggers/trigger-template.ts`
+
+Result: PASS.
