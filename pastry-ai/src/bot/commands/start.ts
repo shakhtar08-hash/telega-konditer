@@ -23,8 +23,25 @@ import {
   loadPromptMenuItems,
 } from "../prompt-menu";
 import { buildFeatureCookieBlock } from "@/features/tariffs/cookie-info";
-import { createTriggerService } from "@/features/triggers/trigger-service";
+import { createTriggerEventService } from "@/features/triggers/trigger-event-service";
+import {
+  type ScheduledMessageRecord,
+  type TriggerMessageRecord,
+  createTriggerService,
+} from "@/features/triggers/trigger-service";
+import { loadTriggerUserState } from "@/features/triggers/trigger-user-state";
 import { prisma } from "@/db/prisma";
+
+const triggerRuleModel = (prisma as unknown as {
+  triggerRule: {
+    findMany(args: unknown): Promise<TriggerMessageRecord[]>;
+  };
+}).triggerRule;
+
+const scheduledMessageModel = prisma.scheduledMessage as unknown as {
+  create(args: unknown): Promise<ScheduledMessageRecord>;
+  findFirst(args: unknown): Promise<{ id: string } | null>;
+};
 
 type UserService = {
   registerTelegramUser(input: {
@@ -332,41 +349,43 @@ async function sendAccessAwareEntryPoint(
     telegramId = user.telegramId;
 
     const triggerService = createTriggerService({
-      findActiveBySlug: async (slug) =>
-        prisma.triggerMessage.findMany({
-          where: { slug, active: true },
-          orderBy: { delayMinutes: "asc" },
-        }) as Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+      findActiveRulesByEvent: async (eventKey) =>
+        triggerRuleModel.findMany({
+          where: { eventKey, status: "active" },
+          orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
+        }),
       createScheduled: async (data) =>
-        prisma.scheduledMessage.create({ data }) as Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-      findExistingScheduled: async (triggerMessageId, chatId) =>
-        prisma.scheduledMessage.findFirst({
-          where: { triggerMessageId, chatId, sentAt: null },
+        scheduledMessageModel.create({ data }),
+      findExistingScheduled: async (triggerRuleId, chatId, eventOccurredAt) =>
+        scheduledMessageModel.findFirst({
+          where: { triggerRuleId, chatId, triggeredAt: eventOccurredAt, sentAt: null },
           select: { id: true },
         }),
       findPendingScheduled: async () => [],
       markSent: async () => {},
     });
+    const triggerEventService = createTriggerEventService({
+      loadTriggerUserState,
+      scheduleTrigger: triggerService.scheduleTrigger,
+    });
+
+    try {
+      await triggerEventService.handleTriggerEvent("user.started", {
+        userId: user.id,
+        chatId: telegramId,
+      });
+    } catch (error) {
+      console.error("Failed to dispatch user.started trigger event", {
+        error,
+        telegramId,
+        userId: user.id,
+      });
+    }
 
     const userTariff = await prisma.userTariff.findUnique({
       where: { userId: user.id },
       select: { tariffPlan: { select: { slug: true } } },
     });
-    const tariffSlug = userTariff?.tariffPlan?.slug ?? "promo";
-
-    try {
-      await triggerService.scheduleTrigger(
-        "after-start",
-        telegramId,
-        tariffSlug,
-      );
-    } catch (error) {
-      console.error("Failed to schedule after-start trigger", {
-        error,
-        tariffSlug,
-        telegramId,
-      });
-    }
 
     const tariffExists = userTariff !== null;
 

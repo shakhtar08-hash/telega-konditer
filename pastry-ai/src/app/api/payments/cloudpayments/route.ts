@@ -1,4 +1,6 @@
+import { createTriggerEventService } from "@/features/triggers/trigger-event-service";
 import { createTriggerService, TriggerMessageRecord, ScheduledMessageRecord } from "@/features/triggers/trigger-service";
+import { loadTriggerUserState } from "@/features/triggers/trigger-user-state";
 import { NextResponse } from "next/server";
 import { prisma } from "@/db/prisma";
 import {
@@ -8,6 +10,17 @@ import {
 } from "@/features/payments/cloudpayments";
 
 export const runtime = "nodejs";
+
+const triggerRuleModel = (prisma as unknown as {
+  triggerRule: {
+    findMany(args: unknown): Promise<TriggerMessageRecord[]>;
+  };
+}).triggerRule;
+
+const scheduledMessageModel = prisma.scheduledMessage as unknown as {
+  create(args: unknown): Promise<ScheduledMessageRecord>;
+  findFirst(args: unknown): Promise<{ id: string } | null>;
+};
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -85,30 +98,31 @@ export async function POST(request: Request) {
 
   if (user) {
     const triggerService = createTriggerService({
-      findActiveBySlug: async (slug) =>
-        prisma.triggerMessage.findMany({
-          where: { slug, active: true },
-          orderBy: { delayMinutes: "asc" },
-        }) as Promise<TriggerMessageRecord[]>,
+      findActiveRulesByEvent: async (eventKey) =>
+        triggerRuleModel.findMany({
+          where: { eventKey, status: "active" },
+          orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
+        }),
       createScheduled: async (data) =>
-        prisma.scheduledMessage.create({ data }) as Promise<ScheduledMessageRecord>,
-      findExistingScheduled: async (triggerMessageId, chatId) =>
-        prisma.scheduledMessage.findFirst({
-          where: { triggerMessageId, chatId, sentAt: null },
+        scheduledMessageModel.create({ data }),
+      findExistingScheduled: async (triggerRuleId, chatId, eventOccurredAt) =>
+        scheduledMessageModel.findFirst({
+          where: { triggerRuleId, chatId, triggeredAt: eventOccurredAt, sentAt: null },
           select: { id: true },
         }),
       findPendingScheduled: async () => [],
       markSent: async () => {},
     });
+    const triggerEventService = createTriggerEventService({
+      loadTriggerUserState,
+      scheduleTrigger: triggerService.scheduleTrigger,
+    });
 
-    await triggerService.scheduleTrigger(
-      "after-payment",
-      user.telegramId,
-      tariffPlan.slug,
-    );
+    await triggerEventService.handleTriggerEvent("tariff.paid", {
+      userId: invoice.userId,
+      chatId: user.telegramId,
+    });
   }
 
   return NextResponse.json({ code: 0 });
 }
-
-

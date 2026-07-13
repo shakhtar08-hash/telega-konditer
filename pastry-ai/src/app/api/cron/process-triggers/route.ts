@@ -11,6 +11,19 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const triggerRuleModel = (prisma as unknown as {
+  triggerRule: {
+    findMany(args: unknown): Promise<TriggerMessageRecord[]>;
+  };
+}).triggerRule;
+
+const scheduledMessageModel = prisma.scheduledMessage as unknown as {
+  create(args: unknown): Promise<ScheduledMessageRecord>;
+  findFirst(args: unknown): Promise<{ id: string } | null>;
+  findMany(args: unknown): Promise<ScheduledMessageRecord[]>;
+  update(args: unknown): Promise<unknown>;
+};
+
 export async function POST(request: Request) {
   const env = loadEnv();
   const authHeader = request.headers.get("authorization");
@@ -26,23 +39,23 @@ export async function POST(request: Request) {
   }
 
   const triggerService = createTriggerService({
-    findActiveBySlug: async (slug) =>
-      prisma.triggerMessage.findMany({
-        where: { slug, active: true },
-        orderBy: { delayMinutes: "asc" },
-      }) as Promise<TriggerMessageRecord[]>,
+    findActiveRulesByEvent: async (eventKey) =>
+      triggerRuleModel.findMany({
+        where: { eventKey, status: "active" },
+        orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
+      }),
 
     createScheduled: async (data) =>
-      prisma.scheduledMessage.create({ data }) as Promise<ScheduledMessageRecord>,
+      scheduledMessageModel.create({ data }),
 
-    findExistingScheduled: async (triggerMessageId, chatId) =>
-      prisma.scheduledMessage.findFirst({
-        where: { triggerMessageId, chatId, sentAt: null },
+    findExistingScheduled: async (triggerRuleId, chatId, eventOccurredAt) =>
+      scheduledMessageModel.findFirst({
+        where: { triggerRuleId, chatId, triggeredAt: eventOccurredAt, sentAt: null },
         select: { id: true },
       }),
 
     findPendingScheduled: async (limit) =>
-      prisma.scheduledMessage.findMany({
+      scheduledMessageModel.findMany({
         orderBy: { sendAt: "asc" },
         take: limit,
         where: {
@@ -52,7 +65,7 @@ export async function POST(request: Request) {
       }) as Promise<ScheduledMessageRecord[]>,
 
     markSent: async (id) => {
-      await prisma.scheduledMessage.update({
+      await scheduledMessageModel.update({
         data: { sentAt: new Date() },
         where: { id },
       });
