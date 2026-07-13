@@ -24,21 +24,44 @@ enum BotMenuActionType {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  telegramId    String         @unique
-  username      String?
-  name          String?
-  plan          Plan           @default(FREE)
-  credits       Int            @default(10)
-  promoClaimed  Boolean        @default(false)
-  createdAt     DateTime       @default(now())
-  conversations Conversation[]
+  id                      String                   @id @default(cuid())
+  telegramId              String                   @unique
+  username                String?
+  name                    String?
+  plan                    Plan                     @default(FREE)
+  credits                 Int                      @default(10)
+  promoClaimed            Boolean                  @default(false)
+  createdAt               DateTime                 @default(now())
+  conversations           Conversation[]
   generatedRecipeContexts GeneratedRecipeContext[]
-  usage         Usage[]
-  subscription  Subscription?
-  payments      Payment[]
-  userTariff    UserTariff?
-  tokenUsage    TokenUsage[]
+  usage                   Usage[]
+  subscription            Subscription?
+  payments                Payment[]
+  userTariff              UserTariff?
+  tokenUsage              TokenUsage[]
+  groupMemberships        UserGroupMember[]
+}
+
+model UserGroup {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  memberships UserGroupMember[]
+
+  @@unique([name])
+}
+
+model UserGroupMember {
+  userId      String
+  userGroupId String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userGroup   UserGroup @relation(fields: [userGroupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, userGroupId])
+  @@index([userGroupId])
 }
 
 model TariffPlan {
