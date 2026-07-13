@@ -263,37 +263,37 @@ model GeneratedRecipeContext {
   @@index([userId, createdAt])
 }
 
-model TriggerMessage {
-  id           String   @id @default(cuid())
-  slug         String
-  title        String
-  text         String
-  imageUrl     String?
-  delayMinutes Int
-  targetPlans  Json
-  buttons      Json?
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model TriggerRule {
+  id          String   @id @default(cuid())
+  name        String
+  eventKey    String
+  status      String
+  delayValue  Int
+  delayUnit   String
+  messageText String
+  imageUrl    String?
+  buttons     Json?
+  conditions  Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@unique([slug, delayMinutes])
-  @@index([slug, active])
+  @@index([eventKey, status])
 }
 
 model ScheduledMessage {
-  id               String    @id @default(cuid())
-  triggerMessageId String
-  triggerSlug      String
-  chatId           String
-  text             String
-  imageUrl         String?
-  buttons          Json?
-  triggeredAt      DateTime
-  sendAt           DateTime
-  sentAt           DateTime?
-  createdAt        DateTime  @default(now())
+  id              String    @id @default(cuid())
+  triggerRuleId   String
+  triggerEventKey String
+  chatId          String
+  text            String
+  imageUrl        String?
+  buttons         Json?
+  triggeredAt     DateTime
+  sendAt          DateTime
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
 
-  @@index([triggerSlug])
-  @@index([triggerMessageId, chatId, sentAt])
+  @@index([triggerEventKey])
+  @@index([triggerRuleId, chatId, sentAt])
   @@index([sentAt, sendAt])
 }

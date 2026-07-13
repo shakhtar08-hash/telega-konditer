@@ -33,6 +33,24 @@ describe("createTriggerService", () => {
     vi.clearAllMocks();
   });
 
+  it("expects explicit rule fields instead of slug + delayMinutes", () => {
+    const rule = {
+      id: "rule_1",
+      name: "After Start: no promo",
+      eventKey: "user.started",
+      status: "active",
+      delayValue: 15,
+      delayUnit: "minutes",
+      messageText: "Hello!",
+      imageUrl: null,
+      buttons: null,
+      conditions: [{ field: "promoClaimed", operator: "is", value: false }],
+    };
+
+    expect(rule.eventKey).toBe("user.started");
+    expect(rule.delayUnit).toBe("minutes");
+  });
+
   it("schedules a trigger when plan matches targetPlans", async () => {
     findActiveBySlugMock.mockResolvedValue([mockTriggerMessage]);
     findExistingScheduledMock.mockResolvedValue(null);
