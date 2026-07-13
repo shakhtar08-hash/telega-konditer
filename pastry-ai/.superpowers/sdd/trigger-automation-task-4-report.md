@@ -78,6 +78,43 @@ Ran:
 
 Result: PASS.
 
+---
+
+## Final Compatibility Follow-Up
+
+The dedicated legacy compatibility module was adjusted again so it no longer silently succeeds.
+
+### What changed
+
+- Updated `src/app/admin/triggers/page.legacy-actions.ts`
+  - `createTriggerMessage`
+  - `updateTriggerMessage`
+  - `deleteTriggerMessage`
+- Each compatibility export now immediately throws a clear error:
+  - legacy trigger actions moved out of the Task 4 list page
+  - Task 5 replaces this compatibility surface with real TriggerRule actions
+
+### Why this is safer
+
+- no silent success
+- no fake persistence behavior
+- no Prisma access to deleted models or fields
+- adjacent imports remain explicit and safe until Task 5 lands
+
+### Final focused verification
+
+Ran:
+
+`npm test -- src/app/admin/triggers/page.actions.test.ts`
+
+Result: PASS, 3 tests passed.
+
+Ran:
+
+`npx eslint src/app/admin/triggers/page.legacy-actions.ts src/app/admin/triggers/page.actions.test.ts`
+
+Result: PASS.
+
 ## Minor Adaptation From The Brief
 
 One test example in the brief used `expect(html).not.toContain("Promo expired")` to prove filtered rows were removed.
