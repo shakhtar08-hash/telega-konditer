@@ -127,3 +127,34 @@ The Task 2 files now use the new trigger-rule contract, but existing callers out
 Created after verification:
 
 - `a9f7a81 feat: add trigger rule evaluation service`
+
+## Follow-up fix: review finding P2
+
+Controller directed the runtime-caller mismatch concern to the next task and limited this follow-up to the in-scope review finding about missing failure-path coverage in `trigger-service.test.ts`.
+
+### Fix applied
+
+Restored explicit coverage for the existing `processPendingTriggers` catch branch with a focused regression test:
+
+- `marks a pending row as sent when message delivery fails`
+
+The restored test verifies that when `sendMessage(...)` throws:
+
+- the service returns `0` sent messages for that batch item
+- `markSent(...)` is still called for the failed scheduled row
+- the failure is logged through `console.error(...)`
+
+### Test evidence
+
+Executed after adding the regression test:
+
+`npm test -- src/features/triggers/trigger-service.test.ts`
+
+Result:
+
+- 1 test file passed
+- 9 tests passed
+
+### TDD note
+
+This review fix was a coverage restoration, not a production behavior change. The catch-branch behavior already existed in `trigger-service.ts`, so the newly added regression test passed immediately against the current implementation instead of producing a red failure first. I did not change production code for this follow-up because the requested fix was to restore the missing test coverage only.

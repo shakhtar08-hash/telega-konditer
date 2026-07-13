@@ -212,4 +212,43 @@ describe("createTriggerService", () => {
     expect(sent).toBe(1);
     expect(markSentMock).toHaveBeenCalledWith("scheduled_1");
   });
+
+  it("marks a pending row as sent when message delivery fails", async () => {
+    const sendError = new Error("send failed");
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    findPendingScheduledMock.mockResolvedValue([
+      {
+        id: "scheduled_2",
+        triggerRuleId: "rule_2",
+        triggerEventKey: "user.started",
+        chatId: "99999",
+        text: "Fallback",
+        imageUrl: null,
+        buttons: null,
+        triggeredAt: new Date("2026-07-13T10:00:00.000Z"),
+        sendAt: new Date("2026-07-13T10:15:00.000Z"),
+        sentAt: null,
+        createdAt: new Date("2026-07-13T10:00:00.000Z"),
+      },
+    ]);
+
+    const sent = await service.processPendingTriggers(async () => {
+      throw sendError;
+    });
+
+    expect(sent).toBe(0);
+    expect(markSentMock).toHaveBeenCalledWith("scheduled_2");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Failed to send trigger message",
+      expect.objectContaining({
+        chatId: "99999",
+        error: sendError,
+      }),
+    );
+
+    consoleErrorSpy.mockRestore();
+  });
 });
