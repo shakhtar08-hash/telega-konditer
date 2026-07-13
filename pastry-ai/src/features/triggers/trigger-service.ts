@@ -1,20 +1,13 @@
-export type TriggerMessageRecord = {
-  id: string;
-  slug: string;
-  title: string;
-  text: string;
-  imageUrl: string | null;
-  delayMinutes: number;
-  targetPlans: string[];
-  active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import { computeSendAt, evaluateConditions } from "./trigger-condition";
+import type {
+  TriggerRuleRecord,
+  TriggerUserState,
+} from "./trigger-rule-types";
 
 export type ScheduledMessageRecord = {
   id: string;
-  triggerMessageId: string;
-  triggerSlug: string;
+  triggerRuleId: string;
+  triggerEventKey: string;
   chatId: string;
   text: string;
   imageUrl: string | null;
@@ -25,20 +18,24 @@ export type ScheduledMessageRecord = {
   createdAt: Date;
 };
 
+export type TriggerMessageRecord = TriggerRuleRecord;
+
 type Dependencies = {
-  findActiveBySlug(slug: string): Promise<TriggerMessageRecord[]>;
+  findActiveRulesByEvent(eventKey: string): Promise<TriggerRuleRecord[]>;
   createScheduled(data: {
-    triggerMessageId: string;
-    triggerSlug: string;
+    triggerRuleId: string;
+    triggerEventKey: string;
     chatId: string;
     text: string;
     imageUrl?: string | null;
+    buttons?: unknown;
     triggeredAt: Date;
     sendAt: Date;
   }): Promise<ScheduledMessageRecord>;
   findExistingScheduled(
-    triggerMessageId: string,
+    triggerRuleId: string,
     chatId: string,
+    eventOccurredAt: Date,
   ): Promise<{ id: string } | null>;
   findPendingScheduled(
     limit: number,
@@ -49,36 +46,41 @@ type Dependencies = {
 export function createTriggerService(deps: Dependencies) {
   return {
     async scheduleTrigger(
-      slug: string,
+      eventKey: string,
       chatId: string,
-      plan: string,
+      state: TriggerUserState,
+      eventOccurredAt = new Date(),
     ): Promise<void> {
-      const triggers = await deps.findActiveBySlug(slug);
+      const rules = await deps.findActiveRulesByEvent(eventKey);
 
-      for (const trigger of triggers) {
-        const plans = Array.isArray(trigger.targetPlans) ? trigger.targetPlans : [];
-
-        if (!plans.includes(plan)) {
+      for (const rule of rules) {
+        if (!evaluateConditions(rule.conditions, state)) {
           continue;
         }
 
-        const existing = await deps.findExistingScheduled(trigger.id, chatId);
+        const existing = await deps.findExistingScheduled(
+          rule.id,
+          chatId,
+          eventOccurredAt,
+        );
 
         if (existing) {
           continue;
         }
 
-        const triggeredAt = new Date();
-        const sendAt = new Date(triggeredAt.getTime() + trigger.delayMinutes * 60 * 1000);
-
         await deps.createScheduled({
-          triggerMessageId: trigger.id,
-          triggerSlug: slug,
+          triggerRuleId: rule.id,
+          triggerEventKey: eventKey,
           chatId,
-          text: trigger.text,
-          imageUrl: trigger.imageUrl ?? null,
-          triggeredAt,
-          sendAt,
+          text: rule.messageText,
+          imageUrl: rule.imageUrl ?? null,
+          buttons: rule.buttons,
+          triggeredAt: eventOccurredAt,
+          sendAt: computeSendAt(
+            eventOccurredAt,
+            rule.delayValue,
+            rule.delayUnit,
+          ),
         });
       }
     },
