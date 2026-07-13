@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   AdminPageHeader,
   DataTable,
@@ -9,88 +10,10 @@ import {
   AdminSelect,
 } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
-import { revalidatePath } from "next/cache";
 import { DeleteUserButton } from "@/components/admin/delete-user-button";
-import { deleteUser } from "./actions";
+import { updateUserTariff } from "./actions";
 
 export const dynamic = "force-dynamic";
-
-export async function updateUserTariff(formData: FormData) {
-  "use server";
-
-  const id = String(formData.get("id") ?? "");
-  const tariffPlanId = String(formData.get("tariffPlanId") ?? "");
-  const expiresAtValue = String(formData.get("expiresAt") ?? "").trim();
-  const tokensValue = String(formData.get("tokens") ?? "").trim();
-
-  if (!id) {
-    return;
-  }
-
-  if (!tariffPlanId) {
-    await prisma.userTariff.deleteMany({
-      where: { userId: id },
-    });
-    revalidatePath("/admin/users");
-    return;
-  }
-
-  const tariffPlan = await prisma.tariffPlan.findUnique({
-    where: { id: tariffPlanId },
-    select: {
-      durationDays: true,
-      id: true,
-      tokenAmount: true,
-    },
-  });
-
-  if (!tariffPlan) {
-    return;
-  }
-
-  const remainingTokens =
-    tokensValue === "" ? tariffPlan.tokenAmount : Number(tokensValue);
-  const expiresAt =
-    expiresAtValue === ""
-      ? getDefaultTariffExpiryDate(tariffPlan.durationDays)
-      : new Date(expiresAtValue);
-
-  if (
-    !Number.isFinite(remainingTokens) ||
-    remainingTokens < 0 ||
-    Number.isNaN(expiresAt.getTime())
-  ) {
-    return;
-  }
-
-  const existingTariff = await prisma.userTariff.findUnique({
-    where: { userId: id },
-    select: { id: true },
-  });
-
-  if (existingTariff) {
-    await prisma.userTariff.update({
-      where: { userId: id },
-      data: {
-        expiresAt,
-        remainingTokens,
-        tariffPlanId,
-      },
-    });
-  } else {
-    await prisma.userTariff.create({
-      data: {
-        expiresAt,
-        remainingTokens,
-        startedAt: new Date(),
-        tariffPlanId,
-        userId: id,
-      },
-    });
-  }
-
-  revalidatePath("/admin/users");
-}
 
 export default async function AdminUsersPage() {
   const [users, tariffPlans] = await Promise.all([
@@ -190,6 +113,17 @@ export default async function AdminUsersPage() {
           {
             header: "",
             cell: (user) => (
+              <Link
+                className="text-sm font-medium text-[#b9abff] transition hover:text-[#d8d2ff]"
+                href={`/admin/users/${user.id}`}
+              >
+                Открыть
+              </Link>
+            ),
+          },
+          {
+            header: "",
+            cell: (user) => (
               <DeleteUserButton userId={user.id} telegramId={user.telegramId} />
             ),
           },
@@ -200,10 +134,6 @@ export default async function AdminUsersPage() {
       />
     </section>
   );
-}
-
-function getDefaultTariffExpiryDate(durationDays: number) {
-  return new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 }
 
 function formatDateTimeLocalValue(date?: Date) {
