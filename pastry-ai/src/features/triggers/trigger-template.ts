@@ -87,7 +87,7 @@ const triggerEventOptions = [
   {
     key: "user.started",
     label: "Pressed Start",
-    description: "Launch onboarding or a comeback sequence after /start.",
+    description: "Start a follow-up or comeback sequence after /start.",
   },
   {
     key: "promo.granted",

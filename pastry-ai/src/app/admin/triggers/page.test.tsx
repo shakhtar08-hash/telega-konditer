@@ -46,6 +46,9 @@ describe("AdminTriggersPage", () => {
 
     expect(html).toContain("Ready templates");
     expect(html).toContain("After Start: no promo");
+    expect(html).toContain("Pressed Start - In 15 minutes");
+    expect(html).not.toContain("onboarding");
+    expect(html).not.toContain("В·");
     expect(html).toContain("Create trigger");
   });
 

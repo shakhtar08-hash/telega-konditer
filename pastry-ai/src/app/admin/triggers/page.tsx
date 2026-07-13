@@ -10,6 +10,12 @@ import {
 } from "@/features/triggers/trigger-template";
 import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
 
+export {
+  createTriggerMessage,
+  deleteTriggerMessage,
+  updateTriggerMessage,
+} from "./page.legacy-actions";
+
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
@@ -212,7 +218,7 @@ export default async function AdminTriggersPage({
                 >
                   <p className="text-sm font-medium text-[#f4f7fb]">{template.name}</p>
                   <p className="mt-1 text-xs text-[#97a4b8]">
-                    {getEventLabel(template.eventKey)} · {formatDelay(template.delayValue, template.delayUnit)}
+                    {getEventLabel(template.eventKey)} - {formatDelay(template.delayValue, template.delayUnit)}
                   </p>
                 </Link>
               ))}

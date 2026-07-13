@@ -97,3 +97,56 @@ This preserves the behavior goal while matching the intended two-panel screen co
 ## Commit
 
 - `feat: redesign trigger list screen`
+
+---
+
+## Review Fixes
+
+Follow-up review findings were addressed with a narrow patch set.
+
+### 1. Removed onboarding wording from trigger automation copy
+
+- Updated the `user.started` event description in `src/features/triggers/trigger-template.ts`
+- New wording keeps `/start` trigger automation framed as follow-up / comeback behavior, without describing onboarding as part of trigger automation
+
+### 2. Replaced the mojibake separator in template subtitles
+
+- Updated the template subtitle rendering in `src/app/admin/triggers/page.tsx`
+- Replaced the bad separator with a clean ASCII ` - `
+
+### 3. Restored the neighboring legacy action import surface
+
+- Added a minimal adjacent compatibility file: `src/app/admin/triggers/page.legacy-actions.ts`
+- Re-exported `createTriggerMessage`, `updateTriggerMessage`, and `deleteTriggerMessage` from `src/app/admin/triggers/page.tsx`
+- Kept the bridge intentionally narrow so Task 4 does not leave `src/app/admin/triggers/page.actions.test.ts` broken before Task 5 replaces that legacy path
+
+This was the smallest safe compatibility strategy because the neighboring test imports those names directly from `./page`.
+
+## Fresh Verification Evidence
+
+### Red verification for the review findings
+
+Ran:
+
+`npm test -- src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.actions.test.ts`
+
+Observed expected failures:
+
+- `page.test.tsx` failed because the rendered HTML still contained the bad separator and onboarding wording
+- `page.actions.test.ts` failed because `createTriggerMessage`, `updateTriggerMessage`, and `deleteTriggerMessage` were no longer exported from `./page`
+
+### Green verification after the fixes
+
+Ran:
+
+`npm test -- src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.actions.test.ts`
+
+Result: PASS, 9 tests passed.
+
+### Fresh lint verification
+
+Ran:
+
+`npx eslint src/app/admin/triggers/page.tsx src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.legacy-actions.ts src/features/triggers/trigger-template.ts`
+
+Result: PASS.
