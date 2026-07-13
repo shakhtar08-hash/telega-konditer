@@ -52,3 +52,34 @@ This preserves the required data-copy path while matching the real database hist
 
 - The required red step did not fail in practice because the requested test note is not schema-bound; this task therefore documents the gap rather than forcing an artificial failure.
 - The brief's `prisma migrate diff` command is outdated for the Prisma CLI version installed in this workspace, so I validated with the supported equivalent command.
+
+## Reviewer Fix Follow-Up
+
+### What Changed
+
+- Replaced the previous non-binding object-literal test in [src/features/triggers/trigger-service.test.ts](/C:/Users/Roof/Documents/Телега/pastry-ai/src/features/triggers/trigger-service.test.ts) with contract-level coverage tied to the task-owned artifacts.
+- Added schema coverage that verifies the Prisma datamodel now exposes `TriggerRule`, `triggerRuleId`, and `triggerEventKey`, and no longer declares `TriggerMessage`, `triggerMessageId`, or `triggerSlug`.
+- Added migration coverage that verifies the destructive migration sequence is safe:
+  - copy legacy `TriggerMessage` rows into `TriggerRule`
+  - add scheduled-message replacement columns
+  - backfill `triggerRuleId` from `triggerMessageId`
+  - backfill `triggerEventKey` from `triggerSlug`
+  - enforce `NOT NULL`
+  - drop old scheduled linkage columns only after the backfill
+  - drop `TriggerMessage` only after the scheduled-row rewrite
+- Added a behavior-oriented migration test that derives the backfill assignments from the actual SQL update block and applies them to a sample legacy scheduled row, so the test is anchored to the migration artifact rather than a free-standing object shape.
+
+### Why This Addresses The Review
+
+- The previous test only asserted fields on a local object and did not guard the schema or migration contract.
+- The new tests fail against the old slug-based schema/migration state because they require the explicit-rule Prisma model and the new scheduled-message linkage fields.
+- The new migration test covers the risky part of Task 1 directly: it verifies the real SQL artifact performs the scheduled-row backfill before destructive drops.
+
+### Focused Verification Re-Run
+
+- Command: `npm test -- src/features/triggers/trigger-service.test.ts`
+  - Result: pass
+  - Output summary: `Test Files  1 passed (1)`, `Tests  10 passed (10)`
+- Command: `npx prisma validate`
+  - Result: pass
+  - Output summary: `The schema at prisma\\schema.prisma is valid`
