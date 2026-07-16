@@ -2,6 +2,44 @@ import { describe, expect, it, vi } from "vitest";
 import { createAITransport } from "./ai-transport";
 
 describe("createAITransport", () => {
+  it("keeps direct mode reachable without validating unrelated app env", async () => {
+    const directImage = vi
+      .fn()
+      .mockResolvedValue({ url: "data:image/jpeg;base64,direct" });
+    const previousEnv = {
+      ...process.env,
+    };
+
+    delete process.env.DATABASE_URL;
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.TELEGRAM_WEBHOOK_SECRET;
+    delete process.env.CRON_SECRET;
+    delete process.env.INTERNAL_AI_GATEWAY_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
+
+    try {
+      const transport = createAITransport({
+        directGenerateImage: directImage,
+      });
+
+      await expect(
+        transport.generateImage({
+          provider: "openai",
+          model: "gpt-image-1",
+          prompt: "  plated dessert  ",
+        }),
+      ).resolves.toEqual({ url: "data:image/jpeg;base64,direct" });
+
+      expect(directImage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prompt: "plated dessert",
+        }),
+      );
+    } finally {
+      process.env = previousEnv;
+    }
+  });
+
   it("sanitizes prompts before direct KIE image generation", async () => {
     const directImage = vi
       .fn()

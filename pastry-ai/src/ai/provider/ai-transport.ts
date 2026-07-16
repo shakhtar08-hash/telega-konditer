@@ -1,4 +1,3 @@
-import { loadEnv } from "@/lib/env";
 import type { GenerateImageInput } from "./ai-service";
 import { sanitizeOutboundPrompt } from "./ai-request-sanitizer";
 
@@ -51,10 +50,8 @@ function resolveGatewayRoute(config: AITransportConfig) {
     };
   }
 
-  const env = loadEnv(process.env);
-
   return {
-    gatewayUrl: env.INTERNAL_AI_GATEWAY_URL,
-    sharedSecret: env.INTERNAL_API_SHARED_SECRET,
+    gatewayUrl: process.env.INTERNAL_AI_GATEWAY_URL,
+    sharedSecret: process.env.INTERNAL_API_SHARED_SECRET,
   };
 }
