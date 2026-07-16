@@ -175,7 +175,7 @@ export function registerStartCommand(
   });
 
   composer.callbackQuery(MENU_RETURN_CALLBACK, async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await answerCallbackQuerySafely(ctx);
     clearScenarioSession(ctx.session);
     const user =
       ctx.from
@@ -553,11 +553,49 @@ async function sendPromptMenu(ctx: PastryBotContext) {
   const items = await loadPromptMenuItems();
 
   if (items.length === 0) {
-    await ctx.reply("Сейчас нет активных сценариев. Напишите администратору.");
+    await sendTextMessage(ctx, "Сейчас нет активных сценариев. Напишите администратору.");
     return;
   }
 
-  await ctx.reply(await buildPromptMenuMessage(), {
+  await sendTextMessage(ctx, await buildPromptMenuMessage(), {
     reply_markup: buildPromptMenuKeyboard(items),
   });
+}
+
+async function answerCallbackQuerySafely(ctx: PastryBotContext) {
+  try {
+    await ctx.answerCallbackQuery();
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "description" in error &&
+      typeof error.description === "string" &&
+      /query is too old|query id is invalid/i.test(error.description)
+    ) {
+      console.warn("Ignoring stale Telegram callback query", {
+        callbackData: "match" in ctx ? ctx.match : undefined,
+        fromId: ctx.from?.id,
+      });
+      return;
+    }
+
+    throw error;
+  }
+}
+
+async function sendTextMessage(
+  ctx: PastryBotContext,
+  text: string,
+  other?: Parameters<PastryBotContext["reply"]>[1],
+) {
+  if (ctx.chat) {
+    return ctx.reply(text, other);
+  }
+
+  if (ctx.from?.id) {
+    return ctx.api.sendMessage(ctx.from.id, text, other);
+  }
+
+  throw new Error("Missing information for API call to sendMessage");
 }

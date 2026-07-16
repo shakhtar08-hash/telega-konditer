@@ -93,7 +93,7 @@ import {
 } from "./start";
 
 const menuReplyMarkup = {
-  inline_keyboard: [[{ callback_data: "menu:button_recipe", text: "РЎРѕР·РґР°С‚СЊ СЂРµС†РµРїС‚" }]],
+  inline_keyboard: [[{ callback_data: "menu:button_recipe", text: "Р РЋР С•Р В·Р Т‘Р В°РЎвЂљРЎРЉ РЎР‚Р ВµРЎвЂ Р ВµР С—РЎвЂљ" }]],
 };
 
 function createUserService() {
@@ -110,6 +110,14 @@ function createUserService() {
 
 function createBaseContext() {
   return {
+    api: {
+      sendMessage: vi.fn().mockResolvedValue(undefined),
+      sendPhoto: vi.fn().mockResolvedValue(undefined),
+    },
+    chat: {
+      id: 123,
+      type: "private",
+    },
     from: {
       first_name: "Roof",
       id: 123,
@@ -168,10 +176,10 @@ describe("registerStartCommand", () => {
         feature: "recipes",
         id: "button_recipe",
         slug: "recipe-from-ingredients",
-        title: "РЎРѕР·РґР°С‚СЊ СЂРµС†РµРїС‚",
+        title: "Р РЋР С•Р В·Р Т‘Р В°РЎвЂљРЎРЉ РЎР‚Р ВµРЎвЂ Р ВµР С—РЎвЂљ",
       },
     ]);
-    buildPromptMenuMessageMock.mockResolvedValue("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ");
+    buildPromptMenuMessageMock.mockResolvedValue("Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹");
     buildPromptMenuKeyboardMock.mockReturnValue(menuReplyMarkup);
     handleTriggerEventMock.mockResolvedValue(undefined);
   });
@@ -201,7 +209,7 @@ describe("registerStartCommand", () => {
       username: "roof09",
     });
     expect(handleTriggerEventMock).not.toHaveBeenCalled();
-    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
+    expect(ctx.reply).toHaveBeenCalledWith("Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹", {
       reply_markup: menuReplyMarkup,
     });
   });
@@ -228,7 +236,7 @@ describe("registerStartCommand", () => {
 
     expect(userService.assignPromoTariff).toHaveBeenCalledWith("user-1");
     expect(handleTriggerEventMock).not.toHaveBeenCalled();
-    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
+    expect(ctx.reply).toHaveBeenCalledWith("Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹", {
       reply_markup: menuReplyMarkup,
     });
   });
@@ -257,7 +265,7 @@ describe("registerStartCommand", () => {
       chatId: "123",
       userId: "user-1",
     });
-    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
+    expect(ctx.reply).toHaveBeenCalledWith("Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹", {
       reply_markup: menuReplyMarkup,
     });
   });
@@ -283,7 +291,7 @@ describe("registerStartCommand", () => {
       username: "roof09",
     });
     expect(handleTriggerEventMock).not.toHaveBeenCalled();
-    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
+    expect(ctx.reply).toHaveBeenCalledWith("Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹", {
       reply_markup: menuReplyMarkup,
     });
   });
@@ -313,9 +321,37 @@ describe("registerStartCommand", () => {
     });
     expect(userHasPromptAccessMock).toHaveBeenCalledWith("user-1");
     expect(handleTriggerEventMock).not.toHaveBeenCalled();
-    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
+    expect(ctx.reply).toHaveBeenCalledWith("Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹", {
       reply_markup: menuReplyMarkup,
     });
+  });
+
+  it("falls back to api.sendMessage from menu:return when callback context has no chat", async () => {
+    const callbackHandlers = new Map<string, (ctx: any) => Promise<void>>();
+    const composer = {
+      callbackQuery: vi.fn((pattern, handler) => {
+        if (typeof pattern === "string") callbackHandlers.set(pattern, handler);
+      }),
+      command: vi.fn(),
+    } as any;
+    const userService = createUserService();
+    const ctx = {
+      ...createBaseContext(),
+      answerCallbackQuery: vi.fn().mockResolvedValue(undefined),
+      chat: undefined,
+    };
+
+    registerStartCommand(composer, userService);
+
+    await callbackHandlers.get("menu:return")?.(ctx);
+
+    expect(ctx.api.sendMessage).toHaveBeenCalledWith(
+      123,
+      "Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹",
+      {
+        reply_markup: menuReplyMarkup,
+      },
+    );
   });
 
   it("opens the main menu after onboarding promo activation without dispatching user.started", async () => {
@@ -355,8 +391,9 @@ describe("registerStartCommand", () => {
       data: { promoClaimed: true },
     });
     expect(handleTriggerEventMock).not.toHaveBeenCalled();
-    expect(ctx.reply).toHaveBeenCalledWith("Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ", {
+    expect(ctx.reply).toHaveBeenCalledWith("Р вЂњР В»Р В°Р Р†Р Р…Р С•Р Вµ Р СР ВµР Р…РЎР‹", {
       reply_markup: menuReplyMarkup,
     });
   });
 });
+
