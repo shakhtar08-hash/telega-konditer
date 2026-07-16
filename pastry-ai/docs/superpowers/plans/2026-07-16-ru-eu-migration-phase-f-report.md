@@ -131,3 +131,8 @@ Recommended next step:
 
 - treat this as a truthful failed cutover rehearsal on live infrastructure
 - fix RU app-to-PostgreSQL runtime connectivity for containerized Telegram handling before the next Phase F attempt
+
+Follow-up note:
+
+- a same-day recovery and successful retry were later completed
+- see `docs/superpowers/plans/2026-07-16-ru-eu-migration-phase-f-recovery-report.md`
