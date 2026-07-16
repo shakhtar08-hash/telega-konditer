@@ -1,29 +1,39 @@
 import { z } from "zod";
 
+const optionalNonEmptyString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
+
+const optionalUrlString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().url().optional(),
+);
+
 const envSchema = z
   .object({
   OPENAI_API_KEY: z.string().min(1),
-  OPENROUTER_API_KEY: z.string().min(1).optional(),
-  SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_ANON_KEY: z.string().min(1).optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  OPENROUTER_API_KEY: optionalNonEmptyString,
+  SUPABASE_URL: optionalUrlString,
+  SUPABASE_ANON_KEY: optionalNonEmptyString,
+  SUPABASE_SERVICE_ROLE_KEY: optionalNonEmptyString,
   DATABASE_URL: z.string().min(1),
-  DIRECT_URL: z.string().min(1).optional(),
+  DIRECT_URL: optionalNonEmptyString,
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(1),
-  ADMIN_USERNAME: z.string().min(1).optional(),
-  ADMIN_PASSWORD: z.string().min(1).optional(),
-  ADMIN_SESSION_SECRET: z.string().min(1).optional(),
-  APP_BASE_URL: z.string().url().optional(),
-  CLOUDPAYMENTS_PUBLIC_ID: z.string().min(1).optional(),
-  CLOUDPAYMENTS_API_SECRET: z.string().min(1).optional(),
+  ADMIN_USERNAME: optionalNonEmptyString,
+  ADMIN_PASSWORD: optionalNonEmptyString,
+  ADMIN_SESSION_SECRET: optionalNonEmptyString,
+  APP_BASE_URL: optionalUrlString,
+  CLOUDPAYMENTS_PUBLIC_ID: optionalNonEmptyString,
+  CLOUDPAYMENTS_API_SECRET: optionalNonEmptyString,
   CRON_SECRET: z.string().min(1),
-  RENDER_CARD_SECRET: z.string().min(1).optional(),
-  YOUTUBE_API_KEY: z.string().min(1).optional(),
-  INTERNAL_API_BASE_URL: z.string().url().optional(),
-  INTERNAL_API_SHARED_SECRET: z.string().min(1).optional(),
-  INTERNAL_TELEGRAM_INGRESS_URL: z.string().url().optional(),
-  INTERNAL_AI_GATEWAY_URL: z.string().url().optional(),
+  RENDER_CARD_SECRET: optionalNonEmptyString,
+  YOUTUBE_API_KEY: optionalNonEmptyString,
+  INTERNAL_API_BASE_URL: optionalUrlString,
+  INTERNAL_API_SHARED_SECRET: optionalNonEmptyString,
+  INTERNAL_TELEGRAM_INGRESS_URL: optionalUrlString,
+  INTERNAL_AI_GATEWAY_URL: optionalUrlString,
   APP_REGION: z.enum(["eu", "ru"]).optional(),
   APP_ROLE: z.enum(["ingress", "app", "cron"]).optional(),
   })

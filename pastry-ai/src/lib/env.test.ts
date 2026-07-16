@@ -56,6 +56,31 @@ describe("loadEnv transition config", () => {
     expect(env.APP_REGION).toBe("ru");
   });
 
+  it("treats empty optional transition variables as unset", () => {
+    const env = loadEnv({
+      OPENAI_API_KEY: "openai-key",
+      OPENROUTER_API_KEY: "",
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
+      DIRECT_URL: "",
+      TELEGRAM_BOT_TOKEN: "telegram-token",
+      TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+      APP_BASE_URL: "",
+      CLOUDPAYMENTS_PUBLIC_ID: "",
+      CLOUDPAYMENTS_API_SECRET: "",
+      CRON_SECRET: "cron-secret",
+      RENDER_CARD_SECRET: "",
+      YOUTUBE_API_KEY: "",
+      INTERNAL_API_BASE_URL: "",
+      INTERNAL_API_SHARED_SECRET: "",
+      INTERNAL_TELEGRAM_INGRESS_URL: "",
+      INTERNAL_AI_GATEWAY_URL: "",
+    });
+
+    expect(env.OPENROUTER_API_KEY).toBeUndefined();
+    expect(env.DIRECT_URL).toBeUndefined();
+    expect(env.INTERNAL_API_SHARED_SECRET).toBeUndefined();
+  });
+
   it("rejects partially configured Supabase settings", () => {
     expect(() =>
       loadEnv({
