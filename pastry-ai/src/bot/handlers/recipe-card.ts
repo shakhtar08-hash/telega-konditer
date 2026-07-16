@@ -10,6 +10,7 @@ import { splitTelegramText, getRecipeImageGenerationConfig } from "./recipes";
 import { toTelegramPhotoInput } from "./photoshoot";
 import { templateNames, type CardTemplate } from "@/components/recipe-card/templates";
 import type { StructuredRecipe } from "@/ai/schemas/recipe";
+import { addMenuKeyboard, replyChunks } from "../menu-return";
 
 type RecipeCardService = {
   createCard(input: {
@@ -253,9 +254,8 @@ export function registerRecipeContextCallbacks(
           );
         }
       } else {
-        for (const chunk of splitTelegramText(result.text)) {
-          await ctx.reply(chunk, { parse_mode: "Markdown" });
-        }
+        const chunks = splitTelegramText(result.text);
+        await replyChunks(ctx.reply.bind(ctx), chunks, { parse_mode: "Markdown" });
       }
 
       await dependencies.tokenGuard.chargeTokens(
@@ -373,9 +373,8 @@ export function registerRecipeContextCallbacks(
     ctx.session.selectedGeneratedRecipeId = recipe.id;
     ctx.session.selectedGeneratedRecipeText = recipe.recipeText;
     await ctx.answerCallbackQuery();
-    await ctx.reply(
-      "Напишите, что именно пересчитать в этом рецепте.",
-    );
+    const recalcMsg = addMenuKeyboard("Напишите, что именно пересчитать в этом рецепте.");
+    await ctx.reply(recalcMsg.text, { reply_markup: recalcMsg.reply_markup });
   });
 
   composer.callbackQuery(/^ask_chef_recipe:(.+)$/, async (ctx) => {
@@ -409,9 +408,8 @@ export function registerRecipeContextCallbacks(
     ctx.session.selectedGeneratedRecipeId = recipe.id;
     ctx.session.selectedGeneratedRecipeText = recipe.recipeText;
     await ctx.answerCallbackQuery();
-    await ctx.reply(
-      "Напишите ваш вопрос по этому рецепту.",
-    );
+    const chefMsg = addMenuKeyboard("Напишите ваш вопрос по этому рецепту.");
+    await ctx.reply(chefMsg.text, { reply_markup: chefMsg.reply_markup });
   });
 }
 

@@ -1,11 +1,18 @@
 import { AdminPageHeader } from "@/components/admin/data-table";
 import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
+import { prisma } from "@/db/prisma";
+import { loadDynamicUserGroupsOrEmpty } from "@/app/admin/_lib/dynamic-user-groups";
 import {
   getTriggerEventOptions,
   getTriggerTemplates,
 } from "@/features/triggers/trigger-template";
 import { createTriggerRule } from "../actions";
-import { TriggerForm, type TriggerFormValues, type TriggerUserGroupOption } from "../trigger-form";
+import {
+  TriggerForm,
+  type TriggerDynamicUserGroupOption,
+  type TriggerFormValues,
+  type TriggerUserGroupOption,
+} from "../trigger-form";
 
 type NewTriggerPageProps = {
   searchParams?: Promise<{ template?: string }> | { template?: string };
@@ -72,23 +79,34 @@ function buildInitialValues(templateKey?: string): TriggerFormValues {
     imageUrl: null,
     messageText: "",
     name: template ? (templateNameCopy[template.key] ?? template.name) : "",
+    buttons: [],
     status: "draft",
   };
 }
 
 export default async function NewTriggerPage({ searchParams }: NewTriggerPageProps) {
-  const [{ prisma }, resolvedSearchParams] = await Promise.all([
-    import("@/db/prisma"),
-    searchParams ? searchParams : Promise.resolve({}),
-  ]);
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const initial = buildInitialValues(resolvedSearchParams.template);
-  const userGroups = await prisma.userGroup.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  const [userGroups, dynamicGroupsResult] = await Promise.all([
+    prisma.userGroup.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    loadDynamicUserGroupsOrEmpty(() =>
+      prisma.dynamicUserGroup.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, status: true },
+      }),
+    ),
+  ]);
+  const dynamicGroups = dynamicGroupsResult.groups;
   const userGroupOptions: TriggerUserGroupOption[] = userGroups.map((group) => ({
     value: group.id,
     label: group.name,
+  }));
+  const dynamicUserGroupOptions: TriggerDynamicUserGroupOption[] = dynamicGroups.map((group) => ({
+    value: group.id,
+    label: group.status === "active" ? group.name : `${group.name} (выключена)`,
   }));
 
   return (
@@ -101,6 +119,7 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
       <TriggerForm
         action={createTriggerRule}
         cancelHref="/admin/triggers"
+        dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}
         initial={initial}
         submitLabel="Создать триггер"

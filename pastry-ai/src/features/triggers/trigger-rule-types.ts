@@ -3,6 +3,7 @@ export type TriggerCondition =
   | { field: "hasActiveTariff"; operator: "is"; value: boolean }
   | { field: "generationCount"; operator: "equals" | "gte"; value: number }
   | { field: "userGroupId"; operator: "isMember"; value: string }
+  | { field: "dynamicUserGroupId"; operator: "matches"; value: string }
   | { field: "groupId"; operator: "contains"; value: string };
 
 export type TriggerUserState = {
@@ -11,6 +12,10 @@ export type TriggerUserState = {
   hasActiveTariff: boolean;
   generationCount: number;
   groupIds: string[];
+  remainingTokens: number;
+  tariffExpired: boolean;
+  createdAt: Date;
+  lastActivityAt: Date | null;
 };
 
 export type TriggerRuleRecord = {

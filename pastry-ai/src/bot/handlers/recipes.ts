@@ -3,7 +3,6 @@ import { prisma } from "@/db/prisma";
 import { createGeneratedRecipeContextRepository } from "@/db/repositories/generated-recipe-context-repository";
 import {
   formatRecipeForTelegram,
-  formatRecipeOutputForTelegram,
 } from "@/features/recipes/recipe-presenter";
 import type { Composer } from "grammy";
 import {
@@ -14,11 +13,13 @@ import {
 import { resolveUserIdByTelegramId } from "../user-id";
 import { parseRecipeIntent } from "./recipe-intent";
 import { applyRecipeIntent, type RecipeStateAction } from "./recipe-state";
+import { addMenuKeyboard } from "../menu-return";
 
 type RecipeService = {
   createFromIngredients(input: {
     ingredientsText: string;
     promptSlug?: string;
+    excludeRecipes?: string[];
   }): Promise<{
     recipes: StructuredRecipe[];
   }>;
@@ -27,6 +28,13 @@ type RecipeService = {
 type GeneratedRecipeContextRepository = ReturnType<
   typeof createGeneratedRecipeContextRepository
 >;
+
+type ConversationLogService = {
+  startConversation(input: { userId: string; feature: string }): Promise<string>;
+  appendUserMessage(input: { conversationId: string; content: string; caption?: string }): Promise<void>;
+  appendAssistantMessage(input: { conversationId: string; content: string; model?: string | null }): Promise<void>;
+  appendErrorMessage(input: { conversationId: string; content: string }): Promise<void>;
+};
 
 const processingMessage =
   "Готовлю варианты десертов по вашим ингредиентам. Это может занять несколько секунд.";
@@ -50,6 +58,7 @@ export function registerRecipeTextHandler(
   dependencies: {
     recipeService: RecipeService;
     generatedRecipeContextRepository: GeneratedRecipeContextRepository;
+    conversationLogService?: ConversationLogService;
   },
 ): void {
   composer.command("stop", async (ctx) => {
@@ -75,6 +84,71 @@ export function registerRecipeTextHandler(
 
     return handleSimpleRecipe(ctx, text, dependencies);
   });
+
+  composer.callbackQuery(/^create_another_recipe:(.+)$/, async (ctx) => {
+    const currentRecipeId = ctx.match[1];
+
+    const userId = await resolveUserIdByTelegramId(
+      prisma.user,
+      String(ctx.from?.id ?? ""),
+    );
+
+    if (!userId) {
+      await ctx.answerCallbackQuery();
+      await ctx.reply(missingProfileMessage);
+      return;
+    }
+
+    const currentRecipe =
+      await dependencies.generatedRecipeContextRepository.findByIdForUser(
+        currentRecipeId,
+        userId,
+      );
+
+    if (!currentRecipe) {
+      await ctx.answerCallbackQuery();
+      await ctx.reply("Этот рецепт больше не доступен.");
+      return;
+    }
+
+    await ctx.answerCallbackQuery();
+    await ctx.reply(ctx.session.processingText || processingMessage);
+
+    const excludeRecipes = ctx.session.givenRecipeNames ?? [];
+
+    const recipeOutput = await dependencies.recipeService.createFromIngredients({
+      ingredientsText: ctx.session.recipeSearchQuery ?? currentRecipe.recipeText,
+      promptSlug: ctx.session.lastPromptSlug,
+      excludeRecipes,
+    });
+
+    const recipe = recipeOutput.recipes[0];
+    if (!recipe) {
+      await ctx.reply("Не удалось сгенерировать новый рецепт. Попробуйте ещё раз.");
+      return;
+    }
+
+    const singleText = formatSingleRecipeForTelegram(recipe, 0);
+
+    const saved = await dependencies.generatedRecipeContextRepository.create({
+      userId,
+      recipeText: singleText,
+      recipeJson: recipe,
+      imageUrl: null,
+      source: "create_recipe",
+    });
+
+    ctx.session.selectedGeneratedRecipeId = saved.id;
+    ctx.session.selectedGeneratedRecipeText = singleText;
+    ctx.session.givenRecipeIds = [...(ctx.session.givenRecipeIds ?? []), saved.id];
+    ctx.session.givenRecipeNames = [...(ctx.session.givenRecipeNames ?? []), recipe.name];
+
+    const chunks = splitTelegramText(singleText);
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const isLast = ci === chunks.length - 1;
+      await ctx.reply(chunks[ci], isLast ? { reply_markup: buildRecipeActionKeyboard(saved.id) } : undefined);
+    }
+  });
 }
 
 export function shouldHandleRecipeText(session: BotSession, text = "") {
@@ -85,12 +159,62 @@ export function shouldHandleRecipeText(session: BotSession, text = "") {
   );
 }
 
+async function sendRecipe(
+  ctx: PastryBotContext,
+  recipe: StructuredRecipe,
+  index: number,
+  dependencies: {
+    generatedRecipeContextRepository: GeneratedRecipeContextRepository;
+    conversationLogService?: ConversationLogService;
+  },
+  options?: { action?: "create_recipe" | "create_another"; sourceText?: string; conversationId?: string; conversationLogService?: ConversationLogService },
+) {
+  const userId = await resolveUserIdByTelegramId(
+    prisma.user,
+    String(ctx.from?.id ?? ""),
+  );
+
+  if (!userId) {
+    await ctx.reply(missingProfileMessage);
+    return;
+  }
+
+  const singleText = formatSingleRecipeForTelegram(recipe, index);
+
+  const saved = await dependencies.generatedRecipeContextRepository.create({
+    userId,
+    recipeText: singleText,
+    recipeJson: recipe,
+    imageUrl: null,
+    source: options?.action ?? "create_recipe",
+  });
+
+  ctx.session.selectedGeneratedRecipeId = saved.id;
+  ctx.session.selectedGeneratedRecipeText = singleText;
+  ctx.session.givenRecipeIds = [...(ctx.session.givenRecipeIds ?? []), saved.id];
+  ctx.session.givenRecipeNames = [...(ctx.session.givenRecipeNames ?? []), recipe.name];
+
+  const chunks = splitTelegramText(singleText);
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const isLast = ci === chunks.length - 1;
+    await ctx.reply(chunks[ci], isLast ? { reply_markup: buildRecipeActionKeyboard(saved.id) } : undefined);
+  }
+
+  if (dependencies.conversationLogService && options?.conversationId) {
+    await dependencies.conversationLogService.appendAssistantMessage({
+      conversationId: options.conversationId,
+      content: singleText,
+    });
+  }
+}
+
 async function handleIngredientRecipe(
   ctx: PastryBotContext,
   text: string,
   dependencies: {
     recipeService: RecipeService;
     generatedRecipeContextRepository: GeneratedRecipeContextRepository;
+    conversationLogService?: ConversationLogService;
   },
 ) {
   const intent = parseRecipeIntent(text);
@@ -111,13 +235,6 @@ async function handleIngredientRecipe(
   }
 
   if (result.action === "show_all") {
-    if (ctx.session.lastRecipeListText) {
-      for (const chunk of splitTelegramText(ctx.session.lastRecipeListText)) {
-        await ctx.reply(chunk);
-      }
-      return;
-    }
-
     await ctx.reply(
       "Сначала соберём список вариантов по ингредиентам, а потом сможем показать всё.",
     );
@@ -126,56 +243,54 @@ async function handleIngredientRecipe(
 
   if (result.action === "show_one") {
     await ctx.reply(
-      `Показываю рецепт №${result.recipeIndex}. На следующем шаге можно расширить это до выбора конкретного сохранённого варианта из списка.`,
+      `Показываю рецепт №${result.recipeIndex}.`,
     );
     return;
   }
 
   await ctx.reply(ctx.session.processingText || processingMessage);
 
+  const log = dependencies.conversationLogService;
+  let convId: string | undefined;
+
+  if (log) {
+    const userId = await resolveUserIdByTelegramId(
+      prisma.user,
+      String(ctx.from?.id ?? ""),
+    );
+    if (userId) {
+      convId = await log.startConversation({
+        userId,
+        feature: ctx.session.lastPromptSlug ?? "recipes",
+      });
+      await log.appendUserMessage({ conversationId: convId, content: text });
+    }
+  }
+
   const ingredientsText = buildRecipePromptText(
     text,
     ctx.session.lastRecipeRequestText,
     result.promptText,
   );
+
+  const excludeRecipes = ctx.session.givenRecipeNames ?? [];
+
   const recipeOutput = await dependencies.recipeService.createFromIngredients({
     ingredientsText,
     promptSlug: ctx.session.lastPromptSlug,
+    excludeRecipes,
   });
 
-  const userId = await resolveUserIdByTelegramId(
-    prisma.user,
-    String(ctx.from?.id ?? ""),
-  );
+  ctx.session.recipeSearchQuery = ctx.session.recipeSearchQuery ?? ingredientsText;
+  ctx.session.lastRecipeRequestText = result.promptText;
 
-  if (!userId) {
-    await ctx.reply(missingProfileMessage);
+  const recipe = recipeOutput.recipes[0];
+  if (!recipe) {
+    await ctx.reply("Не удалось сгенерировать рецепт. Попробуйте ещё раз.");
     return;
   }
 
-  const combinedText = formatRecipeOutputForTelegram(recipeOutput);
-  ctx.session.lastRecipeRequestText = result.promptText;
-  ctx.session.lastRecipeListText = combinedText;
-  ctx.session.recipeScenarioStep = "results_shown";
-
-  for (let i = 0; i < recipeOutput.recipes.length; i++) {
-    const recipe = recipeOutput.recipes[i];
-    const singleText = formatSingleRecipeForTelegram(recipe, i);
-
-    const saved = await dependencies.generatedRecipeContextRepository.create({
-      userId,
-      recipeText: singleText,
-      recipeJson: recipe,
-      imageUrl: null,
-      source: "create_recipe",
-    });
-
-    const chunks = splitTelegramText(singleText);
-    for (let ci = 0; ci < chunks.length; ci++) {
-      const isLast = ci === chunks.length - 1;
-      await ctx.reply(chunks[ci], isLast ? { reply_markup: buildRecipeActionKeyboard(saved.id) } : undefined);
-    }
-  }
+  await sendRecipe(ctx, recipe, 0, dependencies, { conversationId: convId });
 }
 
 async function handleBestRecipeSearch(
@@ -184,48 +299,46 @@ async function handleBestRecipeSearch(
   dependencies: {
     recipeService: RecipeService;
     generatedRecipeContextRepository: GeneratedRecipeContextRepository;
+    conversationLogService?: ConversationLogService;
   },
 ) {
   await ctx.reply(ctx.session.processingText || processingBestRecipeMessage);
 
+  const log = dependencies.conversationLogService;
+  let convId: string | undefined;
+
+  if (log) {
+    const userId = await resolveUserIdByTelegramId(
+      prisma.user,
+      String(ctx.from?.id ?? ""),
+    );
+    if (userId) {
+      convId = await log.startConversation({
+        userId,
+        feature: ctx.session.lastPromptSlug ?? "best-recipe-search",
+      });
+      await log.appendUserMessage({ conversationId: convId, content: text });
+    }
+  }
+
+  const excludeRecipes = ctx.session.givenRecipeNames ?? [];
+
   const recipeOutput = await dependencies.recipeService.createFromIngredients({
     ingredientsText: text,
     promptSlug: ctx.session.lastPromptSlug,
+    excludeRecipes,
   });
 
-  const userId = await resolveUserIdByTelegramId(
-    prisma.user,
-    String(ctx.from?.id ?? ""),
-  );
+  ctx.session.recipeSearchQuery = ctx.session.recipeSearchQuery ?? text;
+  ctx.session.lastRecipeRequestText = text;
 
-  if (!userId) {
-    await ctx.reply(missingProfileMessage);
+  const recipe = recipeOutput.recipes[0];
+  if (!recipe) {
+    await ctx.reply("Не удалось сгенерировать рецепт. Попробуйте ещё раз.");
     return;
   }
 
-  const combinedText = formatRecipeOutputForTelegram(recipeOutput);
-  ctx.session.lastRecipeRequestText = text;
-  ctx.session.lastRecipeListText = combinedText;
-  ctx.session.recipeScenarioStep = "results_shown";
-
-  for (let i = 0; i < recipeOutput.recipes.length; i++) {
-    const recipe = recipeOutput.recipes[i];
-    const singleText = formatSingleRecipeForTelegram(recipe, i);
-
-    const saved = await dependencies.generatedRecipeContextRepository.create({
-      userId,
-      recipeText: singleText,
-      recipeJson: recipe,
-      imageUrl: null,
-      source: "create_recipe",
-    });
-
-    const chunks = splitTelegramText(singleText);
-    for (let ci = 0; ci < chunks.length; ci++) {
-      const isLast = ci === chunks.length - 1;
-      await ctx.reply(chunks[ci], isLast ? { reply_markup: buildRecipeActionKeyboard(saved.id) } : undefined);
-    }
-  }
+  await sendRecipe(ctx, recipe, 0, dependencies, { conversationId: convId });
 }
 
 async function handleSimpleRecipe(
@@ -234,6 +347,7 @@ async function handleSimpleRecipe(
   dependencies: {
     recipeService: RecipeService;
     generatedRecipeContextRepository: GeneratedRecipeContextRepository;
+    conversationLogService?: ConversationLogService;
   },
 ) {
   return handleBestRecipeSearch(ctx, text, dependencies);
@@ -322,6 +436,7 @@ export function formatSingleRecipeForTelegram(
 export function buildRecipeActionKeyboard(recipeId: string) {
   return {
     inline_keyboard: [
+      [{ text: "🍳 Создать ещё 1 рецепт", callback_data: `create_another_recipe:${recipeId}` }],
       [{ text: "📸 Создать фото десерта (1 печенька)", callback_data: `create_recipe_photo:${recipeId}` }],
       [{ text: "✨ Создать карточку рецепта (1 печенька)", callback_data: `create_recipe_card:${recipeId}` }],
       [{ text: "📏 Пересчитать рецепт", callback_data: `recipe_recalculate:${recipeId}` }],

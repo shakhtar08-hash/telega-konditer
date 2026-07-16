@@ -42,6 +42,14 @@ vi.mock("@/db/prisma", () => ({
   prisma: prismaMock,
 }));
 
+vi.mock("@/features/dynamic-user-groups/query", () => ({
+  buildDynamicUserGroupPreview: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@/features/dynamic-user-groups/service", () => ({
+  listDynamicUserGroupOptions: vi.fn().mockResolvedValue([]),
+}));
+
 function expectNoMojibake(text: string) {
   for (const marker of ["\u0420\u045f", "\u0420\u045c", "\u0420\u040e", "\u0420\u2019"]) {
     expect(text).not.toContain(marker);

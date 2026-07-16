@@ -1,5 +1,6 @@
 import type { TriggerRule } from "@prisma/client";
 import Link from "next/link";
+import { loadUserGroupsOrEmpty } from "@/app/admin/_lib/user-groups";
 import { AdminPageHeader } from "@/components/admin/data-table";
 import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
 import { AdminInput, AdminPanel, AdminSelect } from "@/components/admin/form";
@@ -176,7 +177,7 @@ function summarizeConditions(
   return conditions
     .map((condition) => {
       if (condition.field === "userGroupId" || condition.field === "groupId") {
-        const label = userGroupNames.get(condition.value) ?? "Удаленная группа";
+        const label = userGroupNames.get(condition.value) ?? condition.value ?? "Удаленная группа";
         return `Состоит в группе: ${label}`;
       }
 
@@ -262,10 +263,13 @@ export default async function AdminTriggersPage({
   const rules = (await prisma.triggerRule.findMany({
     orderBy: { updatedAt: "desc" },
   })) as TriggerRuleRow[];
-  const userGroups = await prisma.userGroup.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  const { groups: userGroups, unavailable: userGroupsUnavailable } =
+    await loadUserGroupsOrEmpty(() =>
+      prisma.userGroup.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+    );
   const userGroupNames = new Map(userGroups.map((group) => [group.id, group.name]));
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const filters = {
@@ -303,6 +307,13 @@ export default async function AdminTriggersPage({
       </header>
 
       <ChatBotSubNav />
+
+      {userGroupsUnavailable ? (
+        <div className="rounded-lg border border-[#6b4d1f] bg-[#22180d] px-4 py-3 text-sm text-[#f6d7a7]">
+          Группы пользователей недоступны: таблица ещё не создана в базе. Список
+          триггеров открыт, но названия групп временно не подгружаются.
+        </div>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[0.72fr_1.28fr]">
         <div className="space-y-4">
@@ -375,13 +386,16 @@ export default async function AdminTriggersPage({
             </Link>
           </div>
 
-          <form className="flex flex-wrap items-center gap-3" method="get">
-            <AdminInput
+          <form className="space-y-3" method="get">
+            <div className="md:max-w-[360px]">
+              <AdminInput
               defaultValue={filters.search}
               name="search"
               placeholder="Найти триггер"
             />
-            <AdminSelect defaultValue={filters.event} name="event">
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+            <AdminSelect className="md:max-w-[220px]" defaultValue={filters.event} name="event">
               <option value="all">Все события</option>
               {eventOptions.map((eventOption) => (
                 <option key={eventOption.key} value={eventOption.key}>
@@ -389,14 +403,14 @@ export default async function AdminTriggersPage({
                 </option>
               ))}
             </AdminSelect>
-            <AdminSelect defaultValue={filters.status} name="status">
+            <AdminSelect className="md:max-w-[220px]" defaultValue={filters.status} name="status">
               {statusOptions.map((statusOption) => (
                 <option key={statusOption.value} value={statusOption.value}>
                   {statusOption.label}
                 </option>
               ))}
             </AdminSelect>
-            <AdminSelect defaultValue={filters.sort} name="sort">
+            <AdminSelect className="md:max-w-[220px]" defaultValue={filters.sort} name="sort">
               {sortOptions.map((sortOption) => (
                 <option key={sortOption.value} value={sortOption.value}>
                   {sortOption.label}
@@ -409,6 +423,7 @@ export default async function AdminTriggersPage({
             >
               Применить
             </button>
+            </div>
           </form>
 
           {filteredRules.length === 0 ? (

@@ -28,6 +28,12 @@ export function registerSingleStylePhotoshootHandler(
     botToken: string;
     photoshootService: PhotoshootService;
     tokenGuard: TokenGuardService;
+    conversationLogService?: {
+      startConversation(input: { userId: string; feature: string }): Promise<string>;
+      appendUserMessage(input: { conversationId: string; content: string; caption?: string }): Promise<void>;
+      appendAssistantMessage(input: { conversationId: string; content: string; model?: string | null }): Promise<void>;
+      appendErrorMessage(input: { conversationId: string; content: string }): Promise<void>;
+    };
   },
 ): void {
   composer.on("message:photo", async (ctx, next) => {

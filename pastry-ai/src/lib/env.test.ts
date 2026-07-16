@@ -12,6 +12,7 @@ describe("loadEnv", () => {
       TELEGRAM_BOT_TOKEN: "telegram-token",
       TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
       CRON_SECRET: "cron-secret",
+      RENDER_CARD_SECRET: "render-card-secret",
     });
 
     expect(env.DATABASE_URL).toContain("postgresql://");

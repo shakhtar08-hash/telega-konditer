@@ -64,6 +64,20 @@ model UserGroupMember {
   @@index([userGroupId])
 }
 
+model DynamicUserGroup {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  status        String   @default("active")
+  logicOperator String
+  conditionsJson Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([name])
+  @@index([status, updatedAt])
+}
+
 model TariffPlan {
   id           String       @id @default(cuid())
   slug         String       @unique

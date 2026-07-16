@@ -120,3 +120,48 @@ export function AdminToggle({
     </label>
   );
 }
+
+export function AdminImageField({
+  defaultValue = "",
+  fileLabel = "Или выберите файл",
+  fileName,
+  hint,
+  label,
+  placeholder,
+  textName,
+}: {
+  defaultValue?: string;
+  fileLabel?: string;
+  fileName: string;
+  hint?: string;
+  label: string;
+  placeholder?: string;
+  textName: string;
+}) {
+  const previewable =
+    defaultValue.startsWith("/") || defaultValue.startsWith("http");
+
+  return (
+    <AdminField hint={hint} label={label}>
+      <div className="space-y-3">
+        <AdminInput
+          defaultValue={defaultValue}
+          name={textName}
+          placeholder={placeholder}
+        />
+        <div className="space-y-2">
+          <span className="block text-xs text-[#7f8da3]">{fileLabel}</span>
+          <AdminInput accept="image/*" name={fileName} type="file" />
+        </div>
+        {previewable ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt=""
+            className="h-24 w-24 rounded-md border border-[#2a3a55] object-cover"
+            src={defaultValue}
+          />
+        ) : null}
+      </div>
+    </AdminField>
+  );
+}

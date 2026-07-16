@@ -53,6 +53,16 @@ Trigger rules now support multiple messages under one immutable `slug`:
 - New scheduled rows use `sendAt = triggeredAt + delayMinutes`.
 - Editing a trigger message updates only unsent scheduled rows and recalculates `sendAt` from the original `triggeredAt`.
 - Deleting a trigger message removes only unsent scheduled rows; sent rows remain untouched.
+
+## Admin Image Upload
+
+Admin image upload uses a shared mechanism:
+
+- **`saveAdminImage`** helper at `src/app/admin/_lib/save-admin-image.ts` — validates image type (jpeg/png/webp/gif), enforces 10 MB limit, writes to `public/uploads/admin/<entity>/`, returns web path like `/uploads/admin/triggers/example.webp`. If file is missing/invalid, falls back to manual value or existing value.
+
+- **`AdminImageField`** component at `src/components/admin/form.tsx` — reusable form field combining a text input for manual URL/path, a file picker (`accept="image/*"`), and a preview thumbnail when a value exists.
+
+Covered pages: `/admin/triggers`, `/admin/chat-bot`, `/admin/funnel`, `/admin/photo-styles`. Uploaded file takes precedence over manual text when both are present.
 - The admin UI at `/admin/triggers` is grouped by `slug`, with each group showing messages sorted by `delayMinutes` and a form to add new messages under that rule.
 - `slug` is displayed but not editable in the admin interface.
 

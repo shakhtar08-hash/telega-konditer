@@ -3,9 +3,17 @@ import type { PhotoSize } from "grammy/types";
 import type { VisionOutput } from "@/ai/schemas/vision";
 import type { PastryBotContext } from "../context";
 import { splitTelegramText } from "./recipes";
+import { addMenuKeyboard, replyChunks } from "../menu-return";
 
 type VisionService = {
   identifyDessert(input: { imageUrl: string }): Promise<string>;
+};
+
+type ConversationLogService = {
+  startConversation(input: { userId: string; feature: string }): Promise<string>;
+  appendUserMessage(input: { conversationId: string; content: string; caption?: string }): Promise<void>;
+  appendAssistantMessage(input: { conversationId: string; content: string; model?: string | null }): Promise<void>;
+  appendErrorMessage(input: { conversationId: string; content: string }): Promise<void>;
 };
 
 const confidenceLabels: Record<VisionOutput["confidence"]["level"], string> = {
@@ -22,7 +30,7 @@ const difficultyLabels: Record<VisionOutput["difficulty"]["level"], string> = {
 
 export function registerVisionPhotoHandler(
   composer: Composer<PastryBotContext>,
-  dependencies: { botToken: string; visionService: VisionService },
+  dependencies: { botToken: string; visionService: VisionService; conversationLogService?: ConversationLogService },
 ): void {
   composer.on("message:photo", async (ctx, next) => {
     if (
@@ -35,9 +43,8 @@ export function registerVisionPhotoHandler(
     const photo = getLargestPhoto(ctx.message.photo);
 
     if (!photo) {
-      await ctx.reply(
-        "Не получилось прочитать фото. Попробуйте отправить его ещё раз.",
-      );
+      const notFound = addMenuKeyboard("Не получилось прочитать фото. Попробуйте отправить его ещё раз.");
+      await ctx.reply(notFound.text, { reply_markup: notFound.reply_markup });
       return;
     }
 
@@ -45,20 +52,44 @@ export function registerVisionPhotoHandler(
       "Анализирую десерт по фото. Это может занять несколько секунд.",
     );
 
+    const log = dependencies.conversationLogService;
+    let convId: string | undefined;
+
+    if (log) {
+      const { prisma } = await import("@/db/prisma");
+      const user = await prisma.user.findFirst({ where: { telegramId: String(ctx.from?.id ?? "") }, select: { id: true } });
+      if (user) {
+        convId = await log.startConversation({ userId: user.id, feature: "vision" });
+        const caption = ctx.message.caption ?? "";
+        await log.appendUserMessage({ conversationId: convId, content: "", caption });
+      }
+    }
+
     const file = await ctx.api.getFile(photo.file_id);
 
     if (!file.file_path) {
-      await ctx.reply(
-        "Telegram не вернул путь к фото. Попробуйте другое изображение.",
-      );
+      const noPath = addMenuKeyboard("Telegram не вернул путь к фото. Попробуйте другое изображение.");
+      await ctx.reply(noPath.text, { reply_markup: noPath.reply_markup });
       return;
     }
 
     const imageUrl = buildTelegramFileUrl(dependencies.botToken, file.file_path);
-    const result = await dependencies.visionService.identifyDessert({ imageUrl });
+    try {
+      const result = await dependencies.visionService.identifyDessert({ imageUrl });
 
-    for (const chunk of splitTelegramText(result)) {
-      await ctx.reply(chunk);
+      const chunks = splitTelegramText(result);
+      await replyChunks(ctx.reply.bind(ctx), chunks);
+
+      if (log && convId) {
+        await log.appendAssistantMessage({ conversationId: convId, content: result });
+      }
+    } catch (error) {
+      console.error("Vision analysis failed", error);
+      if (log && convId) {
+        await log.appendErrorMessage({ conversationId: convId, content: `Vision analysis failed: ${error instanceof Error ? error.message : String(error)}` });
+      }
+      const prepared = addMenuKeyboard("Произошла ошибка при анализе фото. Попробуйте ещё раз.");
+      await ctx.reply(prepared.text, { reply_markup: prepared.reply_markup });
     }
   });
 }

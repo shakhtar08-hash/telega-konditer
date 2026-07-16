@@ -1,0 +1,212 @@
+# Review package: working tree task 1
+
+## Files changed
+ pastry-ai/prisma/schema.prisma | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+## Diff
+diff --git a/pastry-ai/prisma/schema.prisma b/pastry-ai/prisma/schema.prisma
+index 98099764..2608ed6f 100644
+--- a/pastry-ai/prisma/schema.prisma
++++ b/pastry-ai/prisma/schema.prisma
+@@ -25,20 +25,21 @@ enum BotMenuActionType {
+ 
+ model User {
+   id            String         @id @default(cuid())
+   telegramId    String         @unique
+   username      String?
+   name          String?
+   plan          Plan           @default(FREE)
+   credits       Int            @default(10)
+   createdAt     DateTime       @default(now())
+   conversations Conversation[]
++  generatedRecipeContexts GeneratedRecipeContext[]
+   usage         Usage[]
+   subscription  Subscription?
+   payments      Payment[]
+   userTariff    UserTariff?
+   tokenUsage    TokenUsage[]
+ }
+ 
+ model TariffPlan {
+   id           String       @id @default(cuid())
+   slug         String       @unique
+@@ -228,20 +229,33 @@ model FunnelStep {
+ model Subscription {
+   id        String    @id @default(cuid())
+   userId    String    @unique
+   provider  String
+   status    String
+   startedAt DateTime  @default(now())
+   expiresAt DateTime?
+   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+ }
+ 
++model GeneratedRecipeContext {
++  id         String   @id @default(cuid())
++  userId     String
++  recipeText String
++  recipeJson Json?
++  imageUrl   String?
++  source     String
++  createdAt  DateTime @default(now())
++  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
++
++  @@index([userId, createdAt])
++}
++
+ model TriggerMessage {
+   id           String   @id @default(cuid())
+   slug         String   @unique
+   title        String
+   text         String
+   delayMinutes Int
+   targetPlans  Json
+   buttons      Json?
+   active       Boolean  @default(true)
+   createdAt    DateTime @default(now())
+
+## New file contents
+
+## File: src/db/repositories/generated-recipe-context-repository.ts
+
+import type { StructuredRecipe } from "@/ai/schemas/recipe";
+
+type GeneratedRecipeContextRecord = {
+  id: string;
+  userId: string;
+  recipeText: string;
+  recipeJson: StructuredRecipe | null;
+  imageUrl: string | null;
+  source: string;
+  createdAt: Date;
+};
+
+type GeneratedRecipeContextModel = {
+  create(args: {
+    data: {
+      userId: string;
+      recipeText: string;
+      recipeJson?: StructuredRecipe | null;
+      imageUrl?: string | null;
+      source: string;
+    };
+  }): Promise<GeneratedRecipeContextRecord>;
+  findFirst(args: {
+    where: { id: string; userId: string };
+  }): Promise<GeneratedRecipeContextRecord | null>;
+};
+
+export function createGeneratedRecipeContextRepository(
+  model: GeneratedRecipeContextModel,
+) {
+  return {
+    create(input: {
+      userId: string;
+      recipeText: string;
+      recipeJson?: StructuredRecipe | null;
+      imageUrl?: string | null;
+      source: "create_recipe";
+    }) {
+      return model.create({ data: input });
+    },
+    findByIdForUser(id: string, userId: string) {
+      return model.findFirst({ where: { id, userId } });
+    },
+  };
+}
+
+
+## File: src/db/repositories/generated-recipe-context-repository.test.ts
+
+import { describe, expect, it, vi } from "vitest";
+import { createGeneratedRecipeContextRepository } from "./generated-recipe-context-repository";
+
+describe("generated recipe context repository", () => {
+  it("creates and reads a recipe context for the same user", async () => {
+    const expectedData = {
+      userId: "user_1",
+      recipeText: "Р СћР ВµР С”РЎРѓРЎвЂљ РЎР‚Р ВµРЎвЂ Р ВµР С—РЎвЂљР В°",
+      recipeJson: {
+        name: "Р СћР В°РЎР‚РЎвЂљ",
+        ingredients: [],
+        steps: [],
+        whyFits: "",
+        activeTime: "",
+        chillingTime: "",
+        totalTime: "",
+        difficulty: "easy",
+        pastryTip: "",
+        imagePrompt: "",
+      },
+      imageUrl: "https://img.test/tart.png",
+      source: "create_recipe" as const,
+    };
+
+    const create = vi.fn().mockResolvedValue({
+      id: "recipe_1",
+      ...expectedData,
+      createdAt: new Date("2026-07-07T10:00:00.000Z"),
+    });
+    const findFirst = vi.fn().mockResolvedValue({
+      id: "recipe_1",
+      ...expectedData,
+      createdAt: new Date("2026-07-07T10:00:00.000Z"),
+    });
+
+    const repository = createGeneratedRecipeContextRepository({
+      create,
+      findFirst,
+    });
+
+    await repository.create(expectedData);
+
+    const record = await repository.findByIdForUser("recipe_1", "user_1");
+
+    expect(create).toHaveBeenCalledWith({ data: expectedData });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { id: "recipe_1", userId: "user_1" },
+    });
+    expect(record?.imageUrl).toBe("https://img.test/tart.png");
+  });
+
+  it("returns null when the recipe context is missing", async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+
+    const repository = createGeneratedRecipeContextRepository({
+      create: vi.fn(),
+      findFirst,
+    });
+
+    await expect(
+      repository.findByIdForUser("missing_recipe", "user_1"),
+    ).resolves.toBeNull();
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { id: "missing_recipe", userId: "user_1" },
+    });
+  });
+});
+
+
+## File: prisma/migrations/20260707225100_add_generated_recipe_context/migration.sql
+
+CREATE TABLE "GeneratedRecipeContext" (
+  "id" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "recipeText" TEXT NOT NULL,
+  "recipeJson" JSONB,
+  "imageUrl" TEXT,
+  "source" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "GeneratedRecipeContext_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "GeneratedRecipeContext_userId_createdAt_idx"
+ON "GeneratedRecipeContext"("userId", "createdAt");
+
+ALTER TABLE "GeneratedRecipeContext"
+ADD CONSTRAINT "GeneratedRecipeContext_userId_fkey"
+FOREIGN KEY ("userId") REFERENCES "User"("id")
+ON DELETE CASCADE ON UPDATE CASCADE;
+

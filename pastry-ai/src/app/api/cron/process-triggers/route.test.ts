@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMessageMock = vi.hoisted(() => vi.fn());
+const sendPhotoMock = vi.hoisted(() => vi.fn());
 const processPendingTriggersMock = vi.hoisted(() => vi.fn());
 const createTriggerServiceMock = vi.hoisted(() => vi.fn(() => ({
   processPendingTriggers: processPendingTriggersMock,
@@ -18,7 +19,20 @@ vi.mock("grammy", () => ({
   Bot: class {
     api = {
       sendMessage: sendMessageMock,
+      sendPhoto: sendPhotoMock,
     };
+  },
+  InlineKeyboard: class {
+    rows: Array<{ text: string; url: string }> = [];
+
+    url(text: string, url: string) {
+      this.rows.push({ text, url });
+      return this;
+    }
+
+    row() {
+      return this;
+    }
   },
 }));
 
@@ -47,6 +61,7 @@ describe("POST /api/cron/process-triggers", () => {
     vi.clearAllMocks();
     processPendingTriggersMock.mockResolvedValue(1);
     sendMessageMock.mockResolvedValue(undefined);
+    sendPhotoMock.mockResolvedValue(undefined);
   });
 
   it("returns unauthorized without a bearer token", async () => {
@@ -82,9 +97,43 @@ describe("POST /api/cron/process-triggers", () => {
     expect(processPendingTriggersMock).toHaveBeenCalledTimes(1);
 
     const sendMessage = processPendingTriggersMock.mock.calls[0]?.[0];
-    await sendMessage("12345", "Hello!");
+    await sendMessage("12345", "Hello!", {
+      imageUrl: null,
+      buttons: null,
+    });
 
-    expect(sendMessageMock).toHaveBeenCalledWith("12345", "Hello!");
+    expect(sendMessageMock).toHaveBeenCalledWith("12345", "Hello!", {
+      reply_markup: undefined,
+    });
+    await expect(response.json()).resolves.toEqual({ ok: true, sent: 1 });
+  });
+
+  it("sends photo messages with the queued image snapshot and URL buttons", async () => {
+    const response = await POST(
+      new Request("https://example.com/api/cron/process-triggers", {
+        headers: {
+          authorization: "Bearer cron-secret",
+        },
+        method: "POST",
+      }),
+    );
+
+    const sendMessage = processPendingTriggersMock.mock.calls[0]?.[0];
+    await sendMessage("12345", "Snapshot text", {
+      imageUrl: "/uploads/admin/triggers/hero.webp",
+      buttons: [
+        { text: "Try free", type: "url", value: "https://example.com" },
+      ],
+    });
+
+    expect(sendPhotoMock).toHaveBeenCalledWith(
+      "12345",
+      "/uploads/admin/triggers/hero.webp",
+      expect.objectContaining({
+        caption: "Snapshot text",
+      }),
+    );
+    expect(sendMessageMock).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({ ok: true, sent: 1 });
   });
 });

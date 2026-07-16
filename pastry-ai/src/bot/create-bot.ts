@@ -40,6 +40,12 @@ type BotDependencies = {
     generateImage(input: { provider: string; model: string; prompt: string; size?: string }): Promise<{ url: string }>;
   };
   generatedRecipeContextRepository?: Parameters<typeof registerRecipeTextHandler>[1]["generatedRecipeContextRepository"];
+  conversationLogService?: {
+    startConversation(input: { userId: string; feature: string }): Promise<string>;
+    appendUserMessage(input: { conversationId: string; content: string; caption?: string }): Promise<void>;
+    appendAssistantMessage(input: { conversationId: string; content: string; model?: string | null }): Promise<void>;
+    appendErrorMessage(input: { conversationId: string; content: string }): Promise<void>;
+  };
 };
 
 export function createPastryBot(
@@ -56,38 +62,45 @@ export function createPastryBot(
   registerStartCommand(bot, dependencies.userService);
   registerHelpCommand(bot);
   registerProfileCommand(bot);
+  const conversationLog = dependencies.conversationLogService;
   if (dependencies.photoshootService) {
     registerPhotoshootPhotoHandler(bot, {
       botToken: dependencies.token,
       photoshootService: dependencies.photoshootService,
       tokenGuard: dependencies.tokenGuard!,
+      conversationLogService: conversationLog,
     });
     registerSingleStylePhotoshootHandler(bot, {
       botToken: dependencies.token,
       photoshootService: dependencies.photoshootService,
       tokenGuard: dependencies.tokenGuard!,
+      conversationLogService: conversationLog,
     });
   }
   if (dependencies.recipeService) {
     registerRecipeTextHandler(bot, {
       recipeService: dependencies.recipeService,
       generatedRecipeContextRepository: dependencies.generatedRecipeContextRepository!,
+      conversationLogService: conversationLog,
     });
   }
   if (dependencies.visionService) {
     registerVisionPhotoHandler(bot, {
       botToken: dependencies.token,
       visionService: dependencies.visionService,
+      conversationLogService: conversationLog,
     });
   }
   if (dependencies.freeLessonService) {
     registerFreeLessonTextHandler(bot, {
       freeLessonService: dependencies.freeLessonService,
+      conversationLogService: conversationLog,
     });
   }
   if (dependencies.askChefService) {
     registerAskChefTextHandler(bot, {
       askChefService: dependencies.askChefService,
+      conversationLogService: conversationLog,
     });
   }
   if (dependencies.recipeCardService) {
@@ -109,6 +122,7 @@ export function createPastryBot(
   if (dependencies.textPromptService) {
     registerTextPromptHandler(bot, {
       textPromptService: dependencies.textPromptService,
+      conversationLogService: conversationLog,
     });
   }
 

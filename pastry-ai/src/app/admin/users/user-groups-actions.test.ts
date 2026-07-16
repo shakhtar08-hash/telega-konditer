@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { revalidatePathMock, prismaMock } = vi.hoisted(() => ({
+const {
+  addUserToGroupFromTask2Mock,
+  prismaMock,
+  removeUserFromGroupFromTask2Mock,
+  revalidatePathMock,
+} = vi.hoisted(() => ({
+  addUserToGroupFromTask2Mock: vi.fn(),
   prismaMock: {
     tariffPlan: {
       findUnique: vi.fn(),
@@ -12,6 +18,7 @@ const { revalidatePathMock, prismaMock } = vi.hoisted(() => ({
       update: vi.fn(),
     },
   },
+  removeUserFromGroupFromTask2Mock: vi.fn(),
   revalidatePathMock: vi.fn(),
 }));
 
@@ -23,15 +30,16 @@ vi.mock("@/db/prisma", () => ({
   prisma: prismaMock,
 }));
 
+vi.mock("../user-groups/actions", () => ({
+  addUserToGroup: addUserToGroupFromTask2Mock,
+  removeUserFromGroup: removeUserFromGroupFromTask2Mock,
+}));
+
 import {
   addUserToGroup,
   removeUserFromGroup,
   updateUserTariff,
 } from "./actions";
-import {
-  addUserToGroup as addUserToGroupFromTask2,
-  removeUserFromGroup as removeUserFromGroupFromTask2,
-} from "../user-groups/actions";
 
 describe("admin user actions", () => {
   beforeEach(() => {
@@ -47,9 +55,20 @@ describe("admin user actions", () => {
     prismaMock.userTariff.deleteMany.mockResolvedValue(undefined);
   });
 
-  it("reuses the shared user group membership actions from Task 2", () => {
-    expect(addUserToGroup).toBe(addUserToGroupFromTask2);
-    expect(removeUserFromGroup).toBe(removeUserFromGroupFromTask2);
+  it("delegates user group membership actions to the shared handlers", async () => {
+    const addFormData = new FormData();
+    addFormData.set("userId", "user_1");
+    addFormData.set("userGroupId", "group_1");
+
+    const removeFormData = new FormData();
+    removeFormData.set("userId", "user_1");
+    removeFormData.set("userGroupId", "group_1");
+
+    await addUserToGroup(addFormData);
+    await removeUserFromGroup(removeFormData);
+
+    expect(addUserToGroupFromTask2Mock).toHaveBeenCalledWith(addFormData);
+    expect(removeUserFromGroupFromTask2Mock).toHaveBeenCalledWith(removeFormData);
   });
 
   it("refreshes both the list and detail pages after a tariff update", async () => {

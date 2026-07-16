@@ -13,12 +13,14 @@ describe("createTriggerUserStateLoader", () => {
       findUser: vi.fn().mockResolvedValue({
         plan: "FREE",
         promoClaimed: false,
+        createdAt: new Date("2026-07-01T00:00:00.000Z"),
       }),
       findUserGroups: vi.fn().mockResolvedValue([
         { userGroupId: "vip" },
         { userGroupId: "promo-testers" },
       ]),
       findUserTariff: vi.fn().mockResolvedValue(null),
+      findLastActivityAt: vi.fn().mockResolvedValue(new Date("2026-07-12T00:00:00.000Z")),
     });
 
     await expect(loadTriggerUserState("user_1")).resolves.toEqual({
@@ -27,6 +29,10 @@ describe("createTriggerUserStateLoader", () => {
       hasActiveTariff: false,
       generationCount: 2,
       groupIds: ["vip", "promo-testers"],
+      remainingTokens: 0,
+      tariffExpired: false,
+      createdAt: new Date("2026-07-01T00:00:00.000Z"),
+      lastActivityAt: new Date("2026-07-12T00:00:00.000Z"),
     });
   });
 });

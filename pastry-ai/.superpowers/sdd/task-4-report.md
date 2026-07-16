@@ -1,19 +1,28 @@
-# Task 4: UserTariff Repository — Done
+# Task 4: Create Instrumented AI Service
 
-## Steps completed
+## Status: DONE
 
-1. **Wrote failing tests** — `src/db/repositories/user-tariff-repository.test.ts` with 3 tests:
-   - `finds user tariff by userId`
-   - `returns null when no tariff found`
-   - `upserts a user tariff (full replace)`
+## Files Created
+- `src/ai/provider/instrumented-ai-service.ts` — decorator wrapping any AIService with usage logging
+- `src/ai/provider/instrumented-ai-service.test.ts` — 5 tests covering all scenarios
 
-2. **Ran test → FAIL** (module not found — expected)
+## Test Results
+- **5/5 new tests passing**
+- Full suite: 62/65 test files pass, 266/267 tests pass
+- 3 pre-existing failures unrelated to this task:
+  - `src/test/encoding.test.ts` (mojibake in existing files)
+  - `src/bot/handlers/vision.test.ts` (missing env vars)
+  - `src/bot/handlers/photoshoot.test.ts` (missing env vars)
 
-3. **Wrote minimal implementation** — `src/db/repositories/user-tariff-repository.ts` with `createUserTariffRepository` exposing:
-   - `findByUserId`
-   - `upsert`
-   - `updateRemainingTokens`
+## Test Scenarios Covered
+1. Records success for `generateText` — verifies `userId`, `feature`, `provider`, `model`, zero tokens/cost, non-negative latency
+2. Records error for `generateText` when it throws — verifies `errorMessage` is captured
+3. Records success for `generateObject`
+4. Records success for `generateImage`
+5. Passes `conversationId` when provided in context
 
-4. **Ran test → PASS** (3/3)
-
-5. **Committed** — `d8c33ac` feat: add UserTariffRepository
+## Implementation
+`createInstrumentedAIService(base, usageLog, ctx)` wraps each of the three methods (`generateText`, `generateObject`, `generateImage`):
+- Measures wall-clock latency via `Date.now()`
+- On success: calls `usageLog.recordSuccess` with context fields, provider/model, tokens=0, cost=0, measured latency
+- On error: calls `usageLog.recordError` with same data + `errorMessage`, then re-throws the original error

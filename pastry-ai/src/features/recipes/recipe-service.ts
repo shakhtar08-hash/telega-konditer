@@ -15,6 +15,7 @@ export function createRecipeService(dependencies: { recipeAgent: RecipeAgent }) 
     async createFromIngredients(input: {
       ingredientsText: string;
       promptSlug?: string;
+      excludeRecipes?: string[];
     }): Promise<RecipeOutput> {
       const parsed = recipeInputSchema.parse(input);
       const ingredientsText = parsed.ingredientsText.trim();
@@ -22,6 +23,7 @@ export function createRecipeService(dependencies: { recipeAgent: RecipeAgent }) 
       return dependencies.recipeAgent.execute({
         ingredientsText,
         promptSlug: input.promptSlug,
+        excludeRecipes: input.excludeRecipes,
       });
     },
   };

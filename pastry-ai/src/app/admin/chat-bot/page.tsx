@@ -1,9 +1,11 @@
 import { Plus, Save, Trash2 } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import { AdminPageHeader } from "@/components/admin/data-table";
+import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
 import {
   AdminButton,
   AdminField,
+  AdminImageField,
   AdminInput,
   AdminPanel,
   AdminSelect,
@@ -11,6 +13,7 @@ import {
   AdminToggle,
 } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
+import { saveAdminImage } from "../_lib/save-admin-image";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,29 @@ function promptTargetValue(feature?: string | null, slug?: string | null) {
   return feature && slug ? `${feature}::${slug}` : "";
 }
 
+function buildPromptOptions(
+  prompts: Array<{ feature: string; slug: string; title: string }>,
+) {
+  const uniqueTargets = new Set<string>();
+
+  return prompts.flatMap((prompt) => {
+    const value = promptTargetValue(prompt.feature, prompt.slug);
+
+    if (!value || uniqueTargets.has(value)) {
+      return [];
+    }
+
+    uniqueTargets.add(value);
+
+    return [
+      {
+        label: `${prompt.title || prompt.slug} · ${prompt.feature}`,
+        value,
+      },
+    ];
+  });
+}
+
 function isActionType(value: string): value is ActionType {
   return value === "PROMPT" || value === "URL";
 }
@@ -38,7 +64,11 @@ export async function createBotMenuButton(formData: FormData) {
 const description = String(formData.get("description") ?? "").trim();
   const instructionText = String(formData.get("instructionText") ?? "").trim();
   const processingText = String(formData.get("processingText") ?? "").trim();
-  const previewImageUrl = String(formData.get("previewImageUrl") ?? "").trim();
+  const previewImageUrl = await saveAdminImage({
+    entity: "chat-bot",
+    file: (formData.get("previewImageFile") as File | null) ?? null,
+    manualValue: String(formData.get("previewImageUrl") ?? ""),
+  });
   const fullWidth = formData.get("fullWidth") === "on";
   const actionTypeRaw = String(formData.get("actionType") ?? "");
   const promptTarget = String(formData.get("promptTarget") ?? "");
@@ -60,6 +90,7 @@ const description = String(formData.get("description") ?? "").trim();
       fullWidth,
       instructionText: instructionText || null,
       label,
+      previewImageUrl,
       processingText: processingText || null,
       promptFeature: actionTypeRaw === "PROMPT" ? target.feature || null : null,
       promptSlug: actionTypeRaw === "PROMPT" ? target.slug || null : null,
@@ -78,9 +109,13 @@ export async function updateBotMenuButton(formData: FormData) {
   const label = String(formData.get("label") ?? "").trim();
   const emoji = String(formData.get("emoji") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const instructionText = String(formData.get("instructionText") ?? "").trim();
+const instructionText = String(formData.get("instructionText") ?? "").trim();
   const processingText = String(formData.get("processingText") ?? "").trim();
-const previewImageUrl = String(formData.get("previewImageUrl") ?? "").trim();
+  const previewImageUrl = await saveAdminImage({
+    entity: "chat-bot",
+    file: (formData.get("previewImageFile") as File | null) ?? null,
+    manualValue: String(formData.get("previewImageUrl") ?? ""),
+  });
   const fullWidth = formData.get("fullWidth") === "on";
   const actionTypeRaw = String(formData.get("actionType") ?? "");
   const promptTarget = String(formData.get("promptTarget") ?? "");
@@ -194,10 +229,7 @@ export default async function AdminChatBotPage() {
     }),
   ]);
 
-  const promptOptions = prompts.map((prompt) => ({
-    label: `${prompt.title || prompt.slug} · ${prompt.feature}`,
-    value: promptTargetValue(prompt.feature, prompt.slug),
-  }));
+  const promptOptions = buildPromptOptions(prompts);
   const activeButtons = buttons.filter((button) => button.active);
 
   return (
@@ -212,13 +244,7 @@ export default async function AdminChatBotPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2 border-b border-[#223047] text-sm">
-        <span className="border-b-2 border-[#7257ff] px-3 py-2 font-medium text-[#d8d2ff]">
-          Меню
-        </span>
-        <span className="px-3 py-2 text-[#63718a]">Цепочки</span>
-        <span className="px-3 py-2 text-[#63718a]">Триггеры</span>
-      </div>
+      <ChatBotSubNav />
 
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.7fr]">
         <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
@@ -302,12 +328,12 @@ export default async function AdminChatBotPage() {
                   placeholder="Сообщение после отправки запроса пользователем. Если пусто — используется стандартный текст функции"
                 />
               </AdminField>
-              <AdminField label="Фото-превью (previewImageUrl)">
-                <AdminInput
-                  name="previewImageUrl"
-                  placeholder="/images/preview.jpg или https://..."
-                />
-              </AdminField>
+              <AdminImageField
+                fileName="previewImageFile"
+                label="Фото-превью (previewImageUrl)"
+                placeholder="/images/preview.jpg или https://..."
+                textName="previewImageUrl"
+              />
               <div className="flex flex-wrap items-center gap-4 py-2">
                 <AdminToggle name="fullWidth">
                   Широкая кнопка (на всю строку)
@@ -400,13 +426,13 @@ export default async function AdminChatBotPage() {
                       placeholder="Сообщение после отправки запроса пользователем"
                     />
                   </AdminField>
-                  <AdminField label="Фото-превью (previewImageUrl)">
-                    <AdminInput
-                      defaultValue={button.previewImageUrl ?? ""}
-                      name="previewImageUrl"
-                      placeholder="/images/preview.jpg или https://..."
-                    />
-                  </AdminField>
+                  <AdminImageField
+                    defaultValue={button.previewImageUrl ?? ""}
+                    fileName="previewImageFile"
+                    label="Фото-превью (previewImageUrl)"
+                    placeholder="/images/preview.jpg или https://..."
+                    textName="previewImageUrl"
+                  />
 
                   <div className="flex flex-wrap items-center gap-4 py-2">
                     <AdminToggle defaultChecked={button.fullWidth} name="fullWidth">

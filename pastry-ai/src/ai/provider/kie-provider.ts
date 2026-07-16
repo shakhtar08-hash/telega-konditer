@@ -1,6 +1,14 @@
 import { resolveManagedApiKey } from "@/lib/api-secrets";
+import { assertAllowedImageUrl } from "@/lib/image-url-validator";
+import { UserFacingError } from "@/lib/user-facing-error";
 
 const KIE_BASE = "https://api.kie.ai";
+const KIE_PROMPT_MAX = 3000;
+
+function truncatePrompt(prompt: string): string {
+  if (prompt.length <= KIE_PROMPT_MAX) return prompt;
+  return "..." + prompt.slice(prompt.length - KIE_PROMPT_MAX + 3);
+}
 
 type KieTaskStatus = "waiting" | "queuing" | "generating" | "success" | "fail";
 
@@ -29,6 +37,19 @@ async function getApiKey(): Promise<string> {
   return apiKey;
 }
 
+function normalizeKieError(error: unknown): never {
+  if (
+    error instanceof Error &&
+    /KIE task failed:\s*internal error, please try again later\.?/i.test(error.message)
+  ) {
+    throw new UserFacingError(
+      "Не удалось создать фото десерта. Попробуйте ещё раз чуть позже.",
+    );
+  }
+
+  throw error;
+}
+
 async function submitFluxKontextTask(params: {
   prompt: string;
   inputImage?: string;
@@ -38,7 +59,7 @@ async function submitFluxKontextTask(params: {
   const apiKey = await getApiKey();
 
   const body: Record<string, unknown> = {
-    prompt: params.prompt,
+    prompt: truncatePrompt(params.prompt),
     enableTranslation: true,
     model: params.model ?? "flux-kontext-pro",
     outputFormat: "jpeg",
@@ -133,32 +154,41 @@ export async function generateFluxKontextImage(input: {
   model?: string;
   aspectRatio?: string;
 }): Promise<{ url: string }> {
-  const taskId = await submitFluxKontextTask({
-    aspectRatio: input.aspectRatio,
-    inputImage: input.imageUrl,
-    model: input.model,
-    prompt: input.prompt,
-  });
+  try {
+    if (input.imageUrl) {
+      assertAllowedImageUrl(input.imageUrl, "kie-provider inputImage");
+    }
 
-  const result = await pollTask(taskId);
-  const imageUrl = result.resultUrls?.[0];
+    const taskId = await submitFluxKontextTask({
+      aspectRatio: input.aspectRatio,
+      inputImage: input.imageUrl,
+      model: input.model,
+      prompt: input.prompt,
+    });
 
-  if (!imageUrl) {
-    throw new Error("KIE Flux Kontext returned no image URL");
+    const result = await pollTask(taskId);
+    const imageUrl = result.resultUrls?.[0];
+
+    if (!imageUrl) {
+      throw new Error("KIE Flux Kontext returned no image URL");
+    }
+
+    // Download the image and return as data URL
+    assertAllowedImageUrl(imageUrl, "kie-provider resultUrl");
+    const imageResponse = await fetch(imageUrl);
+
+    if (!imageResponse.ok) {
+      // Return the URL directly if download fails
+      return { url: imageUrl };
+    }
+
+    const blob = await imageResponse.blob();
+    const buffer = await blob.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const mediaType = blob.type || "image/jpeg";
+
+    return { url: `data:${mediaType};base64,${base64}` };
+  } catch (error) {
+    normalizeKieError(error);
   }
-
-  // Download the image and return as data URL
-  const imageResponse = await fetch(imageUrl);
-
-  if (!imageResponse.ok) {
-    // Return the URL directly if download fails
-    return { url: imageUrl };
-  }
-
-  const blob = await imageResponse.blob();
-  const buffer = await blob.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString("base64");
-  const mediaType = blob.type || "image/jpeg";
-
-  return { url: `data:${mediaType};base64,${base64}` };
 }

@@ -12,6 +12,7 @@ import {
 } from "@/components/admin/form";
 import type { TriggerEventOption } from "@/features/triggers/trigger-template";
 import type { TriggerCondition, TriggerRuleRecord } from "@/features/triggers/trigger-rule-types";
+import { TriggerButtonsEditor, type TriggerButtonDraft } from "./trigger-buttons-editor";
 
 export type TriggerFormValues = {
   id: string | null;
@@ -22,10 +23,16 @@ export type TriggerFormValues = {
   delayUnit: TriggerRuleRecord["delayUnit"];
   messageText: string;
   imageUrl: string | null;
+  buttons: TriggerButtonDraft[];
   conditions: TriggerCondition[];
 };
 
 export type TriggerUserGroupOption = {
+  value: string;
+  label: string;
+};
+
+export type TriggerDynamicUserGroupOption = {
   value: string;
   label: string;
 };
@@ -39,6 +46,20 @@ type TriggerFormProps = {
   submitLabel: string;
   title: string;
   userGroupOptions?: readonly TriggerUserGroupOption[];
+  dynamicUserGroupOptions?: readonly TriggerDynamicUserGroupOption[];
+};
+
+type ConditionFieldKey =
+  | "promoClaimed"
+  | "hasActiveTariff"
+  | "generationCount"
+  | "userGroupId"
+  | "dynamicUserGroupId";
+
+type TriggerConditionDraft = {
+  field: ConditionFieldKey;
+  operator: string;
+  value: string;
 };
 
 const delayUnitOptions = [
@@ -48,20 +69,15 @@ const delayUnitOptions = [
   { value: "days", label: "Дни" },
 ] as const;
 
-type ConditionFieldKey =
-  | "promoClaimed"
-  | "hasActiveTariff"
-  | "generationCount"
-  | "userGroupId";
-
-type TriggerConditionDraft = {
-  field: ConditionFieldKey;
-  operator: string;
-  value: string;
-};
+function isTriggerConditionDraft(
+  draft: TriggerConditionDraft | null,
+): draft is TriggerConditionDraft {
+  return draft !== null;
+}
 
 function getConditionFieldOptions(
   userGroupOptions: readonly TriggerUserGroupOption[] = [],
+  dynamicUserGroupOptions: readonly TriggerDynamicUserGroupOption[] = [],
 ) {
   return [
     {
@@ -73,8 +89,6 @@ function getConditionFieldOptions(
         { label: "Да", value: "true" },
         { label: "Нет", value: "false" },
       ],
-      valuePlaceholder: "",
-      valueStep: undefined,
       valueType: "select",
       valueWidth: "md:max-w-[180px]",
       valueName: "promoClaimed",
@@ -88,8 +102,6 @@ function getConditionFieldOptions(
         { label: "Да", value: "true" },
         { label: "Нет", value: "false" },
       ],
-      valuePlaceholder: "",
-      valueStep: undefined,
       valueType: "select",
       valueWidth: "md:max-w-[180px]",
       valueName: "hasActiveTariff",
@@ -103,8 +115,6 @@ function getConditionFieldOptions(
       type: "number",
       valueLabel: "Количество",
       valueOptions: [],
-      valuePlaceholder: "0",
-      valueStep: 1,
       valueType: "number",
       valueWidth: "md:max-w-[140px]",
       valueName: "generationCount",
@@ -115,11 +125,19 @@ function getConditionFieldOptions(
       type: "string",
       valueLabel: "Группа",
       valueOptions: userGroupOptions,
-      valuePlaceholder: "",
-      valueStep: undefined,
       valueType: "select",
       valueWidth: "md:max-w-[220px]",
       valueName: "userGroupId",
+    },
+    {
+      label: "Динамическая группа",
+      operators: [{ label: "Входит в группу", value: "matches" }],
+      type: "string",
+      valueLabel: "Группа",
+      valueOptions: dynamicUserGroupOptions,
+      valueType: "select",
+      valueWidth: "md:max-w-[220px]",
+      valueName: "dynamicUserGroupId",
     },
   ] as const;
 }
@@ -127,19 +145,26 @@ function getConditionFieldOptions(
 function getConditionFieldConfig(
   field: ConditionFieldKey,
   userGroupOptions: readonly TriggerUserGroupOption[] = [],
+  dynamicUserGroupOptions: readonly TriggerDynamicUserGroupOption[] = [],
 ) {
-  const options = getConditionFieldOptions(userGroupOptions);
+  const options = getConditionFieldOptions(userGroupOptions, dynamicUserGroupOptions);
   return options.find((option) => option.valueName === field) ?? options[0];
 }
 
-function getUserGroupLabel(
+function getOptionLabel(
   value: string,
-  userGroupOptions: readonly TriggerUserGroupOption[] = [],
+  options: readonly { value: string; label: string }[] = [],
 ) {
-  return userGroupOptions.find((option) => option.value === value)?.label ?? value;
+  return options.find((option) => option.value === value)?.label ?? value;
 }
 
-function toConditionDraft(condition: TriggerCondition): TriggerConditionDraft {
+function toConditionDraft(
+  condition: TriggerCondition | null | undefined,
+): TriggerConditionDraft | null {
+  if (!condition || typeof condition !== "object" || !("field" in condition)) {
+    return null;
+  }
+
   switch (condition.field) {
     case "promoClaimed":
     case "hasActiveTariff":
@@ -156,14 +181,23 @@ function toConditionDraft(condition: TriggerCondition): TriggerConditionDraft {
         operator: "isMember",
         value: condition.value,
       };
+    case "dynamicUserGroupId":
+      return {
+        field: "dynamicUserGroupId",
+        operator: "matches",
+        value: condition.value,
+      };
+    default:
+      return null;
   }
 }
 
 function toConditionValue(
   draft: TriggerConditionDraft,
   userGroupOptions: readonly TriggerUserGroupOption[] = [],
+  dynamicUserGroupOptions: readonly TriggerDynamicUserGroupOption[] = [],
 ): TriggerCondition["value"] {
-  const config = getConditionFieldConfig(draft.field, userGroupOptions);
+  const config = getConditionFieldConfig(draft.field, userGroupOptions, dynamicUserGroupOptions);
 
   if (config.type === "boolean") {
     return draft.value === "true";
@@ -180,31 +214,38 @@ function toConditionValue(
 function toTriggerCondition(
   draft: TriggerConditionDraft,
   userGroupOptions: readonly TriggerUserGroupOption[] = [],
+  dynamicUserGroupOptions: readonly TriggerDynamicUserGroupOption[] = [],
 ): TriggerCondition {
   switch (draft.field) {
     case "promoClaimed":
       return {
         field: "promoClaimed",
         operator: "is",
-        value: toConditionValue(draft, userGroupOptions) as boolean,
+        value: toConditionValue(draft, userGroupOptions, dynamicUserGroupOptions) as boolean,
       };
     case "hasActiveTariff":
       return {
         field: "hasActiveTariff",
         operator: "is",
-        value: toConditionValue(draft, userGroupOptions) as boolean,
+        value: toConditionValue(draft, userGroupOptions, dynamicUserGroupOptions) as boolean,
       };
     case "generationCount":
       return {
         field: "generationCount",
         operator: draft.operator === "gte" ? "gte" : "equals",
-        value: toConditionValue(draft, userGroupOptions) as number,
+        value: toConditionValue(draft, userGroupOptions, dynamicUserGroupOptions) as number,
       };
     case "userGroupId":
       return {
         field: "userGroupId",
         operator: "isMember",
-        value: toConditionValue(draft, userGroupOptions) as string,
+        value: toConditionValue(draft, userGroupOptions, dynamicUserGroupOptions) as string,
+      };
+    case "dynamicUserGroupId":
+      return {
+        field: "dynamicUserGroupId",
+        operator: "matches",
+        value: toConditionValue(draft, userGroupOptions, dynamicUserGroupOptions) as string,
       };
   }
 }
@@ -212,21 +253,19 @@ function toTriggerCondition(
 export function createDefaultConditionDraft(
   field: ConditionFieldKey = "promoClaimed",
   userGroupOptions: readonly TriggerUserGroupOption[] = [],
+  dynamicUserGroupOptions: readonly TriggerDynamicUserGroupOption[] = [],
 ): TriggerConditionDraft {
-  const config = getConditionFieldConfig(field, userGroupOptions);
-  const initialValue =
-    field === "userGroupId"
-      ? ""
-      : config.valueType === "select"
-        ? config.valueOptions[1]?.value ?? config.valueOptions[0]?.value ?? ""
-        : config.valueType === "number"
-          ? "0"
-          : "";
+  const config = getConditionFieldConfig(field, userGroupOptions, dynamicUserGroupOptions);
 
   return {
     field,
     operator: config.operators[0]?.value ?? "is",
-    value: initialValue,
+    value:
+      field === "userGroupId" || field === "dynamicUserGroupId"
+        ? ""
+        : config.valueType === "number"
+          ? "0"
+          : "false",
   };
 }
 
@@ -289,6 +328,7 @@ function getStatusLabel(status: TriggerRuleRecord["status"]) {
 export function summarizeTriggerConditions(
   conditions: TriggerCondition[],
   userGroupOptions: readonly TriggerUserGroupOption[] = [],
+  dynamicUserGroupOptions: readonly TriggerDynamicUserGroupOption[] = [],
 ) {
   if (conditions.length === 0) {
     return "Без условий. Триггер сработает для каждого пользователя на выбранном событии.";
@@ -307,7 +347,9 @@ export function summarizeTriggerConditions(
             : `Количество генераций равно ${condition.value}`;
         case "userGroupId":
         case "groupId":
-          return `Состоит в группе ${getUserGroupLabel(condition.value, userGroupOptions)}`;
+          return `Состоит в группе ${getOptionLabel(condition.value, userGroupOptions)}`;
+        case "dynamicUserGroupId":
+          return `Пользователь входит в динамическую группу «${getOptionLabel(condition.value, dynamicUserGroupOptions)}»`;
       }
     })
     .join(" И ");
@@ -318,23 +360,29 @@ function ConditionValueInput({
   index,
   onChange,
   userGroupOptions = [],
+  dynamicUserGroupOptions = [],
 }: {
   draft: TriggerConditionDraft;
   index: number;
   onChange: (value: string) => void;
   userGroupOptions?: readonly TriggerUserGroupOption[];
+  dynamicUserGroupOptions?: readonly TriggerDynamicUserGroupOption[];
 }) {
-  const config = getConditionFieldConfig(draft.field, userGroupOptions);
+  const config = getConditionFieldConfig(
+    draft.field,
+    userGroupOptions,
+    dynamicUserGroupOptions,
+  );
 
   if (config.valueType === "select") {
     return (
       <AdminSelect
         aria-label={`Условие ${index + 1}: значение`}
         className={config.valueWidth}
-        value={draft.value}
         onChange={(event) => onChange(event.target.value)}
+        value={draft.value}
       >
-        {draft.field === "userGroupId" ? (
+        {draft.field === "userGroupId" || draft.field === "dynamicUserGroupId" ? (
           <option value="">Выберите группу</option>
         ) : null}
         {config.valueOptions.map((option) => (
@@ -351,11 +399,9 @@ function ConditionValueInput({
       aria-label={`Условие ${index + 1}: значение`}
       className={config.valueWidth}
       min={config.valueType === "number" ? 0 : undefined}
-      placeholder={config.valuePlaceholder}
-      step={config.valueStep}
+      onChange={(event) => onChange(event.target.value)}
       type={config.valueType}
       value={draft.value}
-      onChange={(event) => onChange(event.target.value)}
     />
   );
 }
@@ -369,6 +415,7 @@ export function TriggerForm({
   submitLabel,
   title,
   userGroupOptions = [],
+  dynamicUserGroupOptions = [],
 }: TriggerFormProps) {
   const [eventKey, setEventKey] = useState(initial.eventKey);
   const [delayValue, setDelayValue] = useState(String(initial.delayValue));
@@ -378,7 +425,7 @@ export function TriggerForm({
   const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
   const [conditions, setConditions] = useState<TriggerConditionDraft[]>(
     initial.conditions.length > 0
-      ? initial.conditions.map((condition) => toConditionDraft(condition))
+      ? initial.conditions.map((condition) => toConditionDraft(condition)).filter(isTriggerConditionDraft)
       : [],
   );
 
@@ -392,13 +439,19 @@ export function TriggerForm({
 
   const normalizedDelayValue = Number(delayValue);
   const previewDelayValue = Number.isFinite(normalizedDelayValue) ? normalizedDelayValue : 0;
-  const previewConditions = conditions.map((condition) =>
-    toTriggerCondition(condition, userGroupOptions),
+  const previewConditions = conditions.flatMap((condition) =>
+    condition ? [toTriggerCondition(condition, userGroupOptions, dynamicUserGroupOptions)] : [],
   );
   const conditionsPayload = JSON.stringify(previewConditions);
-  const conditionsSummary = summarizeTriggerConditions(previewConditions, userGroupOptions);
-  const previewText = messageText.trim() || "Здесь появится предпросмотр сообщения Telegram.";
+  const conditionsSummary = summarizeTriggerConditions(
+    previewConditions,
+    userGroupOptions,
+    dynamicUserGroupOptions,
+  );
+  const previewText =
+    messageText.trim() || "Здесь появится предпросмотр сообщения Telegram.";
   const previewImageUrl = uploadedPreviewUrl ?? imageUrl.trim();
+  const fieldOptions = getConditionFieldOptions(userGroupOptions, dynamicUserGroupOptions);
 
   function updateCondition(index: number, patch: Partial<TriggerConditionDraft>) {
     setConditions((current) =>
@@ -408,15 +461,17 @@ export function TriggerForm({
         }
 
         if (patch.field && patch.field !== condition.field) {
-          return createDefaultConditionDraft(patch.field, userGroupOptions);
+          return createDefaultConditionDraft(
+            patch.field,
+            userGroupOptions,
+            dynamicUserGroupOptions,
+          );
         }
 
         return { ...condition, ...patch };
       }),
     );
   }
-
-  const fieldOptions = getConditionFieldOptions(userGroupOptions);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
@@ -431,8 +486,8 @@ export function TriggerForm({
             </div>
             <div className="flex flex-wrap gap-2">
               <Link
-                href={cancelHref}
                 className="inline-flex rounded-md border border-[#2a3a55] bg-[#192334] px-3 py-2 text-sm font-medium text-[#dbe3ef] transition hover:bg-[#223047]"
+                href={cancelHref}
               >
                 Назад
               </Link>
@@ -449,11 +504,7 @@ export function TriggerForm({
 
           <div className="grid gap-4 md:grid-cols-2">
             <AdminField label="Событие">
-              <AdminSelect
-                name="eventKey"
-                value={eventKey}
-                onChange={(event) => setEventKey(event.target.value)}
-              >
+              <AdminSelect name="eventKey" onChange={(event) => setEventKey(event.target.value)} value={eventKey}>
                 {eventOptions.map((option) => (
                   <option key={option.key} value={option.key}>
                     {option.label}
@@ -482,18 +533,16 @@ export function TriggerForm({
               <AdminInput
                 min={0}
                 name="delayValue"
+                onChange={(event) => setDelayValue(event.target.value)}
                 type="number"
                 value={delayValue}
-                onChange={(event) => setDelayValue(event.target.value)}
               />
             </AdminField>
             <AdminField label="Единица задержки">
               <AdminSelect
                 name="delayUnit"
+                onChange={(event) => setDelayUnit(event.target.value as TriggerRuleRecord["delayUnit"])}
                 value={delayUnit}
-                onChange={(event) =>
-                  setDelayUnit(event.target.value as TriggerRuleRecord["delayUnit"])
-                }
               >
                 {delayUnitOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -505,37 +554,39 @@ export function TriggerForm({
           </div>
 
           <div className="space-y-3">
-            <div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-[#f4f7fb]">Условия</h3>
-                  <p className="mt-1 text-sm text-[#97a4b8]">
-                    Все условия ниже должны совпасть одновременно. Поддерживаются только заданные поля и операторы.
-                  </p>
-                </div>
-                <AdminButton
-                  type="button"
-                  variant="secondary"
-                  onClick={() =>
-                    setConditions((current) => [
-                      ...current,
-                      createDefaultConditionDraft("promoClaimed", userGroupOptions),
-                    ])
-                  }
-                >
-                  Добавить условие
-                </AdminButton>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-[#f4f7fb]">Условия</h3>
+                <p className="mt-1 text-sm text-[#97a4b8]">
+                  Все условия ниже должны совпасть одновременно.
+                </p>
               </div>
+              <AdminButton
+                onClick={() =>
+                  setConditions((current) => [
+                    ...current,
+                    createDefaultConditionDraft("promoClaimed", userGroupOptions, dynamicUserGroupOptions),
+                  ])
+                }
+                type="button"
+                variant="secondary"
+              >
+                Добавить условие
+              </AdminButton>
             </div>
 
             {conditions.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[#2a3a55] bg-[#0d1522] px-4 py-4 text-sm text-[#97a4b8]">
-                Пока нет условий. Триггер сработает для каждого пользователя, который дойдет до выбранного события.
+                Пока нет условий. Триггер сработает для каждого пользователя, который дойдёт до выбранного события.
               </div>
             ) : (
               <div className="space-y-3">
                 {conditions.map((condition, index) => {
-                  const fieldConfig = getConditionFieldConfig(condition.field, userGroupOptions);
+                  const fieldConfig = getConditionFieldConfig(
+                    condition.field,
+                    userGroupOptions,
+                    dynamicUserGroupOptions,
+                  );
 
                   return (
                     <div
@@ -546,12 +597,12 @@ export function TriggerForm({
                         <AdminField label="Поле">
                           <AdminSelect
                             aria-label={`Условие ${index + 1}: поле`}
-                            value={condition.field}
                             onChange={(event) =>
                               updateCondition(index, {
                                 field: event.target.value as ConditionFieldKey,
                               })
                             }
+                            value={condition.field}
                           >
                             {fieldOptions.map((option) => (
                               <option key={option.valueName} value={option.valueName}>
@@ -563,10 +614,8 @@ export function TriggerForm({
                         <AdminField label="Оператор">
                           <AdminSelect
                             aria-label={`Условие ${index + 1}: оператор`}
+                            onChange={(event) => updateCondition(index, { operator: event.target.value })}
                             value={condition.operator}
-                            onChange={(event) =>
-                              updateCondition(index, { operator: event.target.value })
-                            }
                           >
                             {fieldConfig.operators.map((option) => (
                               <option key={option.value} value={option.value}>
@@ -578,19 +627,20 @@ export function TriggerForm({
                         <AdminField label={fieldConfig.valueLabel}>
                           <ConditionValueInput
                             draft={condition}
+                            dynamicUserGroupOptions={dynamicUserGroupOptions}
                             index={index}
                             onChange={(value) => updateCondition(index, { value })}
                             userGroupOptions={userGroupOptions}
                           />
                         </AdminField>
                         <AdminButton
-                          type="button"
-                          variant="secondary"
                           onClick={() =>
                             setConditions((current) =>
                               current.filter((_, conditionIndex) => conditionIndex !== index),
                             )
                           }
+                          type="button"
+                          variant="secondary"
                         >
                           Удалить
                         </AdminButton>
@@ -606,26 +656,27 @@ export function TriggerForm({
             <AdminTextarea
               className="min-h-40"
               name="messageText"
+              onChange={(event) => setMessageText(event.target.value)}
               required
               value={messageText}
-              onChange={(event) => setMessageText(event.target.value)}
             />
           </AdminField>
+
+          <TriggerButtonsEditor initialButtons={initial.buttons} />
 
           <AdminField label="Ссылка на изображение или загрузка">
             <div className="space-y-3">
               <AdminInput
                 name="imageUrl"
+                onChange={(event) => setImageUrl(event.target.value)}
                 placeholder="/uploads/admin/triggers/reminder.png"
                 value={imageUrl}
-                onChange={(event) => setImageUrl(event.target.value)}
               />
               <div className="space-y-2">
                 <span className="block text-xs text-[#7f8da3]">Или выберите файл изображения</span>
                 <AdminInput
                   accept="image/*"
                   name="imageFile"
-                  type="file"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
 
@@ -637,6 +688,7 @@ export function TriggerForm({
                       return file ? URL.createObjectURL(file) : null;
                     });
                   }}
+                  type="file"
                 />
               </div>
               {previewImageUrl ? (
@@ -656,13 +708,13 @@ export function TriggerForm({
                 <div>
                   <h3 className="font-semibold text-[#fecaca]">Удаление триггера</h3>
                   <p className="mt-1 text-sm text-[#c7a9b1]">
-                    Удаление уберет правило из автоматизаций и остановит будущие срабатывания.
+                    Удаление уберёт правило из автоматизаций и остановит будущие срабатывания.
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Link
-                    href={cancelHref}
                     className="inline-flex rounded-md border border-[#2a3a55] bg-[#192334] px-3 py-2 text-sm font-medium text-[#dbe3ef] transition hover:bg-[#223047]"
+                    href={cancelHref}
                   >
                     Отмена
                   </Link>

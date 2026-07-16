@@ -7,6 +7,7 @@ import {
 import {
   AdminButton,
   AdminField,
+  AdminImageField,
   AdminInput,
   AdminPanel,
   AdminSectionTitle,
@@ -16,6 +17,7 @@ import {
 } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
+import { saveAdminImage } from "../_lib/save-admin-image";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,11 @@ async function createStyle(formData: FormData) {
   const prompt = String(formData.get("prompt") ?? "").trim();
   const provider = String(formData.get("provider") ?? "");
   const model = String(formData.get("model") ?? "").trim();
-  const preview = String(formData.get("preview") ?? "").trim() || null;
+  const preview = await saveAdminImage({
+    entity: "photo-styles",
+    file: (formData.get("previewFile") as File | null) ?? null,
+    manualValue: String(formData.get("preview") ?? ""),
+  });
   const userPreview = String(formData.get("userPreview") ?? "").trim() || null;
   const userText = String(formData.get("userText") ?? "").trim() || null;
   const active = formData.get("active") === "on";
@@ -52,7 +58,11 @@ async function updateStyle(formData: FormData) {
   const prompt = String(formData.get("prompt") ?? "").trim();
   const provider = String(formData.get("provider") ?? "");
   const model = String(formData.get("model") ?? "").trim();
-  const preview = String(formData.get("preview") ?? "").trim() || null;
+  const preview = await saveAdminImage({
+    entity: "photo-styles",
+    file: (formData.get("previewFile") as File | null) ?? null,
+    manualValue: String(formData.get("preview") ?? ""),
+  });
   const userPreview = String(formData.get("userPreview") ?? "").trim() || null;
   const userText = String(formData.get("userText") ?? "").trim() || null;
   const active = formData.get("active") === "on";
@@ -140,12 +150,13 @@ export default async function AdminPhotoStylesPage() {
                 required
               />
             </AdminField>
-            <AdminField
-              hint="Ссылка на пример изображения (опционально)"
+            <AdminImageField
+              fileName="previewFile"
+              hint="Ссылка на пример изображения или локальная загрузка"
               label="Preview URL"
-            >
-              <AdminInput name="preview" placeholder="https://..." />
-            </AdminField>
+              placeholder="https://..."
+              textName="preview"
+            />
           </div>
           <AdminField label="Промт">
             <AdminTextarea
@@ -233,13 +244,13 @@ export default async function AdminPhotoStylesPage() {
                       required
                     />
                   </AdminField>
-                  <AdminField label="Preview URL">
-                    <AdminInput
-                      defaultValue={style.preview ?? ""}
-                      name="preview"
-                      placeholder="https://..."
-                    />
-                  </AdminField>
+                  <AdminImageField
+                    defaultValue={style.preview ?? ""}
+                    fileName="previewFile"
+                    label="Preview URL"
+                    placeholder="https://..."
+                    textName="preview"
+                  />
                 </div>
                 <AdminField label="Промт">
                   <AdminTextarea

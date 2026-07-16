@@ -34,7 +34,7 @@ export function createGeneratedRecipeContextRepository(
       recipeText: string;
       recipeJson?: StructuredRecipe | null;
       imageUrl?: string | null;
-      source: "create_recipe";
+      source: "create_recipe" | "create_another";
     }) {
       return model.create({ data: input });
     },

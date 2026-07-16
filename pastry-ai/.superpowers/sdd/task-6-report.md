@@ -1,26 +1,25 @@
-# Task 6: TokenGuardService — Complete
+# Task 6 Report: Update AI prompt and migrate database
 
-## Files created
-- `src/features/tariffs/token-guard-service.ts` — `createTokenGuardService` with `ensureSufficientTokens`, `getAvailablePhotoSlots`, `chargeTokens`, `getUserTariffState`
-- `src/features/tariffs/token-guard-service.test.ts` — 7 tests covering all scenarios
-- `src/features/tariffs/index.ts` — barrel export
+## What I did
 
-## Test results
+1. **Updated `prisma/seed.mjs`** — appended the RECIPE METADATA section to the recipe-card system prompt and bumped `version` from 2 to 3.
+2. **Created `scripts/fix-recipe-card-prompt-v2.ts`** — migration script that deactivates the current active prompt (v2) and creates a new prompt (v3) with the appended RECIPE METADATA block.
+3. **Ran the migration script** — successfully created version 3.
+4. **Committed** the changes.
+
+## Migration script output
+
 ```
-✓ allows sufficient tokens for batch
-✓ throws when tariff expired
-✓ throws when not enough tokens for batch
-✓ returns available photo slots (min of requested and remaining)
-✓ returns 0 when tariff expired
-✓ charges tokens and logs usage
-✓ returns null when user has no tariff
+Created recipe-card prompt version 3 with RECIPE METADATA section.
 ```
-7/7 passing.
 
-## Notes
-- Followed TDD: test written first, verified RED (module-not-found), then implemented.
-- Error messages are in Russian as required.
-- One minor deviation from brief: the "not enough tokens" message includes `не хватает N` so the regex `/не хватает/` matches.
-- `getUserTariffState` returns `TariffState | null` (null when user has no tariff record).
-- `chargeTokens` clamps `newBalance` to `Math.max(0, ...)` so it never goes negative.
-- `getAvailablePhotoSlots` returns `Math.min(maxSlots, tariff.remainingTokens)` when tariff is valid.
+## Commit
+
+```
+44cd061 feat(recipe-card): update AI prompt with RECIPE METADATA section
+```
+
+## Concerns
+
+- The `.superpowers/sdd/task-4-report.md` and `.superpowers/sdd/task-6-brief.md` files are not tracked in the repo (they were staged but I un-staged them before committing). They should be added to `.gitignore` if they should never be committed.
+- Need to ensure the `docs/prompts.md` document is updated to reflect the new RECIPE METADATA section in the recipe-card prompt.

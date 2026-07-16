@@ -1,8 +1,10 @@
 import { webhookCallback } from "grammy";
+import { after } from "next/server";
 import { createPastryBot } from "@/bot/create-bot";
 import { loadEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 export function isValidTelegramSecret(
   request: Request,
@@ -75,10 +77,25 @@ export async function POST(request: Request): Promise<Response> {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const updateId = getTelegramUpdateId(await request.clone().json().catch(() => null));
+  const rawBody = await request.text();
+  const parsedUpdate = rawBody ? JSON.parse(rawBody) : null;
+  const updateId = getTelegramUpdateId(parsedUpdate);
 
-  const [
-    { prisma },
+  const { prisma } = await import("@/db/prisma");
+
+  if (updateId !== null) {
+    const claimed = await claimTelegramUpdate(prisma.telegramSession, updateId);
+
+    if (!claimed) {
+      console.info("Skipping duplicate Telegram update", { updateId });
+
+      return new Response("OK");
+    }
+  }
+
+  after(async () => {
+    try {
+const [
     { createUserRepository },
     { createTariffPlanRepository },
     { createPromptRepository },
@@ -97,16 +114,18 @@ export async function POST(request: Request): Promise<Response> {
     { createVisionService },
     { createFreeLessonAgent },
     { createFreeLessonService },
-{ createAskChefAgent },
+    { createAskChefAgent },
     { createAskChefService },
     { createRecipeCardAgent },
     { createRecipeCardService },
     { createTextPromptAgent },
     { createTextPromptService },
     { createGeneratedRecipeContextRepository },
+    { createUsageLogService },
+    { createConversationLogService },
+    { createInstrumentedAIService },
   ] =
     await Promise.all([
-      import("@/db/prisma"),
       import("@/db/repositories/user-repository"),
       import("@/db/repositories/tariff-plan-repository"),
       import("@/db/repositories/prompt-repository"),
@@ -132,17 +151,10 @@ export async function POST(request: Request): Promise<Response> {
       import("@/ai/agents/text-prompt-agent"),
       import("@/features/text-prompt/text-prompt-service"),
       import("@/db/repositories/generated-recipe-context-repository"),
+      import("@/db/repositories/usage-log-service"),
+      import("@/db/repositories/conversation-log-service"),
+      import("@/ai/provider/instrumented-ai-service"),
     ]);
-
-  if (updateId !== null) {
-    const claimed = await claimTelegramUpdate(prisma.telegramSession, updateId);
-
-    if (!claimed) {
-      console.info("Skipping duplicate Telegram update", { updateId });
-
-      return new Response("OK");
-    }
-  }
 
   const userRepository = createUserRepository(prisma.user);
   const tariffPlanRepository = createTariffPlanRepository(
@@ -203,6 +215,13 @@ photoStyleRepository: {
   const recipeCardService = createRecipeCardService({ recipeCardAgent, aiService });
   const textPromptAgent = createTextPromptAgent({ aiService, promptLoader });
   const textPromptService = createTextPromptService({ textPromptAgent });
+  const usageLogService = createUsageLogService({
+    usage: prisma.usage as never,
+  });
+  const conversationLogService = createConversationLogService({
+    conversation: prisma.conversation as never,
+    message: prisma.message as never,
+  });
   const generatedRecipeContextRepository = createGeneratedRecipeContextRepository(
     prisma.generatedRecipeContext as never,
   );
@@ -220,7 +239,20 @@ photoStyleRepository: {
     tokenGuard,
     aiService,
     generatedRecipeContextRepository,
+    conversationLogService,
   });
 
-  return webhookCallback(bot, "std/http")(request);
+      await webhookCallback(bot, "std/http")(
+        new Request(request.url, {
+          body: rawBody,
+          headers: new Headers(request.headers),
+          method: request.method,
+        }),
+      );
+    } catch (error) {
+      console.error("Telegram webhook background processing failed", error);
+    }
+  });
+
+  return new Response("OK");
 }

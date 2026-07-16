@@ -35,7 +35,7 @@ describe("createOpenAIAIService", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await createOpenAIAIService().generateImage({
-      imageUrl: "https://example.com/dessert.png",
+      imageUrl: "https://api.telegram.org/file/bot123456:ABC-DEF1234ghIkl/dessert.png",
       model: "gpt-image-1",
       prompt: "Make it premium.",
       provider: "openai",
@@ -46,7 +46,7 @@ describe("createOpenAIAIService", () => {
     });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "https://example.com/dessert.png",
+      "https://api.telegram.org/file/bot123456:ABC-DEF1234ghIkl/dessert.png",
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -66,7 +66,7 @@ describe("createOpenAIAIService", () => {
     generateObjectMock.mockResolvedValue({ object: { title: "Dessert" } });
 
     await createOpenAIAIService().generateObject({
-      imageUrl: "https://example.com/photo.jpg",
+      imageUrl: "https://api.telegram.org/file/bot123456:ABC-DEF1234ghIkl/photo.jpg",
       model: "google/gemini-2.5-pro",
       prompt: "Analyze this dessert.",
       provider: "openrouter",
@@ -85,7 +85,7 @@ describe("createOpenAIAIService", () => {
               {
                 type: "file",
                 mediaType: "image",
-                data: new URL("https://example.com/photo.jpg"),
+                data: new URL("https://api.telegram.org/file/bot123456:ABC-DEF1234ghIkl/photo.jpg"),
               },
             ],
           },

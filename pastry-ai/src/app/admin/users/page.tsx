@@ -6,35 +6,84 @@ import {
 } from "@/components/admin/data-table";
 import {
   AdminButton,
+  AdminField,
   AdminInput,
   AdminSelect,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
 import { DeleteUserButton } from "@/components/admin/delete-user-button";
+import { prisma } from "@/db/prisma";
+import { buildDynamicUserGroupPreview } from "@/features/dynamic-user-groups/query";
+import { listDynamicUserGroupOptions } from "@/features/dynamic-user-groups/service";
 import { updateUserTariff } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage() {
-  const [users, tariffPlans] = await Promise.all([
-    prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        telegramId: true,
-        username: true,
-        name: true,
-        createdAt: true,
-        userTariff: {
-          select: {
-            remainingTokens: true,
-            expiresAt: true,
-            tariffPlan: { select: { id: true, name: true, slug: true } },
-          },
+type AdminUsersPageProps = {
+  searchParams?: Promise<{ dynamicGroupId?: string }> | { dynamicGroupId?: string };
+};
+
+async function loadLatestUsers() {
+  return prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      telegramId: true,
+      username: true,
+      name: true,
+      createdAt: true,
+      userTariff: {
+        select: {
+          remainingTokens: true,
+          expiresAt: true,
+          tariffPlan: { select: { id: true, name: true, slug: true } },
         },
       },
-      take: 100,
-    }),
+    },
+    take: 100,
+  });
+}
+
+async function loadUsersByIds(userIds: string[]) {
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: {
+      id: true,
+      telegramId: true,
+      username: true,
+      name: true,
+      createdAt: true,
+      userTariff: {
+        select: {
+          remainingTokens: true,
+          expiresAt: true,
+          tariffPlan: { select: { id: true, name: true, slug: true } },
+        },
+      },
+    },
+  });
+
+  return userIds
+    .map((id) => users.find((user) => user.id === id))
+    .filter((user): user is (typeof users)[number] => Boolean(user));
+}
+
+export default async function AdminUsersPage({
+  searchParams,
+}: AdminUsersPageProps = {}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const dynamicGroupId = resolvedSearchParams.dynamicGroupId?.trim() || "";
+
+  const [dynamicGroupOptions, dynamicPreview, tariffPlans] = await Promise.all([
+    listDynamicUserGroupOptions(),
+    dynamicGroupId
+      ? buildDynamicUserGroupPreview(dynamicGroupId, {
+          take: 100,
+        })
+      : null,
     prisma.tariffPlan.findMany({
       orderBy: { sortOrder: "asc" },
       select: {
@@ -45,12 +94,33 @@ export default async function AdminUsersPage() {
     }),
   ]);
 
+  const users = dynamicPreview
+    ? await loadUsersByIds(dynamicPreview.rows.map((row) => row.id))
+    : await loadLatestUsers();
+
   return (
     <section className="space-y-5">
       <AdminPageHeader
         description="Пользователи Telegram, зарегистрированные через бота. Здесь можно вручную назначать тариф, менять токены и дату окончания доступа."
         title="Пользователи"
       />
+
+      <form className="flex flex-wrap items-end gap-3" method="get">
+        <AdminField label="Динамическая группа">
+          <AdminSelect defaultValue={dynamicGroupId} name="dynamicGroupId">
+            <option value="">Все пользователи</option>
+            {dynamicGroupOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </AdminSelect>
+        </AdminField>
+        <AdminButton type="submit" variant="secondary">
+          Применить
+        </AdminButton>
+      </form>
+
       <DataTable
         columns={[
           { header: "Telegram ID", cell: (user) => user.telegramId },

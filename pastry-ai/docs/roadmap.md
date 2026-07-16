@@ -8,8 +8,18 @@
   - New sidebar items order: Дашборд, Чат-бот, Пользователи, Тарифы, Стили фото, Промты, История, Использование, Настройки.
   - Active-state rules: `/admin/chat-bot`, `/admin/triggers`, `/admin/funnel` all highlight `Чат-бот`. Other sections match their path prefix.
 - **Chat-bot section sub-navigation** (`ChatBotSubNav` component):
-  - Shared local submenu on `/admin/chat-bot`, `/admin/triggers`, `/admin/funnel` with three tabs: `Меню`, `Триггеры`, `Рассылки`.
+  - Shared local submenu on `/admin/chat-bot`, `/admin/triggers`, `/admin/funnel` with three tabs: `Меню`, `Триггеры`, `Воронка`.
   - Active tab correctly highlights based on current pathname.
+
+- **Trigger automation redesign**:
+  - `/admin/triggers` rebuilt around event-based rules with templates, event filters, searchable table, and dedicated create/edit pages.
+  - Each trigger rule has exactly one event, supports multiple `AND` conditions, and can send immediately or after minutes, hours, or days.
+  - Onboarding remains separate in `/admin/funnel`, while queued trigger sends keep a snapshot of `text`, `imageUrl`, and `buttons`.
+- **Manual user groups rollout**:
+  - Added `/admin/user-groups` with manual group creation, editing, deletion, and member management.
+  - Added `/admin/users/[userId]` as a dedicated detail screen with tariff controls and manual group membership editing.
+  - Trigger conditions now support structured manual-group membership via `userGroupId`, while system segments remain separate conditions.
+  - Touched trigger admin screens are localized to Russian, and existing triggers can now be deleted explicitly from the edit form.
 
 - Next.js foundation with admin login and protected admin routes.
 - Prisma/Supabase schema and seed.
@@ -126,6 +136,14 @@
   - `/admin/usage` page updated with columns: пользователь, функция, провайдер, модель, токены, стоимость, latency, статус, ошибка.
   - Dashboard API Usage block now shows real per-provider costs (OpenRouter, OpenAI, KIE) from `Usage.groupBy` — no hardcoded data.
   - New tests: `usage-log-service.test.ts` (4), `conversation-log-service.test.ts` (7), `instrumented-ai-service.test.ts` (5), `logging-integration.test.ts` (2).
+- **Admin image upload**:
+  - Shared upload helper `saveAdminImage` (`src/app/admin/_lib/save-admin-image.ts`) — validates image type/size, writes to `public/uploads/admin/<entity>/`, returns web path.
+  - Shared UI component `AdminImageField` (`src/components/admin/form.tsx`) — combines text input, file picker, and preview.
+  - Added `TriggerMessage.imageUrl` nullable field (migration + server action support).
+  - Fixed `/admin/chat-bot` create action: `previewImageUrl` now actually persisted (was read but dropped).
+  - Wired image upload into `/admin/triggers`, `/admin/chat-bot`, `/admin/funnel`, `/admin/photo-styles` — all accept file upload or manual URL.
+  - Priority rule: uploaded file overrides manual text when both provided.
+  - New tests: `save-admin-image.test.ts` (6), `form.test.tsx` (2), updated trigger actions test (7).
 
 ## Current State
 
@@ -133,12 +151,16 @@ The app can run locally and via ngrok. The test bot can point to the local webho
 
 Admin data is stored in Supabase. If local and server use the same database, changes are shared.
 
-**Trigger rules now support multiple messages under one immutable `slug`, with unique `delayMinutes` inside each rule and grouped admin management on `/admin/triggers`.**
+**Trigger rules are now event-based automations with templates, condition builder, immediate or delayed sending, and dedicated create/edit screens on `/admin/triggers`.**
+
+**Manual user groups are now a first-class admin feature:** `/admin/user-groups` manages hand-made segments, `/admin/users/[userId]` lets admins edit memberships per user, and triggers can target those groups through a structured audience condition.
+
+**Admin image upload:** `/admin/triggers`, `/admin/chat-bot`, `/admin/funnel`, `/admin/photo-styles` accept either manual URL/path or local file upload. Files stored under `public/uploads/admin/...`. Shared helper `saveAdminImage` and shared UI component `AdminImageField` reused across all pages.
 
 **Scheduled-message tracking redesigned:**
-- `ScheduledMessage` now stores `triggerMessageId` and `triggeredAt`, allowing unsent rows to update content and recalculate `sendAt` when trigger delays change.
-- One trigger event can now produce multiple pending scheduled sends (one per matching trigger message).
-- Edit/delete actions on trigger messages synchronize with unsent scheduled rows only; sent rows remain untouched.
+- `ScheduledMessage` now stores `triggerRuleId`, `triggerEventKey`, `triggeredAt`, and a full payload snapshot (`text`, `imageUrl`, `buttons`).
+- One product event can enqueue multiple pending trigger sends when several active rules match the same user state.
+- Queue processing sends the stored snapshot as-is, so later trigger edits do not rewrite already queued messages.
 
 **Tariff/token system is implemented.** Key facts:
 

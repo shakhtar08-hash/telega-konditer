@@ -54,7 +54,7 @@ export function createTriggerService(deps: Dependencies) {
       const rules = await deps.findActiveRulesByEvent(eventKey);
 
       for (const rule of rules) {
-        if (!evaluateConditions(rule.conditions, state)) {
+        if (!(await evaluateConditions(rule.conditions, state))) {
           continue;
         }
 
@@ -86,14 +86,21 @@ export function createTriggerService(deps: Dependencies) {
     },
 
     async processPendingTriggers(
-      sendMessage: (chatId: string, text: string) => Promise<void>,
+      sendMessage: (
+        chatId: string,
+        text: string,
+        payload: { imageUrl: string | null; buttons: unknown },
+      ) => Promise<void>,
     ): Promise<number> {
       const pending = await deps.findPendingScheduled(50);
       let sentCount = 0;
 
       for (const message of pending) {
         try {
-          await sendMessage(message.chatId, message.text);
+          await sendMessage(message.chatId, message.text, {
+            imageUrl: message.imageUrl ?? null,
+            buttons: message.buttons ?? null,
+          });
           await deps.markSent(message.id);
           sentCount++;
         } catch (error) {

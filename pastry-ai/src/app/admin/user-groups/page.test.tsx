@@ -54,4 +54,17 @@ describe("AdminUserGroupsPage", () => {
     expect(html).toContain("Групп пока нет");
     expect(html).toContain("Создайте первую ручную группу");
   });
+
+  it("renders a fallback state when the user groups table is missing", async () => {
+    prismaMock.userGroup.findMany.mockRejectedValue(
+      new Error("The table `public.UserGroup` does not exist in the current database."),
+    );
+
+    const html = renderToStaticMarkup(await AdminUserGroupsPage());
+
+    expect(html).toContain("Группы пользователей");
+    expect(html).toContain("Группы пользователей пока недоступны");
+    expect(html).toContain("Таблица групп ещё не создана в базе");
+    expect(html).not.toContain("Создать группу");
+  });
 });

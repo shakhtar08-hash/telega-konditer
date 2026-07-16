@@ -1,8 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import AdminChatBotPage, {
-  dynamic as chatBotDynamic,
-} from "./page";
+import AdminChatBotPage, { dynamic as chatBotDynamic } from "./page";
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
@@ -12,6 +10,9 @@ const { prismaMock } = vi.hoisted(() => ({
     prompt: {
       findMany: vi.fn(),
     },
+    botTextBlock: {
+      findUnique: vi.fn(),
+    },
   },
 }));
 
@@ -20,7 +21,7 @@ vi.mock("@/db/prisma", () => ({
 }));
 
 function expectNoMojibake(text: string) {
-  for (const marker of ["\u0420\u045f", "\u0420\u045c", "\u0420\u040e", "\u0420\u2019"]) {
+  for (const marker of ["Рџ", "Рќ", "РЎ", "вЂ"]) {
     expect(text).not.toContain(marker);
   }
 }
@@ -33,8 +34,12 @@ describe("AdminChatBotPage", () => {
         active: true,
         description: "Создание рецептов по ингредиентам",
         emoji: "🍰",
+        fullWidth: false,
         id: "button_recipe",
+        instructionText: null,
         label: "Создать рецепт",
+        previewImageUrl: null,
+        processingText: null,
         promptFeature: "recipes",
         promptSlug: "recipe-from-ingredients",
         sortOrder: 1,
@@ -45,14 +50,19 @@ describe("AdminChatBotPage", () => {
         active: true,
         description: "Акции и подарки",
         emoji: "🎁",
+        fullWidth: false,
         id: "button_bonus",
+        instructionText: null,
         label: "Бонусы и акции",
+        previewImageUrl: null,
+        processingText: null,
         promptFeature: null,
         promptSlug: null,
         sortOrder: 2,
         url: "https://example.com/bonus",
       },
     ]);
+    prismaMock.botTextBlock.findUnique.mockResolvedValue(null);
     prismaMock.prompt.findMany.mockResolvedValue([
       {
         feature: "recipes",
@@ -73,5 +83,26 @@ describe("AdminChatBotPage", () => {
     expect(text).toContain("Предпросмотр меню");
     expect(text).toContain("Рецепт по ингредиентам");
     expectNoMojibake(text);
+  });
+
+  it("deduplicates prompt targets when multiple active versions share the same feature and slug", async () => {
+    prismaMock.botMenuButton.findMany.mockResolvedValue([]);
+    prismaMock.botTextBlock.findUnique.mockResolvedValue(null);
+    prismaMock.prompt.findMany.mockResolvedValue([
+      {
+        feature: "recipe-card",
+        slug: "recipe-card",
+        title: "Карточка рецепта v3",
+      },
+      {
+        feature: "recipe-card",
+        slug: "recipe-card",
+        title: "Карточка рецепта v2",
+      },
+    ]);
+
+    const text = renderToStaticMarkup(await AdminChatBotPage());
+
+    expect(text.match(/value="recipe-card::recipe-card"/g)?.length).toBe(1);
   });
 });

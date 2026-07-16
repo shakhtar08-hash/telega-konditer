@@ -33,6 +33,9 @@ export type BotSession = {
   _pendingRecipeText?: string;
   selectedGeneratedRecipeId?: string;
   selectedGeneratedRecipeText?: string;
+  recipeSearchQuery?: string;
+  givenRecipeIds?: string[];
+  givenRecipeNames?: string[];
 };
 
 export type PastryBotContext = Context & SessionFlavor<BotSession>;
@@ -56,6 +59,9 @@ export function clearScenarioSession(session: BotSession) {
   session.selectedCardTemplate = undefined;
   session.selectedGeneratedRecipeId = undefined;
   session.selectedGeneratedRecipeText = undefined;
+  session.recipeSearchQuery = undefined;
+  session.givenRecipeIds = undefined;
+  session.givenRecipeNames = undefined;
 }
 
 export function setRecipeIngredients(

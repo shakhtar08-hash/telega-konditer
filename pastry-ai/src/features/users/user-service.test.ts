@@ -62,7 +62,7 @@ describe("UserService", () => {
           tariffPlanId: "tariff_promo",
           remainingTokens: 7,
           startedAt: new Date("2026-07-05T00:00:00.000Z"),
-          expiresAt: new Date("2026-07-08T00:00:00.000Z"),
+          expiresAt: new Date(Date.now() + 3 * 86400000),
           tariffPlan: { name: "Промо", slug: "promo" },
         }),
         upsert: async () => {
@@ -167,7 +167,7 @@ describe("UserService", () => {
           tariffPlanId: "tariff_promo",
           remainingTokens: 15,
           startedAt: new Date("2026-07-05T00:00:00.000Z"),
-          expiresAt: new Date("2026-07-08T00:00:00.000Z"),
+          expiresAt: new Date(Date.now() + 3 * 86400000),
           tariffPlan: { name: "Промо", slug: "promo" },
         }),
         upsert: async () => {
@@ -180,6 +180,66 @@ describe("UserService", () => {
     const tariff = await service.assignPromoTariff("user_1");
 
     expect(upsertCalls).toBe(0);
+    expect(tariff.remainingTokens).toBe(15);
+  });
+
+  it("reassigns promo tariff when the existing tariff is expired", async () => {
+    let upsertCalls = 0;
+
+    const service = createUserService({
+      userRepository: {
+        upsertTelegramUser: async (input) => ({
+          id: "user_1",
+          telegramId: input.telegramId,
+          username: input.username ?? null,
+          name: input.name ?? null,
+          plan: "FREE",
+          credits: 10,
+        }),
+      },
+      tariffPlanRepository: {
+        findBySlug: async (slug) =>
+          slug === "promo"
+            ? {
+                id: "tariff_promo",
+                slug: "promo",
+                name: "РџСЂРѕРјРѕ",
+                tokenAmount: 15,
+                durationDays: 3,
+                active: true,
+                sortOrder: 0,
+              }
+            : null,
+      },
+      userTariffRepository: {
+        findByUserId: async () => ({
+          id: "ut_1",
+          userId: "user_1",
+          tariffPlanId: "tariff_old",
+          remainingTokens: 0,
+          startedAt: new Date("2026-07-01T00:00:00.000Z"),
+          expiresAt: new Date("2026-07-02T00:00:00.000Z"),
+          tariffPlan: { name: "РЎС‚Р°СЂС‹Р№", slug: "old" },
+        }),
+        upsert: async (userId, data) => {
+          upsertCalls += 1;
+          return {
+            id: "ut_2",
+            userId,
+            tariffPlanId: data.tariffPlanId,
+            remainingTokens: data.remainingTokens,
+            startedAt: new Date("2026-07-05T00:00:00.000Z"),
+            expiresAt: data.expiresAt,
+            tariffPlan: { name: "РџСЂРѕРјРѕ", slug: "promo" },
+          };
+        },
+      },
+    });
+
+    const tariff = await service.assignPromoTariff("user_1");
+
+    expect(upsertCalls).toBe(1);
+    expect(tariff.tariffPlan.slug).toBe("promo");
     expect(tariff.remainingTokens).toBe(15);
   });
 });

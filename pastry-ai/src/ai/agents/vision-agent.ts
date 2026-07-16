@@ -1,5 +1,6 @@
 import type { PromptRecord } from "@/db/repositories/prompt-repository";
 import type { AIService } from "../provider/ai-service";
+import { appendLisaPersonaInstruction } from "./lisa-persona";
 
 type PromptLoader = {
   load(feature: "vision", slug: string): Promise<PromptRecord>;
@@ -22,7 +23,7 @@ export function createVisionAgent(dependencies: {
 
       return dependencies.aiService.generateText({
         imageUrl: input.imageUrl,
-        system: prompt.systemPrompt,
+        system: appendLisaPersonaInstruction(prompt.systemPrompt),
         prompt: prompt.userTemplate.replace("{{imageUrl}}", input.imageUrl),
         provider: prompt.provider,
         model: prompt.model,

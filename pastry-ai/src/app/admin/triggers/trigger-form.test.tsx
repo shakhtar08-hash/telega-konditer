@@ -13,6 +13,9 @@ const userGroupOptions = [
   { value: "group_vip", label: "VIP клиенты" },
   { value: "group_school", label: "Ученики курса" },
 ] as const;
+const dynamicUserGroupOptions = [
+  { value: "dynamic_no_tariff", label: "Без активного тарифа" },
+] as const;
 
 describe("TriggerForm", () => {
   it("renders the create form in Russian with structured conditions", () => {
@@ -20,6 +23,7 @@ describe("TriggerForm", () => {
       <TriggerForm
         action={async () => {}}
         cancelHref="/admin/triggers"
+        dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={eventOptions}
         initial={{
           conditions: template.conditions,
@@ -30,6 +34,7 @@ describe("TriggerForm", () => {
           imageUrl: null,
           messageText: "",
           name: template.name,
+          buttons: [],
           status: "draft",
         }}
         submitLabel="Создать триггер"
@@ -40,20 +45,20 @@ describe("TriggerForm", () => {
 
     expect(html).toContain("Новый триггер");
     expect(html).toContain('name="name"');
-    expect(html).toContain('value="After Start: no promo"');
-    expect(html).toContain("Настройте событие, задержку, сообщение и условия аудитории для этого триггера.");
     expect(html).toContain("Условия");
     expect(html).toContain("Добавить условие");
     expect(html).toContain("Предпросмотр триггера");
-    expect(html).not.toContain("Use JSON like");
+    expect(html).toContain("Оплатить");
+    expect(html).toContain('name="buttons"');
   });
 
-  it("renders an explicit Russian delete flow for existing triggers", () => {
+  it("renders delete flow for existing triggers", () => {
     const html = renderToStaticMarkup(
       <TriggerForm
         action={async () => {}}
         cancelHref="/admin/triggers"
         deleteAction={async () => {}}
+        dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={eventOptions}
         initial={{
           conditions: [{ field: "userGroupId", operator: "isMember", value: "group_vip" }],
@@ -64,6 +69,7 @@ describe("TriggerForm", () => {
           imageUrl: "/uploads/admin/triggers/existing.png",
           messageText: "Come back tomorrow.",
           name: "Promo expired",
+          buttons: [{ text: "Оплатить", type: "url", value: "https://pay.example.com" }],
           status: "active",
         }}
         submitLabel="Сохранить изменения"
@@ -73,10 +79,8 @@ describe("TriggerForm", () => {
     );
 
     expect(html).toContain('name="id"');
-    expect(html).toContain('value="rule_1"');
     expect(html).toContain("Сохранить изменения");
     expect(html).toContain("Удалить триггер");
-    expect(html).toContain("Удаление уберет правило из автоматизаций и остановит будущие срабатывания.");
     expect(html).toContain("/uploads/admin/triggers/existing.png");
     expect(html).toContain("Состоит в группе VIP клиенты");
   });
@@ -89,18 +93,20 @@ describe("TriggerForm", () => {
           { field: "generationCount", operator: "gte", value: 3 },
         ],
         userGroupOptions,
+        dynamicUserGroupOptions,
       ),
     ).toBe("Промо получено: нет И Количество генераций не меньше 3");
   });
 
-  it("renders real user groups in the condition builder", () => {
+  it("renders real user and dynamic groups in the condition builder", () => {
     const html = renderToStaticMarkup(
       <TriggerForm
         action={async () => {}}
         cancelHref="/admin/triggers"
+        dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={eventOptions}
         initial={{
-          conditions: [{ field: "userGroupId", operator: "isMember", value: "group_school" }],
+          conditions: [{ field: "dynamicUserGroupId", operator: "matches", value: "dynamic_no_tariff" }],
           delayUnit: "now",
           delayValue: 0,
           eventKey: template.eventKey,
@@ -108,6 +114,7 @@ describe("TriggerForm", () => {
           imageUrl: null,
           messageText: "",
           name: "Группа",
+          buttons: [],
           status: "draft",
         }}
         submitLabel="Создать триггер"
@@ -117,17 +124,30 @@ describe("TriggerForm", () => {
     );
 
     expect(html).toContain("Группа пользователей");
-    expect(html).toContain("Состоит в группе");
-    expect(html).toContain("VIP клиенты");
-    expect(html).toContain("Ученики курса");
-    expect(html).toContain("Выберите группу");
+    expect(html).toContain("Динамическая группа");
+    expect(html).toContain("Без активного тарифа");
   });
 
-  it("initializes user group drafts with the structured condition shape", () => {
-    expect(createDefaultConditionDraft("userGroupId", userGroupOptions)).toEqual({
+  it("initializes user and dynamic group drafts with the structured condition shape", () => {
+    expect(createDefaultConditionDraft("userGroupId", userGroupOptions, dynamicUserGroupOptions)).toEqual({
       field: "userGroupId",
       operator: "isMember",
       value: "",
     });
+    expect(createDefaultConditionDraft("dynamicUserGroupId", userGroupOptions, dynamicUserGroupOptions)).toEqual({
+      field: "dynamicUserGroupId",
+      operator: "matches",
+      value: "",
+    });
+  });
+
+  it("builds a readable summary for dynamic group conditions", () => {
+    expect(
+      summarizeTriggerConditions(
+        [{ field: "dynamicUserGroupId", operator: "matches", value: "dynamic_no_tariff" }],
+        userGroupOptions,
+        dynamicUserGroupOptions,
+      ),
+    ).toContain("Пользователь входит в динамическую группу «Без активного тарифа»");
   });
 });
