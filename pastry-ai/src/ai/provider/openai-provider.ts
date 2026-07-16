@@ -12,7 +12,7 @@ import { assertAllowedImageUrl } from "@/lib/image-url-validator";
 
 export function createOpenAIAIService(): AIService {
   const transport = createAITransport({
-    directGenerateImage: generateImageDirect,
+    directGenerateImage: generateOpenAIImageDirect,
   });
 
   return {
@@ -90,7 +90,7 @@ export function createOpenAIAIService(): AIService {
   };
 }
 
-async function generateImageDirect(input: GenerateImageInput) {
+export async function generateOpenAIImageDirect(input: GenerateImageInput) {
   if (input.provider === "openrouter") {
     return generateFluxImage(input);
   }

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
-import { createOpenAIAIService } from "./openai-provider";
+import {
+  createOpenAIAIService,
+  generateOpenAIImageDirect,
+} from "./openai-provider";
 
 const {
   createAITransportMock,
@@ -164,6 +167,28 @@ describe("createOpenAIAIService", () => {
     });
 
     expect(result).toEqual({ url: "data:image/png;base64,abc" });
+    expect(generateImageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "premium dessert",
+      }),
+    );
+  });
+
+  it("exports the direct image helper for internal gateway callers", async () => {
+    createAITransportMock.mockClear();
+    generateImageMock.mockResolvedValue({
+      images: [{ base64: "direct", mediaType: "image/png" }],
+    });
+
+    const result = await generateOpenAIImageDirect({
+      model: "gpt-image-1",
+      prompt: "premium dessert",
+      provider: "openai",
+      size: "1024x1024",
+    });
+
+    expect(result).toEqual({ url: "data:image/png;base64,direct" });
+    expect(createAITransportMock).not.toHaveBeenCalled();
     expect(generateImageMock).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: "premium dessert",
