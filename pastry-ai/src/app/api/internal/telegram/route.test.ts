@@ -90,7 +90,7 @@ describe("POST /api/internal/telegram", () => {
     expect(handleTelegramWebhookMock).toHaveBeenCalledTimes(1);
     expect(isValidInternalServiceRequestMock).toHaveBeenCalledTimes(1);
 
-    const forwardedRequest = handleTelegramWebhookMock.mock.calls[0]?.[0];
+    const [forwardedRequest] = handleTelegramWebhookMock.mock.calls[0] as unknown as [Request];
     expect(forwardedRequest).toBeInstanceOf(Request);
     expect(forwardedRequest.headers.get("content-type")).toBe(
       "application/json",
