@@ -179,4 +179,47 @@ describe("generateFluxKontextImage", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
+
+  it("converts KIE timeouts into user-facing errors", async () => {
+    resolveManagedApiKeyMock.mockResolvedValue("kie-key");
+    const waitingResponse = {
+      json: async () => ({
+        code: 200,
+        data: {
+          state: "waiting",
+        },
+      }),
+      ok: true,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: { taskId: "task-1" },
+        }),
+        ok: true,
+      })
+      .mockImplementation(async () => waitingResponse);
+
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-16T21:55:00Z"));
+
+    const promise = generateFluxKontextImage({
+      model: "flux-kontext-pro",
+      prompt: "Create a premium dessert photo.",
+    });
+    const rejection = expect(promise).rejects.toEqual(
+      expect.objectContaining({
+        message: "KIE сейчас отвечает слишком долго. Попробуйте ещё раз чуть позже.",
+        name: new UserFacingError("").name,
+      }),
+    );
+
+    await vi.advanceTimersByTimeAsync(301000);
+    await rejection;
+
+    vi.useRealTimers();
+  }, 10000);
 });

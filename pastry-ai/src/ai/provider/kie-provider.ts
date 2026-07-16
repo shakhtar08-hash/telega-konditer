@@ -6,6 +6,7 @@ import { sanitizeOutboundPrompt } from "./ai-request-sanitizer";
 const KIE_BASE = "https://api.kie.ai";
 const KIE_PROMPT_MAX = 3000;
 const KIE_MAX_ATTEMPTS = 2;
+const KIE_TIMEOUT_MS = 300000;
 
 function truncatePrompt(prompt: string): string {
   if (prompt.length <= KIE_PROMPT_MAX) return prompt;
@@ -46,6 +47,15 @@ function normalizeKieError(error: unknown): never {
   ) {
     throw new UserFacingError(
       "Не удалось создать фото десерта. Попробуйте ещё раз чуть позже.",
+    );
+  }
+
+  if (
+    error instanceof Error &&
+    /KIE task timed out after \d+ms/i.test(error.message)
+  ) {
+    throw new UserFacingError(
+      "KIE сейчас отвечает слишком долго. Попробуйте ещё раз чуть позже.",
     );
   }
 
@@ -112,7 +122,7 @@ async function submitFluxKontextTask(params: {
   return result.data.taskId;
 }
 
-async function pollTask(taskId: string, timeoutMs = 120000): Promise<KieResult> {
+async function pollTask(taskId: string, timeoutMs = KIE_TIMEOUT_MS): Promise<KieResult> {
   const apiKey = await getApiKey();
   const startTime = Date.now();
   const pollInterval = 2000;
