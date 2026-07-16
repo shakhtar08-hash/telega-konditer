@@ -1,4 +1,3 @@
-import { webhookCallback } from "grammy";
 import { after } from "next/server";
 import { createPastryBot } from "@/bot/create-bot";
 import { loadEnv } from "@/lib/env";
@@ -95,160 +94,167 @@ export async function POST(request: Request): Promise<Response> {
 
   after(async () => {
     try {
-const [
-    { createUserRepository },
-    { createTariffPlanRepository },
-    { createPromptRepository },
-    { createUserService },
-    { createPromptLoader },
-    { createOpenAIAIService },
-    { createPrismaSessionStorage },
-    { createPhotoshootAgent },
-    { createPhotoshootService },
-    { createRecipeAgent },
-    { createRecipeService },
-    { createUserTariffRepository },
-    { createTokenUsageRepository },
-    { createTokenGuardService },
-    { createVisionAgent },
-    { createVisionService },
-    { createFreeLessonAgent },
-    { createFreeLessonService },
-    { createAskChefAgent },
-    { createAskChefService },
-    { createRecipeCardAgent },
-    { createRecipeCardService },
-    { createTextPromptAgent },
-    { createTextPromptService },
-    { createGeneratedRecipeContextRepository },
-    { createUsageLogService },
-    { createConversationLogService },
-    { createInstrumentedAIService },
-  ] =
-    await Promise.all([
-      import("@/db/repositories/user-repository"),
-      import("@/db/repositories/tariff-plan-repository"),
-      import("@/db/repositories/prompt-repository"),
-      import("@/features/users/user-service"),
-      import("@/ai/prompts/prompt-loader"),
-      import("@/ai/provider/openai-provider"),
-      import("@/bot/middleware/session"),
-      import("@/ai/agents/photoshoot-agent"),
-      import("@/features/photoshoot/photoshoot-service"),
-      import("@/ai/agents/recipe-agent"),
-      import("@/features/recipes/recipe-service"),
-      import("@/db/repositories/user-tariff-repository"),
-      import("@/db/repositories/token-usage-repository"),
-      import("@/features/tariffs/token-guard-service"),
-      import("@/ai/agents/vision-agent"),
-      import("@/features/vision/vision-service"),
-      import("@/ai/agents/free-lesson-agent"),
-      import("@/features/free-lesson/free-lesson-service"),
-      import("@/ai/agents/ask-chef-agent"),
-      import("@/features/ask-chef/ask-chef-service"),
-      import("@/ai/agents/recipe-card-agent"),
-      import("@/features/recipe-card/recipe-card-service"),
-      import("@/ai/agents/text-prompt-agent"),
-      import("@/features/text-prompt/text-prompt-service"),
-      import("@/db/repositories/generated-recipe-context-repository"),
-      import("@/db/repositories/usage-log-service"),
-      import("@/db/repositories/conversation-log-service"),
-      import("@/ai/provider/instrumented-ai-service"),
-    ]);
+      const [
+        { createUserRepository },
+        { createTariffPlanRepository },
+        { createPromptRepository },
+        { createUserService },
+        { createPromptLoader },
+        { createOpenAIAIService },
+        { createPrismaSessionStorage },
+        { createPhotoshootAgent },
+        { createPhotoshootService },
+        { createRecipeAgent },
+        { createRecipeService },
+        { createUserTariffRepository },
+        { createTokenUsageRepository },
+        { createTokenGuardService },
+        { createVisionAgent },
+        { createVisionService },
+        { createFreeLessonAgent },
+        { createFreeLessonService },
+        { createAskChefAgent },
+        { createAskChefService },
+        { createRecipeCardAgent },
+        { createRecipeCardService },
+        { createTextPromptAgent },
+        { createTextPromptService },
+        { createGeneratedRecipeContextRepository },
+        { createUsageLogService },
+        { createConversationLogService },
+        { createInstrumentedAIService },
+      ] = await Promise.all([
+        import("@/db/repositories/user-repository"),
+        import("@/db/repositories/tariff-plan-repository"),
+        import("@/db/repositories/prompt-repository"),
+        import("@/features/users/user-service"),
+        import("@/ai/prompts/prompt-loader"),
+        import("@/ai/provider/openai-provider"),
+        import("@/bot/middleware/session"),
+        import("@/ai/agents/photoshoot-agent"),
+        import("@/features/photoshoot/photoshoot-service"),
+        import("@/ai/agents/recipe-agent"),
+        import("@/features/recipes/recipe-service"),
+        import("@/db/repositories/user-tariff-repository"),
+        import("@/db/repositories/token-usage-repository"),
+        import("@/features/tariffs/token-guard-service"),
+        import("@/ai/agents/vision-agent"),
+        import("@/features/vision/vision-service"),
+        import("@/ai/agents/free-lesson-agent"),
+        import("@/features/free-lesson/free-lesson-service"),
+        import("@/ai/agents/ask-chef-agent"),
+        import("@/features/ask-chef/ask-chef-service"),
+        import("@/ai/agents/recipe-card-agent"),
+        import("@/features/recipe-card/recipe-card-service"),
+        import("@/ai/agents/text-prompt-agent"),
+        import("@/features/text-prompt/text-prompt-service"),
+        import("@/db/repositories/generated-recipe-context-repository"),
+        import("@/db/repositories/usage-log-service"),
+        import("@/db/repositories/conversation-log-service"),
+        import("@/ai/provider/instrumented-ai-service"),
+      ]);
 
-  const userRepository = createUserRepository(prisma.user);
-  const tariffPlanRepository = createTariffPlanRepository(
-    prisma.tariffPlan as never,
-  );
-  const promptRepository = createPromptRepository(prisma.prompt);
-  const promptLoader = createPromptLoader(promptRepository);
-  const aiService = createOpenAIAIService();
-  const sessionStorage = createPrismaSessionStorage(prisma.telegramSession);
-  const userTariffRepository = createUserTariffRepository(prisma.userTariff as never);
-  const userService = createUserService({
-    userRepository,
-    tariffPlanRepository,
-    userTariffRepository,
-  });
-  const tokenUsageRepository = createTokenUsageRepository(prisma.tokenUsage as never);
-  const tokenGuard = createTokenGuardService(userTariffRepository, tokenUsageRepository);
-  const photoshootAgent = createPhotoshootAgent({ aiService, promptLoader });
-  const photoshootService = createPhotoshootService({
-photoStyleRepository: {
-      listActive: () =>
-        prisma.photoStyle.findMany({
-          orderBy: { createdAt: "asc" },
-          select: {
-            id: true,
-            name: true,
-            prompt: true,
-            provider: true,
-            model: true,
-          },
-          where: {
-            active: true,
-          },
-        }),
-      findById: (id) =>
-        prisma.photoStyle.findFirst({
-          where: { id },
-          select: {
-            id: true,
-            name: true,
-            prompt: true,
-            provider: true,
-            model: true,
-          },
-        }),
-    },
-    photoshootAgent,
-  });
-  const recipeAgent = createRecipeAgent({ aiService, promptLoader });
-  const recipeService = createRecipeService({ recipeAgent });
-  const visionAgent = createVisionAgent({ aiService, promptLoader });
-  const visionService = createVisionService({ visionAgent });
-  const freeLessonAgent = createFreeLessonAgent({ aiService, promptLoader });
-  const freeLessonService = createFreeLessonService({ freeLessonAgent });
-  const askChefAgent = createAskChefAgent({ aiService, promptLoader });
-  const askChefService = createAskChefService({ askChefAgent });
-  const recipeCardAgent = createRecipeCardAgent({ aiService, promptLoader });
-  const recipeCardService = createRecipeCardService({ recipeCardAgent, aiService });
-  const textPromptAgent = createTextPromptAgent({ aiService, promptLoader });
-  const textPromptService = createTextPromptService({ textPromptAgent });
-  const usageLogService = createUsageLogService({
-    usage: prisma.usage as never,
-  });
-  const conversationLogService = createConversationLogService({
-    conversation: prisma.conversation as never,
-    message: prisma.message as never,
-  });
-  const generatedRecipeContextRepository = createGeneratedRecipeContextRepository(
-    prisma.generatedRecipeContext as never,
-  );
-  const bot = createPastryBot({
-    token: env.TELEGRAM_BOT_TOKEN,
-    userService,
-    photoshootService,
-    recipeService,
-    sessionStorage,
-    visionService,
-    freeLessonService,
-    askChefService,
-    recipeCardService,
-    textPromptService,
-    tokenGuard,
-    aiService,
-    generatedRecipeContextRepository,
-    conversationLogService,
-  });
-
-      await webhookCallback(bot, "std/http")(
-        new Request(request.url, {
-          body: rawBody,
-          headers: new Headers(request.headers),
-          method: request.method,
-        }),
+      const userRepository = createUserRepository(prisma.user);
+      const tariffPlanRepository = createTariffPlanRepository(
+        prisma.tariffPlan as never,
       );
+      const promptRepository = createPromptRepository(prisma.prompt);
+      const promptLoader = createPromptLoader(promptRepository);
+      const aiService = createOpenAIAIService();
+      const sessionStorage = createPrismaSessionStorage(prisma.telegramSession);
+      const userTariffRepository = createUserTariffRepository(
+        prisma.userTariff as never,
+      );
+      const userService = createUserService({
+        userRepository,
+        tariffPlanRepository,
+        userTariffRepository,
+      });
+      const tokenUsageRepository = createTokenUsageRepository(
+        prisma.tokenUsage as never,
+      );
+      const tokenGuard = createTokenGuardService(
+        userTariffRepository,
+        tokenUsageRepository,
+      );
+      const photoshootAgent = createPhotoshootAgent({ aiService, promptLoader });
+      const photoshootService = createPhotoshootService({
+        photoStyleRepository: {
+          listActive: () =>
+            prisma.photoStyle.findMany({
+              orderBy: { createdAt: "asc" },
+              select: {
+                id: true,
+                name: true,
+                prompt: true,
+                provider: true,
+                model: true,
+              },
+              where: {
+                active: true,
+              },
+            }),
+          findById: (id) =>
+            prisma.photoStyle.findFirst({
+              where: { id },
+              select: {
+                id: true,
+                name: true,
+                prompt: true,
+                provider: true,
+                model: true,
+              },
+            }),
+        },
+        photoshootAgent,
+      });
+      const recipeAgent = createRecipeAgent({ aiService, promptLoader });
+      const recipeService = createRecipeService({ recipeAgent });
+      const visionAgent = createVisionAgent({ aiService, promptLoader });
+      const visionService = createVisionService({ visionAgent });
+      const freeLessonAgent = createFreeLessonAgent({ aiService, promptLoader });
+      const freeLessonService = createFreeLessonService({ freeLessonAgent });
+      const askChefAgent = createAskChefAgent({ aiService, promptLoader });
+      const askChefService = createAskChefService({ askChefAgent });
+      const recipeCardAgent = createRecipeCardAgent({ aiService, promptLoader });
+      const recipeCardService = createRecipeCardService({
+        recipeCardAgent,
+        aiService,
+      });
+      const textPromptAgent = createTextPromptAgent({ aiService, promptLoader });
+      const textPromptService = createTextPromptService({ textPromptAgent });
+      const usageLogService = createUsageLogService({
+        usage: prisma.usage as never,
+      });
+      const conversationLogService = createConversationLogService({
+        conversation: prisma.conversation as never,
+        message: prisma.message as never,
+      });
+      const generatedRecipeContextRepository =
+        createGeneratedRecipeContextRepository(
+          prisma.generatedRecipeContext as never,
+        );
+      const bot = createPastryBot({
+        token: env.TELEGRAM_BOT_TOKEN,
+        userService,
+        photoshootService,
+        recipeService,
+        sessionStorage,
+        visionService,
+        freeLessonService,
+        askChefService,
+        recipeCardService,
+        textPromptService,
+        tokenGuard,
+        aiService,
+        generatedRecipeContextRepository,
+        conversationLogService,
+      });
+
+      if (parsedUpdate !== null) {
+        await bot.init();
+        await bot.handleUpdate(parsedUpdate);
+      }
     } catch (error) {
       console.error("Telegram webhook background processing failed", error);
     }

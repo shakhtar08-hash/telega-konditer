@@ -50,6 +50,12 @@ describe("TriggerForm", () => {
     expect(html).toContain("Предпросмотр триггера");
     expect(html).toContain("Оплатить");
     expect(html).toContain('name="buttons"');
+    expect(html).toContain("HTML-форматирование");
+    expect(html).toContain('data-format="bold"');
+    expect(html).toContain('data-format="italic"');
+    expect(html).toContain('data-format="strikethrough"');
+    expect(html).toContain('data-format="link"');
+    expect(html).toContain("Отправить тестовое сообщение");
   });
 
   it("renders delete flow for existing triggers", () => {
@@ -82,6 +88,7 @@ describe("TriggerForm", () => {
     expect(html).toContain("Сохранить изменения");
     expect(html).toContain("Удалить триггер");
     expect(html).toContain("/uploads/admin/triggers/existing.png");
+    expect(html).toContain("Telegram HTML");
     expect(html).toContain("Состоит в группе VIP клиенты");
   });
 

@@ -41,6 +41,23 @@ describe("generateFluxKontextImage", () => {
           },
         }),
         ok: true,
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: { taskId: "task-2" },
+        }),
+        ok: true,
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: {
+            failMsg: "internal error, please try again later.",
+            state: "fail",
+          },
+        }),
+        ok: true,
       });
 
     vi.stubGlobal("fetch", fetchMock);
@@ -57,5 +74,63 @@ describe("generateFluxKontextImage", () => {
         name: new UserFacingError("").name,
       }),
     );
+  });
+
+  it("retries once when KIE returns a temporary internal error", async () => {
+    resolveManagedApiKeyMock.mockResolvedValue("kie-key");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: { taskId: "task-1" },
+        }),
+        ok: true,
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: {
+            failMsg: "internal error, please try again later.",
+            state: "fail",
+          },
+        }),
+        ok: true,
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: { taskId: "task-2" },
+        }),
+        ok: true,
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: {
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.kie.ai/output/final.jpg"],
+            }),
+            state: "success",
+          },
+        }),
+        ok: true,
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      generateFluxKontextImage({
+        model: "flux-kontext-pro",
+        prompt: "Create a premium dessert photo.",
+      }),
+    ).resolves.toEqual({
+      url: "https://cdn.kie.ai/output/final.jpg",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 });

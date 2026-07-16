@@ -3,11 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const afterMock = vi.hoisted(() => vi.fn());
 const webhookHandlerMock = vi.hoisted(() => vi.fn());
 const webhookCallbackMock = vi.hoisted(() => vi.fn(() => webhookHandlerMock));
+const initMock = vi.hoisted(() => vi.fn());
+const handleUpdateMock = vi.hoisted(() => vi.fn());
 const loadEnvMock = vi.hoisted(() => vi.fn(() => ({
   TELEGRAM_BOT_TOKEN: "bot-token",
   TELEGRAM_WEBHOOK_SECRET: "secret",
 })));
-const createPastryBotMock = vi.hoisted(() => vi.fn(() => ({ })));
+const createPastryBotMock = vi.hoisted(() =>
+  vi.fn(() => ({ handleUpdate: handleUpdateMock, init: initMock })),
+);
 const claimCreateMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/server", () => ({
@@ -149,6 +153,8 @@ describe("isValidTelegramSecret", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     webhookHandlerMock.mockResolvedValue(new Response("handled"));
+    initMock.mockResolvedValue(undefined);
+    handleUpdateMock.mockResolvedValue(undefined);
     claimCreateMock.mockResolvedValue(undefined);
   });
 
@@ -207,13 +213,24 @@ describe("isValidTelegramSecret", () => {
     await expect(response.text()).resolves.toBe("OK");
     expect(afterMock).toHaveBeenCalledTimes(1);
     expect(webhookCallbackMock).not.toHaveBeenCalled();
+    expect(initMock).not.toHaveBeenCalled();
+    expect(handleUpdateMock).not.toHaveBeenCalled();
 
     const task = afterMock.mock.calls[0]?.[0];
     expect(task).toBeTypeOf("function");
 
     await task();
 
-    expect(webhookCallbackMock).toHaveBeenCalledTimes(1);
-    expect(webhookHandlerMock).toHaveBeenCalledTimes(1);
+    expect(webhookCallbackMock).not.toHaveBeenCalled();
+    expect(webhookHandlerMock).not.toHaveBeenCalled();
+    expect(initMock).toHaveBeenCalledTimes(1);
+    expect(handleUpdateMock).toHaveBeenCalledTimes(1);
+    expect(handleUpdateMock).toHaveBeenCalledWith({
+      message: { text: "hi" },
+      update_id: 42,
+    });
+    expect(initMock.mock.invocationCallOrder[0]).toBeLessThan(
+      handleUpdateMock.mock.invocationCallOrder[0] ?? Infinity,
+    );
   });
 });

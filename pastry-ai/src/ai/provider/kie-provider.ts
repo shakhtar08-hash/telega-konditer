@@ -4,6 +4,7 @@ import { UserFacingError } from "@/lib/user-facing-error";
 
 const KIE_BASE = "https://api.kie.ai";
 const KIE_PROMPT_MAX = 3000;
+const KIE_MAX_ATTEMPTS = 2;
 
 function truncatePrompt(prompt: string): string {
   if (prompt.length <= KIE_PROMPT_MAX) return prompt;
@@ -48,6 +49,15 @@ function normalizeKieError(error: unknown): never {
   }
 
   throw error;
+}
+
+function isRetryableKieInternalError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /KIE task failed:\s*internal error, please try again later\.?/i.test(
+      error.message,
+    )
+  );
 }
 
 async function submitFluxKontextTask(params: {
@@ -159,14 +169,33 @@ export async function generateFluxKontextImage(input: {
       assertAllowedImageUrl(input.imageUrl, "kie-provider inputImage");
     }
 
-    const taskId = await submitFluxKontextTask({
-      aspectRatio: input.aspectRatio,
-      inputImage: input.imageUrl,
-      model: input.model,
-      prompt: input.prompt,
-    });
+    let result: KieResult | null = null;
+    let lastError: unknown;
 
-    const result = await pollTask(taskId);
+    for (let attempt = 1; attempt <= KIE_MAX_ATTEMPTS; attempt++) {
+      try {
+        const taskId = await submitFluxKontextTask({
+          aspectRatio: input.aspectRatio,
+          inputImage: input.imageUrl,
+          model: input.model,
+          prompt: input.prompt,
+        });
+
+        result = await pollTask(taskId);
+        break;
+      } catch (error) {
+        lastError = error;
+
+        if (!isRetryableKieInternalError(error) || attempt === KIE_MAX_ATTEMPTS) {
+          throw error;
+        }
+      }
+    }
+
+    if (!result) {
+      throw lastError ?? new Error("KIE Flux Kontext returned no result");
+    }
+
     const imageUrl = result.resultUrls?.[0];
 
     if (!imageUrl) {

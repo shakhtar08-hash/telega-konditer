@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   AdminButton,
   AdminField,
@@ -12,6 +12,10 @@ import {
 } from "@/components/admin/form";
 import type { TriggerEventOption } from "@/features/triggers/trigger-template";
 import type { TriggerCondition, TriggerRuleRecord } from "@/features/triggers/trigger-rule-types";
+import {
+  applyTelegramHtmlFormat,
+  type TriggerMessageFormat,
+} from "./trigger-message-format";
 import { TriggerButtonsEditor, type TriggerButtonDraft } from "./trigger-buttons-editor";
 
 export type TriggerFormValues = {
@@ -44,9 +48,18 @@ type TriggerFormProps = {
   eventOptions: readonly TriggerEventOption[];
   initial: TriggerFormValues;
   submitLabel: string;
+  testSendAction?: (
+    state: TriggerTestSendState,
+    formData: FormData,
+  ) => Promise<TriggerTestSendState>;
   title: string;
   userGroupOptions?: readonly TriggerUserGroupOption[];
   dynamicUserGroupOptions?: readonly TriggerDynamicUserGroupOption[];
+};
+
+export type TriggerTestSendState = {
+  message: string;
+  ok: boolean;
 };
 
 type ConditionFieldKey =
@@ -68,6 +81,24 @@ const delayUnitOptions = [
   { value: "hours", label: "Часы" },
   { value: "days", label: "Дни" },
 ] as const;
+
+const triggerMessageFormatOptions: Array<{
+  format: TriggerMessageFormat;
+  label: string;
+}> = [
+  { format: "bold", label: "B" },
+  { format: "italic", label: "I" },
+  { format: "strikethrough", label: "S" },
+  { format: "code", label: "</>" },
+  { format: "pre", label: "{ }" },
+  { format: "blockquote", label: "❝" },
+  { format: "link", label: "Link" },
+];
+
+const initialTestSendState: TriggerTestSendState = {
+  message: "",
+  ok: false,
+};
 
 function isTriggerConditionDraft(
   draft: TriggerConditionDraft | null,
@@ -413,10 +444,12 @@ export function TriggerForm({
   eventOptions,
   initial,
   submitLabel,
+  testSendAction,
   title,
   userGroupOptions = [],
   dynamicUserGroupOptions = [],
 }: TriggerFormProps) {
+  const messageTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [eventKey, setEventKey] = useState(initial.eventKey);
   const [delayValue, setDelayValue] = useState(String(initial.delayValue));
   const [delayUnit, setDelayUnit] = useState<TriggerRuleRecord["delayUnit"]>(initial.delayUnit);
@@ -427,6 +460,13 @@ export function TriggerForm({
     initial.conditions.length > 0
       ? initial.conditions.map((condition) => toConditionDraft(condition)).filter(isTriggerConditionDraft)
       : [],
+  );
+  const [testSendState, testSendFormAction, testSendPending] = useActionState(
+    testSendAction ??
+      (async () => {
+        return initialTestSendState;
+      }),
+    initialTestSendState,
   );
 
   useEffect(() => {
@@ -473,9 +513,34 @@ export function TriggerForm({
     );
   }
 
+  function applyMessageFormat(format: TriggerMessageFormat) {
+    const textarea = messageTextareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    const result = applyTelegramHtmlFormat({
+      format,
+      selectionEnd: textarea.selectionEnd ?? messageText.length,
+      selectionStart: textarea.selectionStart ?? messageText.length,
+      text: messageText,
+    });
+
+    setMessageText(result.nextText);
+
+    queueMicrotask(() => {
+      textarea.focus();
+      textarea.setSelectionRange(
+        result.nextSelectionStart,
+        result.nextSelectionEnd,
+      );
+    });
+  }
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-      <form action={action}>
+    <form action={action}>
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
         <AdminPanel className="space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -653,13 +718,35 @@ export function TriggerForm({
           </div>
 
           <AdminField label="Текст сообщения">
-            <AdminTextarea
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#7f8da3]">
+                  HTML-форматирование
+                </p>
+                <p className="text-xs text-[#7f8da3]">Telegram HTML</p>
+                <div className="flex flex-wrap gap-2">
+                  {triggerMessageFormatOptions.map((option) => (
+                    <AdminButton
+                      data-format={option.format}
+                      key={option.format}
+                      onClick={() => applyMessageFormat(option.format)}
+                      type="button"
+                      variant="secondary"
+                    >
+                      {option.label}
+                    </AdminButton>
+                  ))}
+                </div>
+              </div>
+              <AdminTextarea
               className="min-h-40"
               name="messageText"
               onChange={(event) => setMessageText(event.target.value)}
+              ref={messageTextareaRef}
               required
               value={messageText}
             />
+            </div>
           </AdminField>
 
           <TriggerButtonsEditor initialButtons={initial.buttons} />
@@ -730,9 +817,8 @@ export function TriggerForm({
             </div>
           ) : null}
         </AdminPanel>
-      </form>
 
-      <AdminPanel className="space-y-5">
+        <AdminPanel className="space-y-5">
         <div>
           <h3 className="font-semibold text-[#f4f7fb]">Предпросмотр триггера</h3>
           <p className="mt-1 text-sm text-[#97a4b8]">
@@ -784,7 +870,30 @@ export function TriggerForm({
             </div>
           </div>
         </div>
-      </AdminPanel>
-    </div>
+        <div className="space-y-3">
+          <AdminButton
+            formAction={testSendFormAction}
+            type="submit"
+            variant="secondary"
+          >
+            {testSendPending
+              ? "Отправляем тестовое сообщение..."
+              : "Отправить тестовое сообщение"}
+          </AdminButton>
+          {testSendState.message ? (
+            <div
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                testSendState.ok
+                  ? "border-[#1f6f43] bg-[#12261a] text-[#9ae6b4]"
+                  : "border-[#6b2430] bg-[#2a1218] text-[#fecaca]"
+              }`}
+            >
+              {testSendState.message}
+            </div>
+          ) : null}
+        </div>
+        </AdminPanel>
+      </div>
+    </form>
   );
 }

@@ -6,7 +6,7 @@ import {
   getTriggerEventOptions,
   getTriggerTemplates,
 } from "@/features/triggers/trigger-template";
-import { createTriggerRule } from "../actions";
+import { createTriggerRule, sendTriggerTestMessage } from "../actions";
 import {
   TriggerForm,
   type TriggerDynamicUserGroupOption,
@@ -124,8 +124,9 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
         initial={initial}
         submitLabel="Создать триггер"
         title="Новый триггер"
+        testSendAction={sendTriggerTestMessage}
         userGroupOptions={userGroupOptions}
-      />
+        />
     </section>
   );
 }

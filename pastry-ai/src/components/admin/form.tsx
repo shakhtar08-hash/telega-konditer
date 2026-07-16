@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { forwardRef, type ReactNode } from "react";
 
 export function AdminPanel({
   children,
@@ -58,16 +58,18 @@ export function AdminInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputClassName} ${props.className ?? ""}`} />;
 }
 
-export function AdminTextarea(
-  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-) {
+export const AdminTextarea = forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function AdminTextarea(props, ref) {
   return (
     <textarea
       {...props}
       className={`${inputClassName} min-h-28 resize-y ${props.className ?? ""}`}
+      ref={ref}
     />
   );
-}
+});
 
 export function AdminSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...props} className={`${inputClassName} ${props.className ?? ""}`} />;

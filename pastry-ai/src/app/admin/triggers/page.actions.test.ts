@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   createMock,
   deleteMock,
+  findFirstUserGroupMock,
+  fetchMock,
   redirectMock,
   revalidatePathMock,
   saveAdminImageMock,
@@ -10,6 +12,8 @@ const {
 } = vi.hoisted(() => ({
   createMock: vi.fn(),
   deleteMock: vi.fn(),
+  fetchMock: vi.fn(),
+  findFirstUserGroupMock: vi.fn(),
   redirectMock: vi.fn(() => {
     throw new Error("NEXT_REDIRECT");
   }),
@@ -30,6 +34,19 @@ vi.mock("@/app/admin/_lib/save-admin-image", () => ({
   saveAdminImage: saveAdminImageMock,
 }));
 
+vi.mock("@/lib/env", () => ({
+  loadEnv: vi.fn(() => ({
+    OPENAI_API_KEY: "openai-key",
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_ANON_KEY: "anon",
+    SUPABASE_SERVICE_ROLE_KEY: "service",
+    DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
+    TELEGRAM_BOT_TOKEN: "telegram-token",
+    TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+    CRON_SECRET: "cron-secret",
+  })),
+}));
+
 vi.mock("@/db/prisma", () => ({
   prisma: {
     triggerRule: {
@@ -37,9 +54,13 @@ vi.mock("@/db/prisma", () => ({
       delete: deleteMock,
       update: updateMock,
     },
+    userGroup: {
+      findFirst: findFirstUserGroupMock,
+    },
   },
 }));
 
+import * as triggerActionExports from "./actions";
 import {
   createTriggerRule,
   deleteTriggerRule,
@@ -49,9 +70,11 @@ import {
 describe("trigger rule actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", fetchMock);
     createMock.mockResolvedValue(undefined);
     updateMock.mockResolvedValue(undefined);
     deleteMock.mockResolvedValue(undefined);
+    findFirstUserGroupMock.mockResolvedValue(null);
     saveAdminImageMock.mockImplementation(async ({ manualValue }) => manualValue || null);
   });
 
@@ -199,5 +222,72 @@ describe("trigger rule actions", () => {
 
     await expect(deleteTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
     expect(deleteMock).toHaveBeenCalledWith({ where: { id: "rule_1" } });
+  });
+
+  it("exports a dedicated test-send action for preview delivery", () => {
+    expect(typeof (triggerActionExports as Record<string, unknown>).sendTriggerTestMessage).toBe("function");
+  });
+
+  it("sends the current draft to the exact Админы group via Telegram sendMessage", async () => {
+    const action = (triggerActionExports as Record<string, unknown>).sendTriggerTestMessage as
+      | ((formData: FormData) => Promise<unknown>)
+      | undefined;
+
+    const formData = new FormData();
+    formData.set("messageText", "<b>Hello</b>");
+    formData.set("imageUrl", "");
+    formData.set(
+      "buttons",
+      JSON.stringify([{ text: "Открыть", type: "url", value: "https://example.com" }]),
+    );
+
+    findFirstUserGroupMock.mockResolvedValue({
+      id: "group_admins",
+      memberships: [
+        { user: { telegramId: "1001" } },
+        { user: { telegramId: "1002" } },
+      ],
+      name: "Админы",
+    });
+    fetchMock.mockResolvedValue({
+      json: async () => ({ ok: true }),
+      ok: true,
+    });
+
+    const result = await action?.(formData);
+
+    expect(findFirstUserGroupMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { name: "Админы" },
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.telegram.org/bottelegram-token/sendMessage",
+      expect.objectContaining({
+        body: expect.stringContaining("\"parse_mode\":\"HTML\""),
+        method: "POST",
+      }),
+    );
+    expect(result).toEqual({
+      message: "Тестовое сообщение отправлено: 2",
+      ok: true,
+    });
+  });
+
+  it("rejects test-send when the Админы group is missing", async () => {
+    const action = (triggerActionExports as Record<string, unknown>).sendTriggerTestMessage as
+      | ((formData: FormData) => Promise<unknown>)
+      | undefined;
+
+    const formData = new FormData();
+    formData.set("messageText", "<b>Hello</b>");
+
+    const result = await action?.(formData);
+
+    expect(result).toEqual({
+      message: "Группа «Админы» не найдена.",
+      ok: false,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,11 @@ import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
 import { prisma } from "@/db/prisma";
 import { getTriggerEventOptions } from "@/features/triggers/trigger-template";
 import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
-import { deleteTriggerRule, updateTriggerRule } from "../actions";
+import {
+  deleteTriggerRule,
+  sendTriggerTestMessage,
+  updateTriggerRule,
+} from "../actions";
 import { parseTriggerButtons } from "../trigger-buttons-form";
 import {
   TriggerForm,
@@ -129,6 +133,7 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
         }}
         submitLabel="Сохранить изменения"
         title="Редактирование триггера"
+        testSendAction={sendTriggerTestMessage}
         userGroupOptions={userGroupOptions}
       />
     </section>
