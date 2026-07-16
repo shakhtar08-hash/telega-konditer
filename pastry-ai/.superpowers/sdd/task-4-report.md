@@ -165,3 +165,87 @@ chore: add ru deployment artifacts
 
 - Docker Compose validation from the brief remains unverified here because the local machine does not have Docker installed.
 - The checked-in RU deployment path expects a real `deploy/ru/.env` file to be created from `.env.example` before startup.
+
+## Follow-up Fix
+
+### Reviewer finding addressed
+
+The RU sample environment originally omitted:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+That omission made the checked-in RU deployment path incompatible with the current Phase D startup contract.
+
+### Why this was required
+
+The current runtime contract still boots through `loadEnv()` with `process.env`. In the current codebase, that path throws unless all three Supabase variables are present together:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+So even though the admin runtime table intentionally moved away from Supabase-first display, the RU deployment sample env still has to include the full Supabase trio today for startup compatibility.
+
+### Files updated for the fix
+
+- `deploy/ru/.env.example`
+- `deploy/ru/README.md`
+
+### Fix details
+
+Updated `deploy/ru/.env.example` to add:
+
+- `SUPABASE_URL=`
+- `SUPABASE_ANON_KEY=`
+- `SUPABASE_SERVICE_ROLE_KEY=`
+
+Updated `deploy/ru/README.md` to state that:
+
+- the current boot path still requires the Supabase trio together
+- the RU sample env is intentionally transition-aware and startup-compatible at the same time
+- the internal RU/EU transition URLs may still target the same app during Phase D
+
+### Fresh verification for this follow-up
+
+Command:
+
+```bash
+npm test -- src/app/admin/settings/page.test.tsx
+```
+
+Output:
+
+```text
+> pastry-ai@0.1.0 test
+> vitest run src/app/admin/settings/page.test.tsx
+
+ RUN  v4.1.9 C:/Users/Roof/Documents/Телега/pastry-ai
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+```
+
+Result:
+
+- PASS
+- `1` file passed
+- `1` test passed
+- exit code `0`
+
+### Docker availability
+
+Docker is still unavailable in this local environment, so I could not run:
+
+```bash
+docker compose -f deploy/ru/docker-compose.yml config
+```
+
+Observed output:
+
+```text
+docker : The term 'docker' is not recognized as the name of a cmdlet, function, script file, or operable program.
+```
+
+Even with that limitation, the RU sample env is now startup-compatible with the current runtime contract because it includes the required Supabase trio alongside the Phase D transition variables.
