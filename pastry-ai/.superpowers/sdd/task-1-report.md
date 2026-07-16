@@ -88,3 +88,97 @@ Tests  5 passed (5)
 Created commit:
 
 - `refactor: add transition runtime config`
+
+## Review Fixes - 2026-07-16
+
+Reviewer findings addressed within the same owned scope:
+
+- `src/lib/env.ts`
+- `src/lib/env.test.ts`
+- `src/lib/internal-service-auth.ts`
+- `src/lib/internal-service-auth.test.ts`
+
+### Root Cause
+
+The first Task 1 implementation made the three `SUPABASE_*` variables independently optional in the exported env type. That created two problems:
+
+- partial Supabase configuration was accepted at runtime
+- existing direct Supabase consumers calling `loadEnv()` received `string | undefined` at compile time
+
+### Fix
+
+Updated `loadEnv` so the contract is split cleanly:
+
+- `loadEnv(source)` supports transition parsing where the entire Supabase triple may be absent
+- partial Supabase triples are rejected during validation
+- `loadEnv()` preserves the legacy fully-configured Supabase contract for existing direct consumers
+
+Also expanded auth coverage with negative-path tests for:
+
+- wrong internal shared secret
+- missing internal auth header
+
+Added invalid-config coverage for:
+
+- partial Supabase configuration
+- invalid `APP_REGION`
+
+### RED Evidence For Review Fix
+
+Command:
+
+```bash
+npm test -- src/lib/env.test.ts src/lib/internal-service-auth.test.ts
+```
+
+Result:
+
+- Exit code: `1`
+- `src/lib/env.test.ts` failed on the new partial-Supabase regression test
+
+Observed failure excerpt:
+
+```text
+FAIL  src/lib/env.test.ts > loadEnv transition config > rejects partially configured Supabase settings
+AssertionError: expected [Function] to throw an error
+```
+
+### GREEN Evidence For Review Fix
+
+Command:
+
+```bash
+npm test -- src/lib/env.test.ts src/lib/internal-service-auth.test.ts
+```
+
+Result:
+
+- Exit code: `0`
+- `2` test files passed
+- `9` tests passed
+
+Observed output:
+
+```text
+Test Files  2 passed (2)
+Tests  9 passed (9)
+```
+
+### Typecheck Evidence
+
+Command:
+
+```bash
+npm run typecheck
+```
+
+Result:
+
+- Exit code: `0`
+
+Observed output:
+
+```text
+> pastry-ai@0.1.0 typecheck
+> tsc --noEmit
+```

@@ -12,4 +12,18 @@ describe("isValidInternalServiceRequest", () => {
 
     expect(isValidInternalServiceRequest(request, "shared-secret")).toBe(true);
   });
+
+  it("rejects requests with a different shared secret", () => {
+    const request = new Request("https://example.com", {
+      headers: { [INTERNAL_AUTH_HEADER]: "wrong-secret" },
+    });
+
+    expect(isValidInternalServiceRequest(request, "shared-secret")).toBe(false);
+  });
+
+  it("rejects requests without the internal auth header", () => {
+    const request = new Request("https://example.com");
+
+    expect(isValidInternalServiceRequest(request, "shared-secret")).toBe(false);
+  });
 });

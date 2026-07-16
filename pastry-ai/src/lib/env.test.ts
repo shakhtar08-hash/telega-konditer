@@ -55,4 +55,30 @@ describe("loadEnv transition config", () => {
     expect(env.INTERNAL_API_SHARED_SECRET).toBe("shared-secret");
     expect(env.APP_REGION).toBe("ru");
   });
+
+  it("rejects partially configured Supabase settings", () => {
+    expect(() =>
+      loadEnv({
+        OPENAI_API_KEY: "openai-key",
+        SUPABASE_URL: "https://example.supabase.co",
+        DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
+        TELEGRAM_BOT_TOKEN: "telegram-token",
+        TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+        CRON_SECRET: "cron-secret",
+      }),
+    ).toThrow("Invalid environment");
+  });
+
+  it("rejects invalid transition region values", () => {
+    expect(() =>
+      loadEnv({
+        OPENAI_API_KEY: "openai-key",
+        DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
+        TELEGRAM_BOT_TOKEN: "telegram-token",
+        TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+        CRON_SECRET: "cron-secret",
+        APP_REGION: "us",
+      }),
+    ).toThrow("Invalid environment");
+  });
 });
