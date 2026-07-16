@@ -22,3 +22,37 @@ describe("loadEnv", () => {
     expect(() => loadEnv({})).toThrow("Invalid environment");
   });
 });
+
+describe("loadEnv transition config", () => {
+  it("starts without Supabase variables when core app config is present", () => {
+    const env = loadEnv({
+      OPENAI_API_KEY: "openai-key",
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
+      TELEGRAM_BOT_TOKEN: "telegram-token",
+      TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+      CRON_SECRET: "cron-secret",
+    });
+
+    expect(env.SUPABASE_URL).toBeUndefined();
+    expect(env.DATABASE_URL).toContain("postgresql://");
+  });
+
+  it("parses optional internal routing variables", () => {
+    const env = loadEnv({
+      OPENAI_API_KEY: "openai-key",
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
+      TELEGRAM_BOT_TOKEN: "telegram-token",
+      TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+      CRON_SECRET: "cron-secret",
+      INTERNAL_API_BASE_URL: "http://ru-app:3000",
+      INTERNAL_API_SHARED_SECRET: "shared-secret",
+      INTERNAL_TELEGRAM_INGRESS_URL: "http://ru-app:3000/api/internal/telegram",
+      INTERNAL_AI_GATEWAY_URL: "http://ru-app:3000/api/internal/ai",
+      APP_REGION: "ru",
+      APP_ROLE: "app",
+    });
+
+    expect(env.INTERNAL_API_SHARED_SECRET).toBe("shared-secret");
+    expect(env.APP_REGION).toBe("ru");
+  });
+});

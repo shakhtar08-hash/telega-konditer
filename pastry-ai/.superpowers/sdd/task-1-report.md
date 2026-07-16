@@ -1,53 +1,90 @@
-# Task 1 Report: Extend Usage Schema + Migration
+# Task 1 Report: Runtime Config And Internal Auth
 
-## Status: DONE
+Date: 2026-07-16
+Worktree: `C:\Users\Roof\Documents\Телега\pastry-ai`
 
-## What was implemented
+## Scope
 
-1. **Updated `prisma/schema.prisma`** — Added 7 new fields to the `Usage` model:
-   - `provider` (String, default `""`)
-   - `model` (String?, nullable)
-   - `status` (String, default `"success"`)
-   - `errorMessage` (String?, nullable)
-   - `conversationId` (String?, nullable)
-   - Changed `inputTokens`, `outputTokens`, `cost`, `latency` to have `@default(0)`
+Implemented the Task 1 slice only:
 
-2. **Generated Prisma Client** — `npx prisma generate` succeeded.
+- Modified `src/lib/env.ts`
+- Modified `src/lib/env.test.ts`
+- Created `src/lib/internal-service-auth.ts`
+- Created `src/lib/internal-service-auth.test.ts`
 
-3. **Applied schema changes to database** — Used `npx prisma db push` because `prisma migrate dev` detected drift from previously modified migrations and required a reset. The remote Supabase DB was updated successfully.
+No AI transport, Telegram internal route, admin settings, or deploy artifacts were changed.
 
-4. **Created migration file** — Wrote `prisma/migrations/20260710000000_add_usage_fields/migration.sql` with ALTER TABLE statements for the Usage table, then marked it as applied via `npx prisma migrate resolve --applied 20260710000000_add_usage_fields`.
+## TDD Record
 
-5. **Updated `docs/database.md`** — Added a full `Usage` table documentation section with all field descriptions, and updated the Core Models bullet list.
+### RED
 
-## Commands run
+Added failing tests first for:
 
-| Command | Result |
-|---|---|
-| `npx prisma generate` | ✅ Generated Prisma Client v7.8.0 |
-| `npx prisma db push --accept-data-loss` | ✅ Database is now in sync |
-| `npx prisma migrate resolve --applied 20260710000000_add_usage_fields` | ✅ Migration marked as applied |
-| `npx prisma migrate status` | ✅ Database schema is up to date |
+- transition config loading without any `SUPABASE_*` variables
+- parsing the optional internal routing/runtime variables
+- validating a request carrying the internal shared secret header
 
-## Files changed
+Focused command run exactly as required:
 
-| File | Change |
-|---|---|
-| `prisma/schema.prisma` | Updated Usage model with new fields |
-| `prisma/migrations/20260710000000_add_usage_fields/migration.sql` | New migration file |
-| `docs/database.md` | Added Usage section and updated Core Models list |
+```bash
+npm test -- src/lib/env.test.ts src/lib/internal-service-auth.test.ts
+```
 
-## Issues encountered
+Result:
 
-1. **`prisma migrate dev` failed** — The remote Supabase DB had drift from previously modified migrations (`20260704_add_photostyle_provider_model`). Resolved by using `prisma db push` to apply changes directly, then manually creating the migration file and marking it as applied.
+- Exit code: `1`
+- `src/lib/internal-service-auth.test.ts` failed because `./internal-service-auth` did not exist yet
+- `src/lib/env.test.ts` transition tests failed because `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` were still required
 
-2. **Pre-existing test failures** — 3 test failures existed before this task:
-   - `photoshoot.test.ts` / `vision.test.ts` — Missing `.env` variables (environment setup issue)
-   - `encoding.test.ts` — Mojibake detection in `decisions.md` and `user-service.test.ts`
-   
-   None of these are related to the Usage schema changes.
+Observed failure evidence:
 
-## Test results
+```text
+Error: Cannot find module './internal-service-auth'
+Error: Invalid environment: ... SUPABASE_URL ... SUPABASE_ANON_KEY ... SUPABASE_SERVICE_ROLE_KEY ...
+```
 
-- 59 of 62 test files passed (3 pre-existing failures)
-- 250 of 251 tests passed (1 pre-existing failure)
+### GREEN
+
+Implemented the minimum production changes to satisfy the brief:
+
+- made `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` optional in `src/lib/env.ts`
+- added optional runtime config fields:
+  - `INTERNAL_API_BASE_URL`
+  - `INTERNAL_API_SHARED_SECRET`
+  - `INTERNAL_TELEGRAM_INGRESS_URL`
+  - `INTERNAL_AI_GATEWAY_URL`
+  - `APP_REGION` as `"eu" | "ru"`
+  - `APP_ROLE` as `"ingress" | "app" | "cron"`
+- added `src/lib/internal-service-auth.ts` exporting:
+  - `INTERNAL_AUTH_HEADER = "x-internal-shared-secret"`
+  - `isValidInternalServiceRequest(request, expectedSecret)`
+
+Re-ran the same focused command:
+
+```bash
+npm test -- src/lib/env.test.ts src/lib/internal-service-auth.test.ts
+```
+
+Result:
+
+- Exit code: `0`
+- `2` test files passed
+- `5` tests passed
+
+Observed pass evidence:
+
+```text
+Test Files  2 passed (2)
+Tests  5 passed (5)
+```
+
+## Notes
+
+- Existing env fields outside this task were preserved.
+- The internal auth helper is intentionally minimal and matches the brief exactly by comparing the expected shared secret to the request header value.
+
+## Commit
+
+Created commit:
+
+- `refactor: add transition runtime config`

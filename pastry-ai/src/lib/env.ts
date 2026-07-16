@@ -3,9 +3,9 @@ import { z } from "zod";
 const envSchema = z.object({
   OPENAI_API_KEY: z.string().min(1),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   DATABASE_URL: z.string().min(1),
   DIRECT_URL: z.string().min(1).optional(),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
@@ -19,6 +19,12 @@ const envSchema = z.object({
   CRON_SECRET: z.string().min(1),
   RENDER_CARD_SECRET: z.string().min(1).optional(),
   YOUTUBE_API_KEY: z.string().min(1).optional(),
+  INTERNAL_API_BASE_URL: z.string().url().optional(),
+  INTERNAL_API_SHARED_SECRET: z.string().min(1).optional(),
+  INTERNAL_TELEGRAM_INGRESS_URL: z.string().url().optional(),
+  INTERNAL_AI_GATEWAY_URL: z.string().url().optional(),
+  APP_REGION: z.enum(["eu", "ru"]).optional(),
+  APP_ROLE: z.enum(["ingress", "app", "cron"]).optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
