@@ -1,14 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const afterMock = vi.hoisted(() => vi.fn());
+const fetchMock = vi.hoisted(() => vi.fn());
 const webhookHandlerMock = vi.hoisted(() => vi.fn());
 const webhookCallbackMock = vi.hoisted(() => vi.fn(() => webhookHandlerMock));
 const initMock = vi.hoisted(() => vi.fn());
 const handleUpdateMock = vi.hoisted(() => vi.fn());
-const loadEnvMock = vi.hoisted(() => vi.fn(() => ({
-  TELEGRAM_BOT_TOKEN: "bot-token",
-  TELEGRAM_WEBHOOK_SECRET: "secret",
-})));
+type WebhookEnv = {
+  APP_ROLE?: "ingress" | "app" | "cron";
+  INTERNAL_API_SHARED_SECRET?: string;
+  INTERNAL_TELEGRAM_INGRESS_URL?: string;
+  TELEGRAM_BOT_TOKEN: string;
+  TELEGRAM_WEBHOOK_SECRET: string;
+};
+const loadEnvMock = vi.hoisted(() =>
+  vi.fn<() => WebhookEnv>(() => ({
+    APP_ROLE: undefined,
+    INTERNAL_API_SHARED_SECRET: undefined,
+    INTERNAL_TELEGRAM_INGRESS_URL: undefined,
+    TELEGRAM_BOT_TOKEN: "bot-token",
+    TELEGRAM_WEBHOOK_SECRET: "secret",
+  })),
+);
 const createPastryBotMock = vi.hoisted(() =>
   vi.fn(() => ({ handleUpdate: handleUpdateMock, init: initMock })),
 );
@@ -152,10 +165,19 @@ import {
 describe("isValidTelegramSecret", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", fetchMock);
     webhookHandlerMock.mockResolvedValue(new Response("handled"));
     initMock.mockResolvedValue(undefined);
     handleUpdateMock.mockResolvedValue(undefined);
     claimCreateMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue(new Response("OK", { status: 200 }));
+    loadEnvMock.mockReturnValue({
+      APP_ROLE: undefined,
+      INTERNAL_API_SHARED_SECRET: undefined,
+      INTERNAL_TELEGRAM_INGRESS_URL: undefined,
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_WEBHOOK_SECRET: "secret",
+    });
   });
 
   it("accepts matching secret token", () => {
@@ -247,5 +269,45 @@ describe("isValidTelegramSecret", () => {
     expect(initMock.mock.invocationCallOrder[0]).toBeLessThan(
       handleUpdateMock.mock.invocationCallOrder[0] ?? Infinity,
     );
+  });
+
+  it("forwards public Telegram ingress to the RU internal route when running as the EU gateway", async () => {
+    loadEnvMock.mockReturnValue({
+      APP_ROLE: "ingress",
+      INTERNAL_API_SHARED_SECRET: "internal-secret",
+      INTERNAL_TELEGRAM_INGRESS_URL: "http://10.10.0.1:3000/api/internal/telegram",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_WEBHOOK_SECRET: "secret",
+    });
+
+    const request = new Request("https://example.com/api/telegram/webhook", {
+      body: JSON.stringify({ message: { text: "hi" }, update_id: 43 }),
+      headers: {
+        "content-type": "application/json",
+        "x-telegram-bot-api-secret-token": "secret",
+      },
+      method: "POST",
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("OK");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://10.10.0.1:3000/api/internal/telegram",
+      {
+        body: JSON.stringify({ message: { text: "hi" }, update_id: 43 }),
+        headers: {
+          "content-type": "application/json",
+          "x-internal-shared-secret": "internal-secret",
+        },
+        method: "POST",
+      },
+    );
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(initMock).not.toHaveBeenCalled();
+    expect(handleUpdateMock).not.toHaveBeenCalled();
+    expect(claimCreateMock).not.toHaveBeenCalled();
   });
 });

@@ -77,6 +77,24 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const rawBody = await request.text();
+
+  if (
+    env.APP_ROLE === "ingress" &&
+    env.INTERNAL_TELEGRAM_INGRESS_URL &&
+    env.INTERNAL_API_SHARED_SECRET
+  ) {
+    const response = await fetch(env.INTERNAL_TELEGRAM_INGRESS_URL, {
+      body: rawBody,
+      headers: {
+        "content-type": "application/json",
+        "x-internal-shared-secret": env.INTERNAL_API_SHARED_SECRET,
+      },
+      method: "POST",
+    });
+
+    return new Response(await response.text(), { status: response.status });
+  }
+
   const parsedUpdate = rawBody ? JSON.parse(rawBody) : null;
   const updateId = getTelegramUpdateId(parsedUpdate);
 

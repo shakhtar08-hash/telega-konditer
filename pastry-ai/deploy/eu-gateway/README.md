@@ -14,6 +14,7 @@ It is meant to run alongside the current EU production application, not replace 
 
 - `docker-compose.yml` builds the app from the repository root for a separate gateway container.
 - `.env.example` lists the runtime values needed for the gateway path, including the transition variables required by the current app contract.
+- `GATEWAY_PUBLIC_HOST` defines the public HTTPS hostname that Traefik should expose for production webhook ingress.
 
 ## Start
 
@@ -24,6 +25,8 @@ It is meant to run alongside the current EU production application, not replace 
 ## Notes
 
 - `APP_REGION=eu` and `APP_ROLE=ingress` identify this as the EU gateway role.
+- `GATEWAY_PUBLIC_HOST` should be a public hostname that resolves to the EU server and can receive a TLS certificate through the existing reverse proxy.
 - The current startup contract still requires the full Supabase triple, so those values remain in the template.
 - `INTERNAL_API_BASE_URL`, `INTERNAL_TELEGRAM_INGRESS_URL`, and `INTERNAL_AI_GATEWAY_URL` are transition values and should point to the current internal endpoints until a later phase changes traffic.
 - This deployment coexists with the current EU production app; it does not disable, delete, or cut over the existing live deployment.
+- In ingress mode, the public `/api/telegram/webhook` route forwards the raw Telegram update to RU over WireGuard instead of processing the bot update locally on EU.
