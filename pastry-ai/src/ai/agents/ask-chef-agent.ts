@@ -1,5 +1,6 @@
 import type { PromptRecord } from "@/db/repositories/prompt-repository";
 import type { AIService } from "../provider/ai-service";
+import { appendLisaPersonaInstruction } from "./lisa-persona";
 
 type PromptLoader = {
   load(feature: "ask-chef", slug: string): Promise<PromptRecord>;
@@ -29,7 +30,7 @@ export function createAskChefAgent(dependencies: {
       );
 
       return dependencies.aiService.generateText({
-        system: prompt.systemPrompt,
+        system: appendLisaPersonaInstruction(prompt.systemPrompt),
         prompt: renderedPrompt,
         provider: prompt.provider,
         model: prompt.model,

@@ -10,6 +10,7 @@ type PromptLoader = {
 export type RecipeAgentInput = {
   ingredientsText: string;
   promptSlug?: string;
+  excludeRecipes?: string[];
 };
 
 export function createRecipeAgent(dependencies: {
@@ -41,11 +42,17 @@ export function createRecipeAgent(dependencies: {
             pastryTip: z.string().min(1),
             imagePrompt: z.string().min(1),
           }),
-        ).min(1).max(4),
+        ).min(1).max(1),
       });
 
+      let contract = recipeOutputContract;
+
+      if (input.excludeRecipes && input.excludeRecipes.length > 0) {
+        contract += `\n\nDo NOT return any of these already-given recipes: ${input.excludeRecipes.join(", ")}. The user has already received these recipes — you must return a different recipe that is not similar in name, composition, or concept.`;
+      }
+
       return dependencies.aiService.generateObject({
-        system: `${prompt.systemPrompt}\n\n${recipeOutputContract}`,
+        system: `${prompt.systemPrompt}\n\n${contract}`,
         prompt: renderedPrompt,
         provider: prompt.provider,
         model: prompt.model,
@@ -59,10 +66,8 @@ export function createRecipeAgent(dependencies: {
 const recipeOutputContract = [
   "Return only structured recipe data that matches the response schema.",
   "Do not place user-facing prose outside the schema.",
-  "Return 1 to 4 recipes.",
-  "1 recipe is a normal valid response.",
-  "2-4 recipes are preferred when there are multiple strong options.",
-  "Do not treat 1 recipe as an error or fallback.",
+  "Return exactly 1 recipe.",
+  "Do NOT return multiple recipes.",
   "For each recipe, fill every field completely.",
   "Use Russian for all recipe fields except imagePrompt.",
   "Use English for imagePrompt.",

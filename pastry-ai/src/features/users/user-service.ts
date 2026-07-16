@@ -57,7 +57,7 @@ export function createUserService(dependencies: {
         userId,
       );
 
-      if (existing) {
+      if (existing && existing.expiresAt > new Date()) {
         return existing;
       }
 

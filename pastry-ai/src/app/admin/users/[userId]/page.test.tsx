@@ -19,6 +19,12 @@ vi.mock("@/db/prisma", () => ({
   prisma: prismaMock,
 }));
 
+vi.mock("@/features/dynamic-user-groups/service", () => ({
+  listMatchingDynamicUserGroupsForUser: vi.fn().mockResolvedValue([
+    { id: "dynamic_1", name: "Без активного тарифа" },
+  ]),
+}));
+
 import AdminUserDetailPage from "./page";
 
 describe("AdminUserDetailPage", () => {
@@ -75,5 +81,7 @@ describe("AdminUserDetailPage", () => {
     expect(html).toContain("Новички");
     expect(html).toContain("VIP тариф");
     expect(html).toContain("24");
+    expect(html).toContain("Динамические группы");
+    expect(html).toContain("Без активного тарифа");
   });
 });

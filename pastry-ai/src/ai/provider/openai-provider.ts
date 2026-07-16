@@ -7,6 +7,7 @@ import {
 import { resolveManagedApiKey } from "@/lib/api-secrets";
 import type { AIService, GenerateImageInput } from "./ai-service";
 import { generateFluxKontextImage } from "./kie-provider";
+import { assertAllowedImageUrl } from "@/lib/image-url-validator";
 
 export function createOpenAIAIService(): AIService {
   return {
@@ -18,7 +19,8 @@ export function createOpenAIAIService(): AIService {
         temperature: input.temperature,
       };
       const result = input.imageUrl
-        ? await generateText({
+        ? (assertAllowedImageUrl(input.imageUrl, "openai-provider generateText"),
+          await generateText({
             ...shared,
             timeout: 120000,
             messages: [
@@ -34,7 +36,7 @@ export function createOpenAIAIService(): AIService {
                 ],
               },
             ],
-          })
+          }))
         : await generateText({
             ...shared,
             prompt: input.prompt,
@@ -52,7 +54,8 @@ export function createOpenAIAIService(): AIService {
         schema: input.schema,
       };
       const result = input.imageUrl
-        ? await generateObject({
+        ? (assertAllowedImageUrl(input.imageUrl, "openai-provider generateObject"),
+          await generateObject({
             ...shared,
             messages: [
               {
@@ -67,7 +70,7 @@ export function createOpenAIAIService(): AIService {
                 ],
               },
             ],
-          })
+          }))
         : await generateObject({
             ...shared,
             prompt: input.prompt,
@@ -123,6 +126,8 @@ async function generateImageEdit(input: {
   model: string;
   size?: "1024x1024" | "1024x1536" | "1536x1024";
 }) {
+  assertAllowedImageUrl(input.imageUrl, "openai-provider generateImageEdit");
+
   const apiKey = await resolveManagedApiKey("OPENAI_API_KEY");
 
   if (!apiKey) {
@@ -184,7 +189,8 @@ async function generateFluxImage(input: GenerateImageInput) {
       baseURL: "https://openrouter.ai/api/v1",
     }).image(input.model),
     prompt: input.imageUrl
-      ? { text: input.prompt, images: [input.imageUrl] }
+      ? (assertAllowedImageUrl(input.imageUrl, "openai-provider generateFluxImage"),
+        { text: input.prompt, images: [input.imageUrl] })
       : input.prompt,
     size: input.size ?? "1024x1024",
   });

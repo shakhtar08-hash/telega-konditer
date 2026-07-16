@@ -1,0 +1,1624 @@
+COMMITS
+
+7ad83e82 fix: make trigger legacy bridge fail loudly
+2685b663 fix: isolate trigger legacy compatibility
+f1882172 fix: address trigger list review feedback
+33f2b5f3 feat: redesign trigger list screen
+
+STAT
+
+ .../sdd/trigger-automation-task-4-report.md        | 229 +++++++
+ .../src/app/admin/triggers/page.actions.test.ts    | 243 +-------
+ .../src/app/admin/triggers/page.legacy-actions.ts  |  31 +
+ pastry-ai/src/app/admin/triggers/page.test.tsx     | 134 ++--
+ pastry-ai/src/app/admin/triggers/page.tsx          | 676 ++++++++++-----------
+ .../src/features/triggers/trigger-template.ts      | 120 ++++
+ 6 files changed, 776 insertions(+), 657 deletions(-)
+
+DIFF
+
+diff --git a/pastry-ai/.superpowers/sdd/trigger-automation-task-4-report.md b/pastry-ai/.superpowers/sdd/trigger-automation-task-4-report.md
+new file mode 100644
+index 00000000..9bea6f65
+--- /dev/null
++++ b/pastry-ai/.superpowers/sdd/trigger-automation-task-4-report.md
+@@ -0,0 +1,229 @@
++# Trigger Automation Task 4 Report
++
++## Scope
++
++- Created `src/features/triggers/trigger-template.ts`
++- Rebuilt `src/app/admin/triggers/page.tsx`
++- Replaced `src/app/admin/triggers/page.test.tsx`
++
++## What Changed
++
++### 1. Added reusable trigger templates and event metadata
++
++Created `getTriggerTemplates()` with the initial quick-start set for:
++
++- `After Start: no promo`
++- `After Start: did not begin using`
++- `Promo granted but unused`
++- `Promo expired`
++- `Promo expired after active usage`
++- `Paid but not activated`
++- `Inactive for 7 days`
++
++Also added `getTriggerEventOptions()` so the list screen can render product-language event labels and descriptions instead of raw event keys as the primary UI label.
++
++### 2. Replaced the old grouped slug admin screen
++
++Removed the legacy grouped `triggerMessage` / slug-based layout and rebuilt the page around `TriggerRule` records.
++
++The new page now provides:
++
++- left support rail with `Ready templates`
++- left support rail with `System events`
++- right management panel with top-right `Create trigger`
++- filter row using `search`, `event`, `status`, and `sort`
++- trigger table with name, event, send timing, condition summary, status, and open action
++
++### 3. Implemented list filtering in the new page
++
++The page now consumes query params:
++
++- `event`
++- `status`
++- `search`
++- `sort`
++
++Filtering is applied in-memory after loading `TriggerRule` rows, which kept the rewrite simple and aligned with the current test setup.
++
++### 4. Replaced the page tests for the new screen
++
++Removed the old slug-group expectations and added coverage for:
++
++- rendering the templates panel and trigger table
++- applying `event` + `status` + `search` + `sort` filters to the table rows
++
++## TDD / Verification
++
++### Red
++
++Ran:
++
++`npm test -- src/app/admin/triggers/page.test.tsx`
++
++Observed expected failure against the old page because it still referenced `prisma.triggerMessage.findMany(...)`.
++
++### Green
++
++After the rewrite, ran:
++
++`npm test -- src/app/admin/triggers/page.test.tsx`
++
++Result: PASS, 2 tests passed.
++
++### Additional verification
++
++Ran:
++
++`npx eslint src/app/admin/triggers/page.tsx src/app/admin/triggers/page.test.tsx src/features/triggers/trigger-template.ts`
++
++Result: PASS.
++
++---
++
++## Final Compatibility Follow-Up
++
++The dedicated legacy compatibility module was adjusted again so it no longer silently succeeds.
++
++### What changed
++
++- Updated `src/app/admin/triggers/page.legacy-actions.ts`
++  - `createTriggerMessage`
++  - `updateTriggerMessage`
++  - `deleteTriggerMessage`
++- Each compatibility export now immediately throws a clear error:
++  - legacy trigger actions moved out of the Task 4 list page
++  - Task 5 replaces this compatibility surface with real TriggerRule actions
++
++### Why this is safer
++
++- no silent success
++- no fake persistence behavior
++- no Prisma access to deleted models or fields
++- adjacent imports remain explicit and safe until Task 5 lands
++
++### Final focused verification
++
++Ran:
++
++`npm test -- src/app/admin/triggers/page.actions.test.ts`
++
++Result: PASS, 3 tests passed.
++
++Ran:
++
++`npx eslint src/app/admin/triggers/page.legacy-actions.ts src/app/admin/triggers/page.actions.test.ts`
++
++Result: PASS.
++
++## Minor Adaptation From The Brief
++
++One test example in the brief used `expect(html).not.toContain("Promo expired")` to prove filtered rows were removed.
++
++Because the new left template panel correctly includes a `Promo expired` template, I adapted that assertion to check the management table row path instead:
++
++- present: `/admin/triggers/rule_1`
++- absent: `/admin/triggers/rule_2`
++
++This preserves the behavior goal while matching the intended two-panel screen composition.
++
++## Concerns
++
++- `src/app/admin/triggers/page.tsx` no longer exports the old legacy server actions. That is intentional for this task because those actions still depend on removed `triggerMessage` fields and are planned to move into the Task 5 create/edit flow.
++- I verified the page test and lint only for the touched Task 4 files. I did not run the full suite because this repo already contains many unrelated in-progress edits outside Task 4.
++
++## Commit
++
++- `feat: redesign trigger list screen`
++
++---
++
++## Review Fixes
++
++Follow-up review findings were addressed with a narrow patch set.
++
++### 1. Removed onboarding wording from trigger automation copy
++
++- Updated the `user.started` event description in `src/features/triggers/trigger-template.ts`
++- New wording keeps `/start` trigger automation framed as follow-up / comeback behavior, without describing onboarding as part of trigger automation
++
++### 2. Replaced the mojibake separator in template subtitles
++
++- Updated the template subtitle rendering in `src/app/admin/triggers/page.tsx`
++- Replaced the bad separator with a clean ASCII ` - `
++
++### 3. Restored the neighboring legacy action import surface
++
++- Added a minimal adjacent compatibility file: `src/app/admin/triggers/page.legacy-actions.ts`
++- Re-exported `createTriggerMessage`, `updateTriggerMessage`, and `deleteTriggerMessage` from `src/app/admin/triggers/page.tsx`
++- Kept the bridge intentionally narrow so Task 4 does not leave `src/app/admin/triggers/page.actions.test.ts` broken before Task 5 replaces that legacy path
++
++This was the smallest safe compatibility strategy because the neighboring test imports those names directly from `./page`.
++
++## Fresh Verification Evidence
++
++### Red verification for the review findings
++
++Ran:
++
++`npm test -- src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.actions.test.ts`
++
++Observed expected failures:
++
++- `page.test.tsx` failed because the rendered HTML still contained the bad separator and onboarding wording
++- `page.actions.test.ts` failed because `createTriggerMessage`, `updateTriggerMessage`, and `deleteTriggerMessage` were no longer exported from `./page`
++
++### Green verification after the fixes
++
++Ran:
++
++`npm test -- src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.actions.test.ts`
++
++Result: PASS, 9 tests passed.
++
++### Fresh lint verification
++
++Ran:
++
++`npx eslint src/app/admin/triggers/page.tsx src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.legacy-actions.ts src/features/triggers/trigger-template.ts`
++
++Result: PASS.
++
++---
++
++## Re-Review Follow-Up
++
++The previous compatibility bridge was too risky because it re-exposed legacy action names from the real Task 4 page module.
++
++### What changed
++
++1. Removed legacy action re-exports from `src/app/admin/triggers/page.tsx`
++   - The real trigger list page is now clean again and exposes only the Task 4 list screen runtime.
++
++2. Replaced the dedicated compatibility module with an honest inert placeholder
++   - `src/app/admin/triggers/page.legacy-actions.ts` now exports import-compatible async placeholders only.
++   - These placeholders do not touch Prisma at all.
++   - They do not reference deleted `triggerMessage` or `scheduledMessage.triggerMessageId` schema paths.
++
++3. Moved the neighboring legacy test onto the dedicated compatibility module
++   - `src/app/admin/triggers/page.actions.test.ts` now imports from `./page.legacy-actions`
++   - The adjacent suite now verifies that the temporary compatibility exports remain callable and inert instead of exercising deleted legacy persistence behavior through the real page module.
++
++### Why this is safer
++
++- The Task 4 page runtime is no longer coupled to legacy action names.
++- No compatibility path points at removed Prisma models or fields.
++- The remaining compatibility module is explicit about being temporary until Task 5 replaces it with the new TriggerRule action flow.
++
++## Fresh Verification Evidence For The Re-Review Fix
++
++Ran:
++
++`npm test -- src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.actions.test.ts`
++
++Result: PASS, 5 tests passed.
++
++Ran:
++
++`npx eslint src/app/admin/triggers/page.tsx src/app/admin/triggers/page.test.tsx src/app/admin/triggers/page.legacy-actions.ts src/app/admin/triggers/page.actions.test.ts src/features/triggers/trigger-template.ts`
++
++Result: PASS.
+diff --git a/pastry-ai/src/app/admin/triggers/page.actions.test.ts b/pastry-ai/src/app/admin/triggers/page.actions.test.ts
+index 89fe3451..de1c30be 100644
+--- a/pastry-ai/src/app/admin/triggers/page.actions.test.ts
++++ b/pastry-ai/src/app/admin/triggers/page.actions.test.ts
+@@ -1,251 +1,62 @@
+-import { beforeEach, describe, expect, it, vi } from "vitest";
++import { describe, expect, it, vi } from "vitest";
+ 
+ const {
+-  createMock,
+-  updateMock,
+-  deleteMock,
+-  findManyMock,
+-  findFirstMock,
+-  findUniqueMock,
+-  findFirstScheduledMock,
+-  findManyScheduledMock,
+-  updateManyScheduledMock,
+-  updateScheduledMock,
+-  deleteManyScheduledMock,
+-  transactionMock,
+   redirectMock,
+   revalidatePathMock,
+ } = vi.hoisted(() => ({
+-  createMock: vi.fn(),
+-  updateMock: vi.fn(),
+-  deleteMock: vi.fn(),
+-  findManyMock: vi.fn(),
+-  findFirstMock: vi.fn(),
+-  findUniqueMock: vi.fn(),
+-  findFirstScheduledMock: vi.fn(),
+-  findManyScheduledMock: vi.fn(),
+-  updateManyScheduledMock: vi.fn(),
+-  updateScheduledMock: vi.fn(),
+-  deleteManyScheduledMock: vi.fn(),
+-  transactionMock: vi.fn(),
+   redirectMock: vi.fn(() => {
+     throw new Error("NEXT_REDIRECT");
+   }),
+   revalidatePathMock: vi.fn(),
+ }));
+ 
+ vi.mock("next/cache", () => ({
+   revalidatePath: revalidatePathMock,
+ }));
+ 
+ vi.mock("next/navigation", () => ({
+   redirect: redirectMock,
+ }));
+ 
+-vi.mock("@/db/prisma", () => ({
+-  prisma: {
+-    $transaction: transactionMock,
+-    tariffPlan: {
+-      findMany: findManyMock,
+-    },
+-    triggerMessage: {
+-      create: createMock,
+-      update: updateMock,
+-      delete: deleteMock,
+-      findFirst: findFirstMock,
+-      findUnique: findUniqueMock,
+-      findMany: findManyMock,
+-    },
+-    scheduledMessage: {
+-      findFirst: findFirstScheduledMock,
+-      findMany: findManyScheduledMock,
+-      update: updateScheduledMock,
+-      updateMany: updateManyScheduledMock,
+-      deleteMany: deleteManyScheduledMock,
+-    },
+-  },
+-}));
+-
+-import { createTriggerMessage, updateTriggerMessage, deleteTriggerMessage } from "./page";
+-
+-describe("trigger actions", () => {
+-  beforeEach(() => {
+-    vi.clearAllMocks();
+-    createMock.mockResolvedValue({ id: "new_trigger" });
+-    updateMock.mockResolvedValue(undefined);
+-    deleteMock.mockResolvedValue(undefined);
+-    findManyMock.mockResolvedValue([{ slug: "promo" }]);
+-    findUniqueMock.mockResolvedValue(null);
+-    findFirstMock.mockResolvedValue(null);
+-    transactionMock.mockImplementation((fnOrArray: unknown) => {
+-      if (typeof fnOrArray === "function") {
+-        return fnOrArray({
+-          triggerMessage: {
+-            update: updateMock,
+-            delete: deleteMock,
+-          },
+-          scheduledMessage: {
+-            findMany: findManyScheduledMock,
+-            update: updateScheduledMock,
+-            deleteMany: deleteManyScheduledMock,
+-          },
+-        });
+-      }
+-      if (Array.isArray(fnOrArray)) {
+-        return Promise.all(fnOrArray.map((op) => (typeof op === "function" ? op() : op)));
+-      }
+-      return Promise.resolve([]);
+-    });
+-    findManyScheduledMock.mockResolvedValue([]);
+-  });
+-
+-  it("redirects with a friendly duplicate-delay error on create", async () => {
+-    findFirstMock.mockResolvedValue({ id: "existing_message" });
+-
+-    const formData = new FormData();
+-    formData.set("slug", "after-start");
+-    formData.set("title", "После старта");
+-    formData.set("text", "Текст");
+-    formData.set("delayMinutes", "15");
+-    formData.set("target_promo", "on");
+-
+-    await expect(createTriggerMessage(formData)).rejects.toThrow("NEXT_REDIRECT");
+-
+-    expect(redirectMock).toHaveBeenCalledWith(
+-      "/admin/triggers?error=duplicate-delay&slug=after-start&delayMinutes=15",
+-    );
+-  });
+-
+-  it("creates trigger message when slug + delayMinutes is unique", async () => {
+-    const formData = new FormData();
+-    formData.set("slug", "after-start");
+-    formData.set("title", "После старта");
+-    formData.set("text", "Текст");
+-    formData.set("delayMinutes", "30");
+-    formData.set("target_promo", "on");
+-
+-    await createTriggerMessage(formData);
+-
+-    expect(createMock).toHaveBeenCalledWith(
+-      expect.objectContaining({
+-        data: expect.objectContaining({
+-          slug: "after-start",
+-          delayMinutes: 30,
+-        }),
+-      }),
+-    );
+-    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
+-  });
+-
+-  it("stores manual imageUrl on create", async () => {
+-    const formData = new FormData();
+-    formData.set("slug", "after-start");
+-    formData.set("title", "После старта");
+-    formData.set("text", "Текст");
+-    formData.set("delayMinutes", "15");
+-    formData.set("imageUrl", "/uploads/admin/triggers/start.webp");
+-    formData.set("target_promo", "on");
+-
+-    await createTriggerMessage(formData);
+-
+-    expect(createMock).toHaveBeenCalledWith(
+-      expect.objectContaining({
+-        data: expect.objectContaining({
+-          imageUrl: "/uploads/admin/triggers/start.webp",
+-        }),
+-      }),
+-    );
+-  });
++import {
++  createTriggerMessage,
++  deleteTriggerMessage,
++  updateTriggerMessage,
++} from "./page.legacy-actions";
+ 
+-  it("stores manual imageUrl on update", async () => {
++describe("legacy trigger action compatibility", () => {
++  it("fails loudly for createTriggerMessage", async () => {
+     const formData = new FormData();
+-    formData.set("id", "trigger_1");
+     formData.set("slug", "after-start");
+-    formData.set("title", "После старта");
+-    formData.set("text", "Текст");
+-    formData.set("delayMinutes", "30");
+-    formData.set("imageUrl", "/uploads/admin/triggers/edited.webp");
+-    formData.set("target_promo", "on");
+-    formData.set("active", "on");
+-
+-    await updateTriggerMessage(formData);
++    formData.set("title", "Legacy");
+ 
+-    expect(updateMock).toHaveBeenCalledWith(
+-      expect.objectContaining({
+-        data: expect.objectContaining({
+-          imageUrl: "/uploads/admin/triggers/edited.webp",
+-        }),
+-      }),
++    await expect(createTriggerMessage(formData)).rejects.toThrow(
++      "Legacy trigger actions moved out of the Task 4 list page. Task 5 replaces this compatibility surface with TriggerRule actions.",
+     );
++    expect(redirectMock).not.toHaveBeenCalled();
++    expect(revalidatePathMock).not.toHaveBeenCalled();
+   });
+ 
+-  it("redirects with duplicate-delay error on update when delay collides", async () => {
+-    findFirstMock.mockResolvedValue({ id: "other_trigger" });
+-
++  it("fails loudly for updateTriggerMessage", async () => {
+     const formData = new FormData();
+-    formData.set("id", "trigger_1");
+-    formData.set("slug", "after-start");
+-    formData.set("title", "После старта");
+-    formData.set("text", "Текст");
+-    formData.set("delayMinutes", "15");
+-    formData.set("target_promo", "on");
+-    formData.set("active", "on");
+-
+-    await expect(updateTriggerMessage(formData)).rejects.toThrow("NEXT_REDIRECT");
++    formData.set("id", "legacy_1");
++    formData.set("title", "Legacy");
+ 
+-    expect(redirectMock).toHaveBeenCalledWith(
+-      "/admin/triggers?error=duplicate-delay&slug=after-start&delayMinutes=15",
++    await expect(updateTriggerMessage(formData)).rejects.toThrow(
++      "Legacy trigger actions moved out of the Task 4 list page. Task 5 replaces this compatibility surface with TriggerRule actions.",
+     );
++    expect(redirectMock).not.toHaveBeenCalled();
++    expect(revalidatePathMock).not.toHaveBeenCalled();
+   });
+ 
+-  it("recalculates sendAt for unsent rows on update", async () => {
+-    findFirstMock.mockResolvedValue(null);
+-    findManyScheduledMock.mockResolvedValue([
+-      { id: "s1", triggeredAt: new Date("2026-07-10T17:00:00.000Z") },
+-      { id: "s2", triggeredAt: new Date("2026-07-10T18:00:00.000Z") },
+-    ]);
+-
++  it("fails loudly for deleteTriggerMessage", async () => {
+     const formData = new FormData();
+-    formData.set("id", "trigger_1");
+-    formData.set("slug", "after-start");
+-    formData.set("title", "После старта");
+-    formData.set("text", "Новый текст");
+-    formData.set("delayMinutes", "45");
+-    formData.set("target_promo", "on");
+-    formData.set("active", "on");
++    formData.set("id", "legacy_1");
+ 
+-    await updateTriggerMessage(formData);
+-
+-    expect(updateMock).toHaveBeenCalledWith(
+-      expect.objectContaining({
+-        where: { id: "trigger_1" },
+-        data: expect.objectContaining({
+-          title: "После старта",
+-          delayMinutes: 45,
+-        }),
+-      }),
++    await expect(deleteTriggerMessage(formData)).rejects.toThrow(
++      "Legacy trigger actions moved out of the Task 4 list page. Task 5 replaces this compatibility surface with TriggerRule actions.",
+     );
+-
+-    expect(findManyScheduledMock).toHaveBeenCalledWith({
+-      where: { triggerMessageId: "trigger_1", sentAt: null },
+-      select: { id: true, triggeredAt: true },
+-    });
+-
+-    expect(updateScheduledMock).toHaveBeenCalledTimes(2);
+-  });
+-
+-  it("deletes unsent scheduled rows on delete", async () => {
+-    deleteManyScheduledMock.mockResolvedValue({ count: 2 });
+-
+-    const formData = new FormData();
+-    formData.set("id", "trigger_1");
+-
+-    await deleteTriggerMessage(formData);
+-
+-    expect(deleteManyScheduledMock).toHaveBeenCalledWith({
+-      where: { triggerMessageId: "trigger_1", sentAt: null },
+-    });
+-
+-    expect(deleteMock).toHaveBeenCalledWith({ where: { id: "trigger_1" } });
++    expect(redirectMock).not.toHaveBeenCalled();
++    expect(revalidatePathMock).not.toHaveBeenCalled();
+   });
+-});
+\ No newline at end of file
++});
+diff --git a/pastry-ai/src/app/admin/triggers/page.legacy-actions.ts b/pastry-ai/src/app/admin/triggers/page.legacy-actions.ts
+new file mode 100644
+index 00000000..e101e89c
+--- /dev/null
++++ b/pastry-ai/src/app/admin/triggers/page.legacy-actions.ts
+@@ -0,0 +1,31 @@
++// Temporary compatibility surface for adjacent legacy tests.
++// Task 4 removed the old triggerMessage-based admin runtime path.
++// These exports now fail loudly so nothing can silently appear to succeed
++// before Task 5 replaces them with real TriggerRule create/edit actions.
++
++const LEGACY_ACTION_ERROR =
++  "Legacy trigger actions moved out of the Task 4 list page. Task 5 replaces this compatibility surface with TriggerRule actions.";
++
++export async function createTriggerMessage(formData: FormData) {
++  "use server";
++
++  void formData;
++
++  throw new Error(LEGACY_ACTION_ERROR);
++}
++
++export async function updateTriggerMessage(formData: FormData) {
++  "use server";
++
++  void formData;
++
++  throw new Error(LEGACY_ACTION_ERROR);
++}
++
++export async function deleteTriggerMessage(formData: FormData) {
++  "use server";
++
++  void formData;
++
++  throw new Error(LEGACY_ACTION_ERROR);
++}
+diff --git a/pastry-ai/src/app/admin/triggers/page.test.tsx b/pastry-ai/src/app/admin/triggers/page.test.tsx
+index c52b2b8d..66a7b32c 100644
+--- a/pastry-ai/src/app/admin/triggers/page.test.tsx
++++ b/pastry-ai/src/app/admin/triggers/page.test.tsx
+@@ -1,123 +1,103 @@
+ import { beforeEach, describe, expect, it, vi } from "vitest";
+ import { renderToStaticMarkup } from "react-dom/server";
+ 
+ const { prismaMock } = vi.hoisted(() => ({
+   prismaMock: {
+-    triggerMessage: {
+-      findMany: vi.fn(),
+-    },
+-    tariffPlan: {
++    triggerRule: {
+       findMany: vi.fn(),
+     },
+   },
+ }));
+ 
+ vi.mock("@/db/prisma", () => ({
+   prisma: prismaMock,
+ }));
+ 
+ vi.mock("@/components/admin/chat-bot-subnav", () => ({
+   default: () => "<nav>subnav</nav>",
+ }));
+ 
+ import AdminTriggersPage from "./page";
+ 
+ describe("AdminTriggersPage", () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
+-    prismaMock.tariffPlan.findMany.mockResolvedValue([{ slug: "promo", name: "Промо" }]);
+   });
+ 
+-  it("renders trigger rules grouped by slug", async () => {
+-    prismaMock.triggerMessage.findMany.mockResolvedValue([
+-      {
+-        id: "t1",
+-        slug: "after-start",
+-        title: "15 мин",
+-        text: "Первое",
+-        imageUrl: null,
+-        delayMinutes: 15,
+-        targetPlans: ["promo"],
+-        active: true,
+-        createdAt: new Date(),
+-        updatedAt: new Date(),
+-      },
++  it("renders the templates panel and trigger table", async () => {
++    prismaMock.triggerRule.findMany.mockResolvedValue([
+       {
+-        id: "t2",
+-        slug: "after-start",
+-        title: "60 мин",
+-        text: "Второе",
++        id: "rule_1",
++        name: "After Start: no promo",
++        eventKey: "user.started",
++        status: "active",
++        delayValue: 15,
++        delayUnit: "minutes",
++        messageText: "Hello!",
+         imageUrl: null,
+-        delayMinutes: 60,
+-        targetPlans: ["promo"],
+-        active: true,
++        buttons: null,
++        conditions: [],
+         createdAt: new Date(),
+         updatedAt: new Date(),
+       },
+     ]);
+ 
+     const html = renderToStaticMarkup(await AdminTriggersPage({}));
+ 
+-    expect(html).toContain("after-start");
+-    expect(html).toContain("15 мин");
+-    expect(html).toContain("60 мин");
+-    expect(html).toContain("Добавить сообщение в правило");
++    expect(html).toContain("Ready templates");
++    expect(html).toContain("After Start: no promo");
++    expect(html).toContain("Pressed Start - In 15 minutes");
++    expect(html).not.toContain("onboarding");
++    expect(html).not.toContain("В·");
++    expect(html).toContain("Create trigger");
+   });
+ 
+-  it("renders multiple rule groups with independent slugs", async () => {
+-    prismaMock.triggerMessage.findMany.mockResolvedValue([
++  it("applies event and status filters to trigger rows", async () => {
++    prismaMock.triggerRule.findMany.mockResolvedValue([
+       {
+-        id: "t1",
+-        slug: "after-start",
+-        title: "15 мин",
+-        text: "Первое",
++        id: "rule_1",
++        name: "After Start: no promo",
++        eventKey: "user.started",
++        status: "active",
++        delayValue: 15,
++        delayUnit: "minutes",
++        messageText: "Hello!",
+         imageUrl: null,
+-        delayMinutes: 15,
+-        targetPlans: ["promo"],
+-        active: true,
+-        createdAt: new Date(),
+-        updatedAt: new Date(),
++        buttons: null,
++        conditions: [],
++        createdAt: new Date("2026-07-10T10:00:00.000Z"),
++        updatedAt: new Date("2026-07-10T10:00:00.000Z"),
+       },
+       {
+-        id: "t2",
+-        slug: "after-payment",
+-        title: "После оплаты",
+-        text: "Спасибо",
++        id: "rule_2",
++        name: "Promo expired",
++        eventKey: "promo.expired",
++        status: "draft",
++        delayValue: 5,
++        delayUnit: "minutes",
++        messageText: "Come back!",
+         imageUrl: null,
+-        delayMinutes: 10,
+-        targetPlans: ["pastry-chef"],
+-        active: true,
+-        createdAt: new Date(),
+-        updatedAt: new Date(),
++        buttons: null,
++        conditions: [],
++        createdAt: new Date("2026-07-11T10:00:00.000Z"),
++        updatedAt: new Date("2026-07-11T10:00:00.000Z"),
+       },
+     ]);
+ 
+-    const html = renderToStaticMarkup(await AdminTriggersPage({}));
+-
+-    expect(html).toContain("after-start");
+-    expect(html).toContain("after-payment");
+-    expect(html).toContain("Создать правило");
+-  });
+-
+-  it("shows slug as non-editable in rule groups", async () => {
+-    prismaMock.triggerMessage.findMany.mockResolvedValue([
+-      {
+-        id: "t1",
+-        slug: "after-start",
+-        title: "15 мин",
+-        text: "Первое",
+-        imageUrl: null,
+-        delayMinutes: 15,
+-        targetPlans: ["promo"],
+-        active: true,
+-        createdAt: new Date(),
+-        updatedAt: new Date(),
+-      },
+-    ]);
+-
+-    const html = renderToStaticMarkup(await AdminTriggersPage({}));
++    const html = renderToStaticMarkup(
++      await AdminTriggersPage({
++        searchParams: Promise.resolve({
++          event: "user.started",
++          status: "active",
++          search: "After Start",
++          sort: "name-asc",
++        }),
++      }),
++    );
+ 
+-    expect(html).toContain("after-start");
+-    expect(html).toContain("slug не редактируется");
++    expect(html).toContain("After Start: no promo");
++    expect(html).toContain("/admin/triggers/rule_1");
++    expect(html).not.toContain("/admin/triggers/rule_2");
++    expect(html).toContain("Search triggers...");
+   });
+-});
+\ No newline at end of file
++});
+diff --git a/pastry-ai/src/app/admin/triggers/page.tsx b/pastry-ai/src/app/admin/triggers/page.tsx
+index 34075400..218e8587 100644
+--- a/pastry-ai/src/app/admin/triggers/page.tsx
++++ b/pastry-ai/src/app/admin/triggers/page.tsx
+@@ -1,419 +1,367 @@
+-import { Plus, Save, Trash2 } from "lucide-react";
+-import { revalidatePath } from "next/cache";
+-import { redirect } from "next/navigation";
++import type { TriggerRule } from "@prisma/client";
++import Link from "next/link";
+ import { AdminPageHeader } from "@/components/admin/data-table";
+ import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
+-import {
+-  AdminButton,
+-  AdminField,
+-  AdminImageField,
+-  AdminInput,
+-  AdminPanel,
+-  AdminTextarea,
+-  AdminToggle,
+-} from "@/components/admin/form";
++import { AdminInput, AdminPanel, AdminSelect } from "@/components/admin/form";
+ import { prisma } from "@/db/prisma";
++import {
++  getTriggerEventOptions,
++  getTriggerTemplates,
++} from "@/features/triggers/trigger-template";
++import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
+ 
+ export const dynamic = "force-dynamic";
+ 
+-async function parseTargetTariffs(formData: FormData, tariffs: Array<{ slug: string }>) {
+-  const targetPlans: string[] = [];
+-  for (const tariff of tariffs) {
+-    if (formData.get(`target_${tariff.slug}`) === "on") {
+-      targetPlans.push(tariff.slug);
+-    }
+-  }
+-  return targetPlans;
++type SearchParams = {
++  event?: string;
++  search?: string;
++  sort?: string;
++  status?: string;
++};
++
++type TriggerRuleRow = Pick<
++  TriggerRule,
++  | "id"
++  | "name"
++  | "eventKey"
++  | "status"
++  | "delayValue"
++  | "delayUnit"
++  | "conditions"
++  | "createdAt"
++  | "updatedAt"
++>;
++
++const statusOptions = [
++  { value: "all", label: "All statuses" },
++  { value: "active", label: "Active" },
++  { value: "draft", label: "Draft" },
++  { value: "disabled", label: "Disabled" },
++] as const;
++
++const sortOptions = [
++  { value: "updated-desc", label: "Recently updated" },
++  { value: "created-desc", label: "Recently created" },
++  { value: "name-asc", label: "Name A-Z" },
++  { value: "name-desc", label: "Name Z-A" },
++] as const;
++
++function getEventLabel(eventKey: string) {
++  return (
++    getTriggerEventOptions().find((option) => option.key === eventKey)?.label ?? eventKey
++  );
+ }
+ 
+-export async function createTriggerMessage(formData: FormData) {
+-  "use server";
+-
+-  const slug = String(formData.get("slug") ?? "").trim();
+-  const title = String(formData.get("title") ?? "").trim();
+-  const text = String(formData.get("text") ?? "").trim();
+-  const delayMinutes = Number(formData.get("delayMinutes"));
+-  const imageUrl = String(formData.get("imageUrl") ?? "").trim() || null;
+-
+-  if (!slug || !title || !text || Number.isNaN(delayMinutes)) return;
+-
+-  const tariffs = await prisma.tariffPlan.findMany({ select: { slug: true } });
+-  const targetPlans = await parseTargetTariffs(formData, tariffs);
++function formatDelay(delayValue: number, delayUnit: TriggerRuleRow["delayUnit"]) {
++  if (delayUnit === "now") {
++    return "Now";
++  }
+ 
+-  if (targetPlans.length === 0) return;
++  const unitLabel =
++    delayValue === 1
++      ? delayUnit.slice(0, -1)
++      : delayUnit;
+ 
+-  const duplicate = await prisma.triggerMessage.findFirst({
+-    where: { slug, delayMinutes },
+-    select: { id: true },
+-  });
++  return `In ${delayValue} ${unitLabel}`;
++}
+ 
+-  if (duplicate) {
+-    redirect(`/admin/triggers?error=duplicate-delay&slug=${encodeURIComponent(slug)}&delayMinutes=${delayMinutes}`);
++function summarizeCondition(condition: TriggerCondition) {
++  switch (condition.field) {
++    case "promoClaimed":
++      return `Promo tariff received is ${condition.value ? "Yes" : "No"}`;
++    case "hasActiveTariff":
++      return `Active tariff is ${condition.value ? "Yes" : "No"}`;
++    case "generationCount":
++      return `Generations count ${condition.operator === "gte" ? "is at least" : "equals"} ${condition.value}`;
++    case "groupId":
++      return `User group contains ${condition.value}`;
++    default:
++      return "Custom condition";
+   }
+-
+-  await prisma.triggerMessage.create({
+-    data: { slug, title, text, imageUrl, delayMinutes, targetPlans, active: true },
+-  });
+-
+-  revalidatePath("/admin/triggers");
+ }
+ 
+-export async function updateTriggerMessage(formData: FormData) {
+-  "use server";
++function summarizeConditions(rawConditions: TriggerRuleRow["conditions"]) {
++  const conditions = Array.isArray(rawConditions)
++    ? (rawConditions as TriggerCondition[])
++    : [];
+ 
+-  const id = String(formData.get("id") ?? "");
+-  const slug = String(formData.get("slug") ?? "").trim();
+-  const title = String(formData.get("title") ?? "").trim();
+-  const text = String(formData.get("text") ?? "").trim();
+-  const delayMinutes = Number(formData.get("delayMinutes"));
+-  const active = formData.get("active") === "on";
+-  const imageUrl = String(formData.get("imageUrl") ?? "").trim() || null;
++  if (conditions.length === 0) {
++    return "No conditions";
++  }
+ 
+-  if (!id || !title || !text || Number.isNaN(delayMinutes)) return;
++  return conditions.map(summarizeCondition).join(" AND ");
++}
+ 
+-  const tariffs = await prisma.tariffPlan.findMany({ select: { slug: true } });
+-  const targetPlans = await parseTargetTariffs(formData, tariffs);
++function getStatusBadgeClass(status: TriggerRuleRow["status"]) {
++  switch (status) {
++    case "active":
++      return "border-[#1f6f43] bg-[#12261a] text-[#9ae6b4]";
++    case "disabled":
++      return "border-[#6b2430] bg-[#2a1218] text-[#fecaca]";
++    case "draft":
++    default:
++      return "border-[#2a3a55] bg-[#192334] text-[#dbe3ef]";
++  }
++}
+ 
+-  if (targetPlans.length === 0) return;
++function sortRules(rules: TriggerRuleRow[], sort: string) {
++  const copy = [...rules];
++
++  switch (sort) {
++    case "created-desc":
++      return copy.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
++    case "name-asc":
++      return copy.sort((a, b) => a.name.localeCompare(b.name));
++    case "name-desc":
++      return copy.sort((a, b) => b.name.localeCompare(a.name));
++    case "updated-desc":
++    default:
++      return copy.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
++  }
++}
+ 
+-  const duplicate = await prisma.triggerMessage.findFirst({
+-    where: { slug, delayMinutes, NOT: { id } },
+-    select: { id: true },
+-  });
++function buildFilterHref(
++  current: Required<SearchParams>,
++  patch: Partial<Required<SearchParams>>,
++) {
++  const next = { ...current, ...patch };
++  const params = new URLSearchParams();
+ 
+-  if (duplicate) {
+-    redirect(`/admin/triggers?error=duplicate-delay&slug=${encodeURIComponent(slug)}&delayMinutes=${delayMinutes}`);
++  if (next.search) {
++    params.set("search", next.search);
+   }
+ 
+-  await prisma.$transaction(async (tx) => {
+-    await tx.triggerMessage.update({
+-      where: { id },
+-      data: { title, text, imageUrl, delayMinutes, active, targetPlans },
+-    });
+-
+-    const unsentRows = await tx.scheduledMessage.findMany({
+-      where: { triggerMessageId: id, sentAt: null },
+-      select: { id: true, triggeredAt: true },
+-    });
+-
+-    for (const row of unsentRows) {
+-      await tx.scheduledMessage.update({
+-        where: { id: row.id },
+-        data: {
+-          text,
+-          imageUrl,
+-          sendAt: new Date(row.triggeredAt.getTime() + delayMinutes * 60 * 1000),
+-        },
+-      });
+-    }
+-  });
+-
+-  revalidatePath("/admin/triggers");
+-}
+-
+-export async function deleteTriggerMessage(formData: FormData) {
+-  "use server";
++  if (next.event !== "all") {
++    params.set("event", next.event);
++  }
+ 
+-  const id = String(formData.get("id") ?? "");
+-  if (!id) return;
++  if (next.status !== "all") {
++    params.set("status", next.status);
++  }
+ 
+-  await prisma.$transaction([
+-    prisma.scheduledMessage.deleteMany({
+-      where: { triggerMessageId: id, sentAt: null },
+-    }),
+-    prisma.triggerMessage.delete({ where: { id } }),
+-  ]);
++  if (next.sort !== "updated-desc") {
++    params.set("sort", next.sort);
++  }
+ 
+-  revalidatePath("/admin/triggers");
++  const query = params.toString();
++  return query ? `/admin/triggers?${query}` : "/admin/triggers";
+ }
+ 
+ export default async function AdminTriggersPage({
+   searchParams,
+ }: {
+-  searchParams?: Promise<{ error?: string; slug?: string; delayMinutes?: string }>;
++  searchParams?: Promise<SearchParams> | SearchParams;
+ }) {
+-  const [triggers, tariffs] = await Promise.all([
+-    prisma.triggerMessage.findMany({ orderBy: [{ slug: "asc" }, { delayMinutes: "asc" }] }),
+-    prisma.tariffPlan.findMany({ orderBy: { sortOrder: "asc" }, select: { slug: true, name: true } }),
+-  ]);
+-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+-  const error = resolvedSearchParams?.error ?? "";
+-  const errorSlug = resolvedSearchParams?.slug ?? "";
+-  const errorDelayMinutes = resolvedSearchParams?.delayMinutes ?? "";
+-
+-  const groupedTriggers = Object.values(
+-    triggers.reduce<Record<string, { slug: string; messages: typeof triggers }>>(
+-      (acc, trigger) => {
+-        acc[trigger.slug] ??= { slug: trigger.slug, messages: [] };
+-        acc[trigger.slug].messages.push(trigger);
+-        return acc;
+-      },
+-      {},
+-    ),
+-  ).map((group) => ({
+-    ...group,
+-    messages: [...group.messages].sort((a, b) => a.delayMinutes - b.delayMinutes),
+-  }));
++  const templates = getTriggerTemplates();
++  const eventOptions = getTriggerEventOptions();
++  const rules = (await prisma.triggerRule.findMany({
++    orderBy: { updatedAt: "desc" },
++  })) as TriggerRuleRow[];
++  const resolvedSearchParams = searchParams ? await searchParams : {};
++  const filters = {
++    event: resolvedSearchParams.event?.trim() || "all",
++    search: resolvedSearchParams.search?.trim() || "",
++    sort: resolvedSearchParams.sort?.trim() || "updated-desc",
++    status: resolvedSearchParams.status?.trim() || "all",
++  };
++  const searchNeedle = filters.search.toLowerCase();
++
++  const filteredRules = sortRules(
++    rules.filter((rule) => {
++      const matchesEvent = filters.event === "all" || rule.eventKey === filters.event;
++      const matchesStatus = filters.status === "all" || rule.status === filters.status;
++      const matchesSearch =
++        searchNeedle.length === 0 ||
++        rule.name.toLowerCase().includes(searchNeedle) ||
++        getEventLabel(rule.eventKey).toLowerCase().includes(searchNeedle);
++
++      return matchesEvent && matchesStatus && matchesSearch;
++    }),
++    filters.sort,
++  );
+ 
+   return (
+     <section className="space-y-5">
+       <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+         <AdminPageHeader
+-          description="Автоматические сообщения, которые бот отправляет через заданное время после события."
+-          title="Триггерные сообщения"
++          description="Event-based automations for follow-ups, activations, and win-back campaigns."
++          title="Triggers"
+         />
+         <div className="rounded-lg border border-[#223047] bg-[#121a27] px-4 py-2 text-sm text-[#97a4b8]">
+-          Изменения применяются после сохранения формы
++          Build reusable trigger rules around product events and conditions.
+         </div>
+       </header>
+ 
+-      {error === "duplicate-delay" ? (
+-        <div className="rounded-lg border border-[#7f1d1d] bg-[#2a1218] px-4 py-3 text-sm text-[#fecaca]">
+-          В правиле <strong>{errorSlug}</strong> уже есть сообщение с задержкой <strong>{errorDelayMinutes}</strong> мин. Укажите другую задержку.
+-        </div>
+-      ) : null}
+-
+       <ChatBotSubNav />
+ 
+-      <div className="grid gap-4 xl:grid-cols-[1.35fr_0.7fr]">
+-        <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+-          <div className="space-y-4">
+-            <AdminPanel className="space-y-4">
+-              <div className="flex items-center justify-between gap-3">
+-                <div>
+-                  <h3 className="font-semibold text-[#f4f7fb]">Правила</h3>
+-                  <p className="mt-1 text-sm text-[#97a4b8]">
+-                    Группы сообщений по событиям.
++      <div className="grid gap-4 xl:grid-cols-[0.72fr_1.28fr]">
++        <div className="space-y-4">
++          <AdminPanel className="space-y-4">
++            <div>
++              <h3 className="font-semibold text-[#f4f7fb]">Ready templates</h3>
++              <p className="mt-1 text-sm text-[#97a4b8]">
++                Start from a prepared scenario and edit it before saving.
++              </p>
++            </div>
++            <div className="space-y-2">
++              {templates.map((template) => (
++                <Link
++                  key={template.key}
++                  href={`/admin/triggers/new?template=${template.key}`}
++                  className="block rounded-lg border border-[#223047] bg-[#0d1522] p-3 transition hover:border-[#41506b] hover:bg-[#111b2b]"
++                >
++                  <p className="text-sm font-medium text-[#f4f7fb]">{template.name}</p>
++                  <p className="mt-1 text-xs text-[#97a4b8]">
++                    {getEventLabel(template.eventKey)} - {formatDelay(template.delayValue, template.delayUnit)}
+                   </p>
+-                </div>
+-                <span className="rounded-md border border-[#2a3a55] px-2 py-1 text-xs text-[#97a4b8]">
+-                  {groupedTriggers.length}
+-                </span>
+-              </div>
+-
+-              <div className="space-y-2">
+-                {groupedTriggers.map((group) => (
+-                  <div
+-                    className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border border-[#223047] bg-[#0d1522] p-3"
+-                    key={group.slug}
++                </Link>
++              ))}
++            </div>
++          </AdminPanel>
++
++          <AdminPanel className="space-y-4">
++            <div>
++              <h3 className="font-semibold text-[#f4f7fb]">System events</h3>
++              <p className="mt-1 text-sm text-[#97a4b8]">
++                Jump into the event lane you want to manage.
++              </p>
++            </div>
++            <div className="space-y-2">
++              {eventOptions.map((eventOption) => {
++                const isActive = filters.event === eventOption.key;
++
++                return (
++                  <Link
++                    key={eventOption.key}
++                    href={buildFilterHref(filters, { event: eventOption.key })}
++                    className={`block rounded-lg border p-3 transition ${
++                      isActive
++                        ? "border-[#6d5dfc] bg-[#191f38]"
++                        : "border-[#223047] bg-[#0d1522] hover:border-[#41506b] hover:bg-[#111b2b]"
++                    }`}
+                   >
+-                    <div className="min-w-0">
+-                      <p className="text-sm font-medium text-[#f4f7fb]">
+-                        {group.slug}
+-                      </p>
+-                      <p className="truncate text-xs text-[#97a4b8]">
+-                        {group.messages.length} сообщений · от {group.messages[0]?.delayMinutes ?? 0} до {group.messages[group.messages.length - 1]?.delayMinutes ?? 0} мин
+-                      </p>
+-                    </div>
+-                    <span className="text-right text-[#7f8da3]">›</span>
+-                  </div>
+-                ))}
+-              </div>
+-
+-              <form action={createTriggerMessage} className="space-y-3 border-t border-[#223047] pt-4">
+-                <div className="flex items-center gap-2 text-sm font-semibold text-[#f4f7fb]">
+-                  <Plus className="size-4 text-[#9c86ff]" />
+-                  Создать правило
+-                </div>
+-                <AdminField label="Slug">
+-                  <AdminInput name="slug" placeholder="after-start" />
+-                </AdminField>
+-                <AdminField label="Название">
+-                  <AdminInput name="title" placeholder="После /start" />
+-                </AdminField>
+-                <AdminField label="Текст сообщения">
+-                  <AdminTextarea
+-                    className="min-h-24"
+-                    name="text"
+-                    placeholder="Текст, который получит пользователь..."
+-                  />
+-                </AdminField>
+-                <AdminImageField
+-                  fileName="imageFile"
+-                  label="Изображение"
+-                  placeholder="/uploads/admin/triggers/example.webp или https://..."
+-                  textName="imageUrl"
+-                />
+-                <AdminField label="Задержка (минуты)">
+-                  <AdminInput
+-                    defaultValue={15}
+-                    name="delayMinutes"
+-                    type="number"
+-                  />
+-                </AdminField>
+-                <fieldset className="space-y-1">
+-                  <legend className="text-sm font-medium text-[#f4f7fb]">Тарифы</legend>
+-                  <div className="flex flex-wrap gap-4">
+-                    {tariffs.map((tariff) => (
+-                      <label
+-                        className="flex items-center gap-2 text-sm text-[#97a4b8]"
+-                        key={tariff.slug}
+-                      >
+-                        <input name={`target_${tariff.slug}`} type="checkbox" />
+-                        {tariff.name}
+-                      </label>
+-                    ))}
+-                  </div>
+-                </fieldset>
+-                <AdminButton type="submit">Создать правило</AdminButton>
+-              </form>
+-            </AdminPanel>
++                    <p className="text-sm font-medium text-[#f4f7fb]">{eventOption.label}</p>
++                    <p className="mt-1 text-xs text-[#97a4b8]">{eventOption.description}</p>
++                  </Link>
++                );
++              })}
++            </div>
++          </AdminPanel>
++        </div>
++
++        <AdminPanel className="space-y-4">
++          <div className="flex flex-wrap items-center justify-between gap-3">
++            <div>
++              <h3 className="font-semibold text-[#f4f7fb]">Trigger rules</h3>
++              <p className="mt-1 text-sm text-[#97a4b8]">
++                Filter your automation inventory by event, status, or name.
++              </p>
++            </div>
++            <Link
++              href="/admin/triggers/new"
++              className="inline-flex rounded-md bg-[#7c5cff] px-4 py-2 text-sm font-medium text-white shadow-[0_10px_30px_rgba(124,92,255,0.28)] transition hover:bg-[#8d71ff]"
++            >
++              Create trigger
++            </Link>
+           </div>
+ 
+-          <div className="space-y-6">
+-            {groupedTriggers.map((group) => (
+-              <AdminPanel key={group.slug} className="space-y-4">
+-                <div>
+-                  <h3 className="font-semibold text-[#f4f7fb]">{group.slug}</h3>
+-                  <p className="text-sm text-[#97a4b8]">Правило, slug не редактируется</p>
+-                </div>
+-
+-                {group.messages.map((trigger) => {
+-                  const plans = trigger.targetPlans as string[];
+-
+-                  return (
+-                    <form action={updateTriggerMessage} key={trigger.id}>
+-                      <input name="id" type="hidden" value={trigger.id} />
+-                      <input name="slug" type="hidden" value={group.slug} />
+-                      <div className="space-y-4 rounded-lg border border-[#223047] bg-[#0d1522] p-4">
+-                        <div className="flex flex-wrap items-center justify-between gap-3">
+-                          <h4 className="text-sm font-medium text-[#f4f7fb]">
+-                            {trigger.title || "Без названия"}
+-                          </h4>
+-                          <AdminButton type="submit">
+-                            <span className="inline-flex items-center gap-2">
+-                              <Save className="size-4" />
+-                              Сохранить
+-                            </span>
+-                          </AdminButton>
++          <form className="flex flex-wrap items-center gap-3" method="get">
++            <AdminInput
++              defaultValue={filters.search}
++              name="search"
++              placeholder="Search triggers..."
++            />
++            <AdminSelect defaultValue={filters.event} name="event">
++              <option value="all">All events</option>
++              {eventOptions.map((eventOption) => (
++                <option key={eventOption.key} value={eventOption.key}>
++                  {eventOption.label}
++                </option>
++              ))}
++            </AdminSelect>
++            <AdminSelect defaultValue={filters.status} name="status">
++              {statusOptions.map((statusOption) => (
++                <option key={statusOption.value} value={statusOption.value}>
++                  {statusOption.label}
++                </option>
++              ))}
++            </AdminSelect>
++            <AdminSelect defaultValue={filters.sort} name="sort">
++              {sortOptions.map((sortOption) => (
++                <option key={sortOption.value} value={sortOption.value}>
++                  {sortOption.label}
++                </option>
++              ))}
++            </AdminSelect>
++            <button
++              className="rounded-md border border-[#2a3a55] bg-[#192334] px-3 py-2 text-sm font-medium text-[#dbe3ef] transition hover:bg-[#223047]"
++              type="submit"
++            >
++              Apply
++            </button>
++          </form>
++
++          {filteredRules.length === 0 ? (
++            <div className="rounded-lg border border-dashed border-[#2a3a55] bg-[#0d1522] px-4 py-8 text-center text-sm text-[#97a4b8]">
++              No triggers match the current filters.
++            </div>
++          ) : (
++            <div className="overflow-x-auto rounded-lg border border-[#223047] bg-[#0d1522]">
++              <table className="w-full min-w-[860px] border-collapse text-left text-sm">
++                <thead className="bg-[#192334] text-xs uppercase text-[#97a4b8]">
++                  <tr>
++                    <th className="px-4 py-3 font-semibold">Trigger</th>
++                    <th className="px-4 py-3 font-semibold">Event</th>
++                    <th className="px-4 py-3 font-semibold">Send</th>
++                    <th className="px-4 py-3 font-semibold">Conditions</th>
++                    <th className="px-4 py-3 font-semibold">Status</th>
++                    <th className="px-4 py-3 font-semibold">Action</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  {filteredRules.map((rule) => (
++                    <tr className="border-t border-[#223047]/80" key={rule.id}>
++                      <td className="px-4 py-3 text-[#dbe3ef]">
++                        <div>
++                          <p className="font-medium text-[#f4f7fb]">{rule.name}</p>
++                          <p className="mt-1 text-xs text-[#97a4b8]">
++                            Updated {rule.updatedAt.toLocaleDateString("en-US")}
++                          </p>
+                         </div>
+-
+-                        <AdminField label="Название">
+-                          <AdminInput defaultValue={trigger.title} name="title" />
+-                        </AdminField>
+-                        <AdminField label="Текст сообщения">
+-                          <AdminTextarea
+-                            className="min-h-24"
+-                            defaultValue={trigger.text}
+-                            name="text"
+-                          />
+-                        </AdminField>
+-                        <AdminImageField
+-                          defaultValue={trigger.imageUrl ?? ""}
+-                          fileName="imageFile"
+-                          label="Изображение"
+-                          placeholder="/uploads/admin/triggers/example.webp или https://..."
+-                          textName="imageUrl"
+-                        />
+-                        <AdminField label="Задержка (минуты)">
+-                          <AdminInput
+-                            defaultValue={trigger.delayMinutes}
+-                            name="delayMinutes"
+-                            type="number"
+-                          />
+-                        </AdminField>
+-                        <fieldset className="space-y-1">
+-                          <legend className="text-sm font-medium text-[#f4f7fb]">Тарифы</legend>
+-                          <div className="flex flex-wrap gap-4">
+-                            {tariffs.map((tariff) => (
+-                              <label
+-                                className="flex items-center gap-2 text-sm text-[#97a4b8]"
+-                                key={tariff.slug}
+-                              >
+-                                <input
+-                                  defaultChecked={plans.includes(tariff.slug)}
+-                                  name={`target_${tariff.slug}`}
+-                                  type="checkbox"
+-                                />
+-                                {tariff.name}
+-                              </label>
+-                            ))}
+-                          </div>
+-                        </fieldset>
+-                        <div className="flex flex-wrap items-center justify-between gap-3">
+-                          <AdminToggle defaultChecked={trigger.active} name="active">
+-                            Активен
+-                          </AdminToggle>
+-                          <button
+-                            formAction={deleteTriggerMessage}
+-                            className="inline-flex items-center gap-2 rounded-md border border-[#7f1d1d] bg-[#2a1218] px-3 py-2 text-sm font-medium text-[#fecaca] transition hover:bg-[#3a1720]"
+-                            type="submit"
+-                          >
+-                            <Trash2 className="size-4" />
+-                            Удалить сообщение
+-                          </button>
++                      </td>
++                      <td className="px-4 py-3 text-[#dbe3ef]">
++                        <div>
++                          <p className="font-medium text-[#f4f7fb]">{getEventLabel(rule.eventKey)}</p>
++                          <p className="mt-1 text-xs text-[#97a4b8]">{rule.eventKey}</p>
+                         </div>
+-                      </div>
+-                    </form>
+-                  );
+-                })}
+-
+-                <form action={createTriggerMessage} className="space-y-3 border-t border-[#223047] pt-4">
+-                  <input name="slug" type="hidden" value={group.slug} />
+-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#f4f7fb]">
+-                    <Plus className="size-4 text-[#9c86ff]" />
+-                    Добавить сообщение в правило
+-                  </div>
+-                  <AdminField label="Название">
+-                    <AdminInput name="title" placeholder="После /start" />
+-                  </AdminField>
+-                  <AdminField label="Текст сообщения">
+-                    <AdminTextarea
+-                      className="min-h-24"
+-                      name="text"
+-                      placeholder="Текст, который получит пользователь..."
+-                    />
+-                  </AdminField>
+-                  <AdminImageField
+-                    fileName="imageFile"
+-                    label="Изображение"
+-                    placeholder="/uploads/admin/triggers/example.webp или https://..."
+-                    textName="imageUrl"
+-                  />
+-                  <AdminField label="Задержка (минуты)">
+-                    <AdminInput
+-                      defaultValue={15}
+-                      name="delayMinutes"
+-                      type="number"
+-                    />
+-                  </AdminField>
+-                  <fieldset className="space-y-1">
+-                    <legend className="text-sm font-medium text-[#f4f7fb]">Тарифы</legend>
+-                    <div className="flex flex-wrap gap-4">
+-                      {tariffs.map((tariff) => (
+-                        <label
+-                          className="flex items-center gap-2 text-sm text-[#97a4b8]"
+-                          key={tariff.slug}
++                      </td>
++                      <td className="px-4 py-3 text-[#dbe3ef]">{formatDelay(rule.delayValue, rule.delayUnit)}</td>
++                      <td className="max-w-[320px] px-4 py-3 text-[#97a4b8]">
++                        {summarizeConditions(rule.conditions)}
++                      </td>
++                      <td className="px-4 py-3 text-[#dbe3ef]">
++                        <span
++                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${getStatusBadgeClass(rule.status)}`}
+                         >
+-                          <input name={`target_${tariff.slug}`} type="checkbox" />
+-                          {tariff.name}
+-                        </label>
+-                      ))}
+-                    </div>
+-                  </fieldset>
+-                  <AdminButton type="submit">Добавить сообщение в правило</AdminButton>
+-                </form>
+-              </AdminPanel>
+-            ))}
+-          </div>
+-        </div>
+-
+-        <AdminPanel className="space-y-5">
+-          <div>
+-            <h3 className="font-semibold text-[#f4f7fb]">Как это работает</h3>
+-            <p className="mt-1 text-sm leading-6 text-[#97a4b8]">
+-              Бот отслеживает события (первый запуск, оплата) и через
+-              заданное количество минут отправляет пользователю сообщение.
+-            </p>
+-          </div>
+-          <div className="space-y-2 text-sm text-[#97a4b8]">
+-            <p><strong className="text-[#d8d2ff]">Slug</strong> — идентификатор события, не редактируется после создания.</p>
+-            <p><strong className="text-[#d8d2ff]">Задержка</strong> — через сколько минут после события отправить. Уникальна внутри правила.</p>
+-            <p><strong className="text-[#d8d2ff]">Тарифы</strong> — пользователи каких тарифов получат это сообщение.</p>
+-            <p>Каждую минуту сервер проверяет, не пора ли отправить сообщения.</p>
+-          </div>
++                          {rule.status}
++                        </span>
++                      </td>
++                      <td className="px-4 py-3 text-[#dbe3ef]">
++                        <Link
++                          href={`/admin/triggers/${rule.id}`}
++                          className="text-sm font-medium text-[#b9abff] transition hover:text-[#d8d2ff]"
++                        >
++                          Open
++                        </Link>
++                      </td>
++                    </tr>
++                  ))}
++                </tbody>
++              </table>
++            </div>
++          )}
+         </AdminPanel>
+       </div>
+     </section>
+   );
+ }
+diff --git a/pastry-ai/src/features/triggers/trigger-template.ts b/pastry-ai/src/features/triggers/trigger-template.ts
+new file mode 100644
+index 00000000..f456b8f0
+--- /dev/null
++++ b/pastry-ai/src/features/triggers/trigger-template.ts
+@@ -0,0 +1,120 @@
++import type { TriggerCondition } from "./trigger-rule-types";
++
++export type TriggerTemplate = {
++  key: string;
++  name: string;
++  eventKey: string;
++  delayValue: number;
++  delayUnit: "now" | "minutes" | "hours" | "days";
++  conditions: TriggerCondition[];
++};
++
++export type TriggerEventOption = {
++  key: string;
++  label: string;
++  description: string;
++};
++
++const triggerTemplates = [
++  {
++    key: "after-start-no-promo",
++    name: "After Start: no promo",
++    eventKey: "user.started",
++    delayValue: 15,
++    delayUnit: "minutes",
++    conditions: [
++      { field: "promoClaimed", operator: "is", value: false },
++      { field: "hasActiveTariff", operator: "is", value: false },
++    ],
++  },
++  {
++    key: "after-start-did-not-begin-using",
++    name: "After Start: did not begin using",
++    eventKey: "user.started",
++    delayValue: 1,
++    delayUnit: "days",
++    conditions: [
++      { field: "generationCount", operator: "equals", value: 0 },
++      { field: "hasActiveTariff", operator: "is", value: false },
++    ],
++  },
++  {
++    key: "promo-granted-but-unused",
++    name: "Promo granted but unused",
++    eventKey: "promo.granted",
++    delayValue: 30,
++    delayUnit: "minutes",
++    conditions: [{ field: "generationCount", operator: "equals", value: 0 }],
++  },
++  {
++    key: "promo-expired",
++    name: "Promo expired",
++    eventKey: "promo.expired",
++    delayValue: 5,
++    delayUnit: "minutes",
++    conditions: [{ field: "hasActiveTariff", operator: "is", value: false }],
++  },
++  {
++    key: "promo-expired-after-active-usage",
++    name: "Promo expired after active usage",
++    eventKey: "promo.expired",
++    delayValue: 2,
++    delayUnit: "hours",
++    conditions: [
++      { field: "generationCount", operator: "gte", value: 3 },
++      { field: "hasActiveTariff", operator: "is", value: false },
++    ],
++  },
++  {
++    key: "paid-but-not-activated",
++    name: "Paid but not activated",
++    eventKey: "tariff.paid",
++    delayValue: 1,
++    delayUnit: "days",
++    conditions: [{ field: "generationCount", operator: "equals", value: 0 }],
++  },
++  {
++    key: "inactive-for-7-days",
++    name: "Inactive for 7 days",
++    eventKey: "user.inactive_7d",
++    delayValue: 0,
++    delayUnit: "now",
++    conditions: [{ field: "hasActiveTariff", operator: "is", value: true }],
++  },
++] satisfies readonly TriggerTemplate[];
++
++const triggerEventOptions = [
++  {
++    key: "user.started",
++    label: "Pressed Start",
++    description: "Start a follow-up or comeback sequence after /start.",
++  },
++  {
++    key: "promo.granted",
++    label: "Promo tariff granted",
++    description: "Follow up after promo access becomes available.",
++  },
++  {
++    key: "promo.expired",
++    label: "Promo tariff expired",
++    description: "Win users back when promo access runs out.",
++  },
++  {
++    key: "tariff.paid",
++    label: "Paid tariff activated",
++    description: "Guide new paying users into activation and usage.",
++  },
++  {
++    key: "user.inactive_7d",
++    label: "Inactive for 7 days",
++    description: "Re-engage subscribers who stopped using the product.",
++  },
++] satisfies readonly TriggerEventOption[];
++
++export function getTriggerTemplates() {
++  return triggerTemplates;
++}
++
++export function getTriggerEventOptions() {
++  return triggerEventOptions;
++}
+

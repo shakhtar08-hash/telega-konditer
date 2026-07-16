@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { saveAdminImage } from "@/app/admin/_lib/save-admin-image";
 import { prisma } from "@/db/prisma";
 import type { TriggerCondition, TriggerRuleRecord } from "@/features/triggers/trigger-rule-types";
+import { parseTriggerButtonsFromFormData } from "./trigger-buttons-form";
 
 type TriggerDelayUnit = TriggerRuleRecord["delayUnit"];
 type TriggerStatus = TriggerRuleRecord["status"];
@@ -80,6 +81,14 @@ function normalizeCondition(input: unknown): TriggerCondition | null {
             value: String(candidate.value ?? "").trim(),
           }
         : null;
+    case "dynamicUserGroupId":
+      return candidate.operator === "matches"
+        ? {
+            field: "dynamicUserGroupId",
+            operator: "matches",
+            value: String(candidate.value ?? "").trim(),
+          }
+        : null;
     default:
       return null;
   }
@@ -132,6 +141,7 @@ export async function createTriggerRule(formData: FormData) {
   const { delayValue, delayUnit } = parseDelay(formData);
   const messageText = String(formData.get("messageText") ?? "").trim();
   const conditions = parseConditions(formData);
+  const buttons = parseTriggerButtonsFromFormData(formData);
 
   if (!name || !eventKey || !messageText) {
     return;
@@ -146,7 +156,7 @@ export async function createTriggerRule(formData: FormData) {
 
   await prisma.triggerRule.create({
     data: {
-      buttons: [],
+      buttons,
       conditions,
       delayUnit,
       delayValue,
@@ -169,6 +179,7 @@ export async function updateTriggerRule(formData: FormData) {
   const status = parseStatus(formData);
   const messageText = String(formData.get("messageText") ?? "").trim();
   const conditions = parseConditions(formData);
+  const buttons = parseTriggerButtonsFromFormData(formData);
 
   if (!id || !name || !eventKey || !messageText) {
     return;
@@ -183,6 +194,7 @@ export async function updateTriggerRule(formData: FormData) {
 
   await prisma.triggerRule.update({
     data: {
+      buttons,
       conditions,
       delayUnit,
       delayValue,

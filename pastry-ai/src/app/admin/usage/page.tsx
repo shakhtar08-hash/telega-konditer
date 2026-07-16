@@ -7,6 +7,24 @@ import { prisma } from "@/db/prisma";
 
 export const dynamic = "force-dynamic";
 
+interface UsageRow {
+  id: string;
+  feature: string;
+  provider: string;
+  model: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cost: { toString(): string };
+  latency: number;
+  status: string;
+  errorMessage: string | null;
+  createdAt: Date;
+  user: {
+    telegramId: string;
+    username: string | null;
+  };
+}
+
 export default async function AdminUsagePage() {
   const usage = await prisma.usage.findMany({
     include: {
@@ -19,30 +37,50 @@ export default async function AdminUsagePage() {
     },
     orderBy: { createdAt: "desc" },
     take: 100,
-  });
+  }) as unknown as UsageRow[];
+
+  function statusBadge(status: string) {
+    if (status === "success") {
+      return <span className="text-[#35d08b]">✓ Success</span>;
+    }
+    return <span className="text-[#f87171]">✗ Error</span>;
+  }
 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Использование токенов, расходы и задержка ответов AI."
+        description="Журнал AI-вызовов: провайдер, модель, токены, стоимость, статус."
         title="Использование"
       />
       <DataTable
         columns={[
+          { header: "Пользователь", cell: (row: UsageRow) => row.user.username ?? row.user.telegramId },
+          { header: "Функция", cell: (row: UsageRow) => row.feature },
+          { header: "Провайдер", cell: (row: UsageRow) => row.provider || "—" },
+          { header: "Модель", cell: (row: UsageRow) => row.model ?? "—" },
+          { header: "Вход", cell: (row: UsageRow) => row.inputTokens },
+          { header: "Выход", cell: (row: UsageRow) => row.outputTokens },
+          { header: "Стоимость", cell: (row: UsageRow) => `$${row.cost.toString()}` },
+          { header: "Задержка", cell: (row: UsageRow) => `${row.latency} ms` },
+          { header: "Статус", cell: (row: UsageRow) => statusBadge(row.status) },
           {
-            header: "Пользователь",
-            cell: (row) => row.user.username ?? row.user.telegramId,
+            header: "Ошибка",
+            cell: (row: UsageRow) =>
+              row.errorMessage ? (
+                <span title={row.errorMessage}>
+                  {row.errorMessage.length > 80
+                    ? `${row.errorMessage.slice(0, 80)}...`
+                    : row.errorMessage}
+                </span>
+              ) : (
+                "—"
+              ),
           },
-          { header: "Функция", cell: (row) => row.feature },
-          { header: "Вход", cell: (row) => row.inputTokens },
-          { header: "Выход", cell: (row) => row.outputTokens },
-          { header: "Стоимость", cell: (row) => `$${row.cost.toString()}` },
-          { header: "Задержка", cell: (row) => `${row.latency} ms` },
-          { header: "Создано", cell: (row) => formatDate(row.createdAt) },
+          { header: "Создано", cell: (row: UsageRow) => formatDate(row.createdAt) },
         ]}
         empty="Записей использования пока нет. Они появятся после запуска AI-функций."
-        getKey={(row) => row.id}
-        rows={usage}
+        getKey={(row: UsageRow) => row.id}
+        rows={usage as never}
       />
     </section>
   );

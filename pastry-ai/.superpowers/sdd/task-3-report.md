@@ -1,46 +1,34 @@
-# Task 3 Report: Create per-template render functions
+# Task 3: Create ConversationLogService
 
-## What I implemented
+## Status: DONE
 
-Created 4 template render functions in `src/components/recipe-card/templates/`:
+## Files Created
 
-- **minimal.ts** — `renderMinimalHtml(data, imageUrl, size)` — minimal white card with neutral colors
-- **pinterest.ts** — `renderPinterestHtml(data, imageUrl, size)` — full-width hero image + card-content split
-- **luxury.ts** — `renderLuxuryHtml(data, imageUrl, size)` — serif fonts, gold accents, dual border
-- **dark.ts** — `renderDarkHtml(data, imageUrl, size)` — dark backgrounds, gold accents
+- `src/db/repositories/conversation-log-service.ts` — service implementation
+- `src/db/repositories/conversation-log-service.test.ts` — 7 tests
 
-Each function:
-- Returns a complete HTML document string (DOCTYPE + html + head + style + body)
-- Uses `sizeCssVars(size)` for size-based CSS custom properties
-- Omits hero block entirely when `imageUrl` is undefined/empty (no placeholder)
-- Uses `renderTipItems(data.tips, cfg.maxTips)` for tips section (absent in pinterest and dark)
-- Includes Google Fonts (Inter for all, Playfair Display for luxury)
-- All text in Russian
+## Test Results
 
-Additionally fixed `utils.ts` to re-export `sizeConfig` (template files import it from `"./utils"` but it wasn't exported).
+```
+✓ src/db/repositories/conversation-log-service.test.ts (7 tests)
+  ✓ starts a new conversation
+  ✓ appends a user message
+  ✓ appends user message as [photo] when content is empty
+  ✓ appends user message with photo and caption
+  ✓ appends an assistant message with model
+  ✓ appends assistant message with null model
+  ✓ appends an error message
+```
 
-## What I tested and test results
+## Full Suite Regression
 
-Ran `npm run typecheck` — **PASS** (no TS errors)
+3 pre-existing failures unrelated to this task:
+- `src/bot/handlers/photoshoot.test.ts` — missing .env vars
+- `src/bot/handlers/vision.test.ts` — missing .env vars
+- `src/test/encoding.test.ts` — mojibake in pre-existing files
 
-## Files changed
-
-| File | Action |
-|------|--------|
-| `src/components/recipe-card/templates/minimal.ts` | Created |
-| `src/components/recipe-card/templates/pinterest.ts` | Created |
-| `src/components/recipe-card/templates/luxury.ts` | Created |
-| `src/components/recipe-card/templates/dark.ts` | Created |
-| `src/components/recipe-card/templates/utils.ts` | Modified (added `export { sizeConfig }`) |
-
-## Self-review findings
-
-- **Plan inconsistency**: The plan's `utils.ts` code does not export `sizeConfig`, but all 4 template files import `{ sizeConfig }` from `"./utils"`. I added `export { sizeConfig }` to `utils.ts` to resolve the TS error. This is a minor omission in the plan, not a code issue.
-
-## Commit
-
-`a30b1ce` — `feat(recipe-card): add per-template render functions`
+No regressions introduced.
 
 ## Concerns
 
-None. Typecheck passes cleanly. All 4 templates follow the block ordering and image rules specified in the brief.
+None.

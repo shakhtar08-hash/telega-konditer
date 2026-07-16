@@ -3,6 +3,7 @@ import type {
   TriggerRuleRecord,
   TriggerUserState,
 } from "./trigger-rule-types";
+import { matchesSavedDynamicUserGroup } from "@/features/dynamic-user-groups/service";
 
 const unitToMs = {
   now: 0,
@@ -11,25 +12,46 @@ const unitToMs = {
   days: 24 * 60 * 60 * 1000,
 } as const;
 
-export function evaluateConditions(
+export async function evaluateConditions(
   conditions: TriggerCondition[],
   state: TriggerUserState,
-): boolean {
-  return conditions.every((condition) => {
+): Promise<boolean> {
+  for (const condition of conditions) {
     switch (condition.field) {
       case "promoClaimed":
-        return state.promoClaimed === condition.value;
+        if (state.promoClaimed !== condition.value) {
+          return false;
+        }
+        break;
       case "hasActiveTariff":
-        return state.hasActiveTariff === condition.value;
+        if (state.hasActiveTariff !== condition.value) {
+          return false;
+        }
+        break;
       case "generationCount":
-        return condition.operator === "gte"
-          ? state.generationCount >= condition.value
-          : state.generationCount === condition.value;
+        if (
+          !(condition.operator === "gte"
+            ? state.generationCount >= condition.value
+            : state.generationCount === condition.value)
+        ) {
+          return false;
+        }
+        break;
       case "userGroupId":
       case "groupId":
-        return state.groupIds.includes(condition.value);
+        if (!state.groupIds.includes(condition.value)) {
+          return false;
+        }
+        break;
+      case "dynamicUserGroupId":
+        if (!(await matchesSavedDynamicUserGroup(condition.value, state))) {
+          return false;
+        }
+        break;
     }
-  });
+  }
+
+  return true;
 }
 
 export function computeSendAt(

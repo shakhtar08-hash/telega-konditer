@@ -2,7 +2,10 @@
 
 import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
-export { addUserToGroup, removeUserFromGroup } from "../user-groups/actions";
+import {
+  addUserToGroup as addUserToGroupShared,
+  removeUserFromGroup as removeUserFromGroupShared,
+} from "../user-groups/actions";
 
 function getDefaultTariffExpiryDate(durationDays: number) {
   return new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
@@ -11,6 +14,14 @@ function getDefaultTariffExpiryDate(durationDays: number) {
 function revalidateUserAdminPaths(userId: string) {
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${userId}`);
+}
+
+export async function addUserToGroup(formData: FormData) {
+  await addUserToGroupShared(formData);
+}
+
+export async function removeUserFromGroup(formData: FormData) {
+  await removeUserFromGroupShared(formData);
 }
 
 export async function updateUserTariff(formData: FormData) {

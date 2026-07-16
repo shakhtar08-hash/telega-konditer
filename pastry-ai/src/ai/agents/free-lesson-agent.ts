@@ -1,5 +1,6 @@
 import type { PromptRecord } from "@/db/repositories/prompt-repository";
 import type { AIService } from "../provider/ai-service";
+import { appendLisaPersonaInstruction } from "./lisa-persona";
 import {
   createYouTubeService,
   filterVideos,
@@ -123,7 +124,7 @@ export function createFreeLessonAgent(dependencies: {
         .replace("{{videos}}", videosMarkdown);
 
       return dependencies.aiService.generateText({
-        system: prompt.systemPrompt,
+        system: appendLisaPersonaInstruction(prompt.systemPrompt),
         prompt: renderedPrompt,
         provider: prompt.provider,
         model: prompt.model,

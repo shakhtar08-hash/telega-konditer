@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Bot } from "grammy";
+import { InlineKeyboard } from "grammy";
 import { Prisma, type ScheduledMessage, type TriggerRule } from "@prisma/client";
 import { prisma } from "@/db/prisma";
 import { loadEnv } from "@/lib/env";
@@ -11,6 +12,12 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+type TriggerButton = {
+  text?: string;
+  type?: string;
+  value?: string;
+};
 
 function toTriggerRuleRecord(rule: TriggerRule): TriggerMessageRecord {
   return {
@@ -43,6 +50,29 @@ function toPrismaJsonValue(
   }
 
   return value as Prisma.InputJsonValue;
+}
+
+function buildReplyMarkup(buttons: unknown) {
+  if (!Array.isArray(buttons) || buttons.length === 0) {
+    return undefined;
+  }
+
+  const keyboard = new InlineKeyboard();
+  let hasRows = false;
+
+  for (const button of buttons as TriggerButton[]) {
+    if (!button || typeof button.text !== "string" || button.text.trim().length === 0) {
+      continue;
+    }
+
+    if (button.type === "url" && typeof button.value === "string" && button.value.trim().length > 0) {
+      keyboard.url(button.text.trim(), button.value.trim()).row();
+      hasRows = true;
+      continue;
+    }
+  }
+
+  return hasRows ? keyboard : undefined;
 }
 
 export async function POST(request: Request) {
@@ -109,8 +139,20 @@ export async function POST(request: Request) {
   const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
 
   const sent = await triggerService.processPendingTriggers(
-    async (chatId, text) => {
-      await bot.api.sendMessage(chatId, text);
+    async (chatId, text, payload) => {
+      const replyMarkup = buildReplyMarkup(payload.buttons);
+
+      if (payload.imageUrl) {
+        await bot.api.sendPhoto(chatId, payload.imageUrl, {
+          caption: text,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+
+      await bot.api.sendMessage(chatId, text, {
+        reply_markup: replyMarkup,
+      });
     },
   );
 

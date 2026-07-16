@@ -9,12 +9,20 @@ import type {
 } from "./trigger-rule-types";
 import { createTriggerService } from "./trigger-service";
 
+vi.mock("@/features/dynamic-user-groups/service", () => ({
+  matchesSavedDynamicUserGroup: vi.fn().mockResolvedValue(true),
+}));
+
 const baseState: TriggerUserState = {
   plan: "FREE",
   promoClaimed: false,
   hasActiveTariff: false,
   generationCount: 0,
   groupIds: [],
+  remainingTokens: 0,
+  tariffExpired: false,
+  createdAt: new Date("2026-07-01T00:00:00.000Z"),
+  lastActivityAt: null,
 };
 
 const baseRule: TriggerRuleRecord = {
@@ -34,10 +42,10 @@ const baseRule: TriggerRuleRecord = {
 };
 
 describe("evaluateConditions", () => {
-  it("returns true only when every condition matches the user state", () => {
-    expect(evaluateConditions(baseRule.conditions, baseState)).toBe(true);
+  it("returns true only when every condition matches the user state", async () => {
+    await expect(evaluateConditions(baseRule.conditions, baseState)).resolves.toBe(true);
 
-    expect(
+    await expect(
       evaluateConditions(
         [
           ...baseRule.conditions,
@@ -45,15 +53,15 @@ describe("evaluateConditions", () => {
         ],
         baseState,
       ),
-    ).toBe(false);
+    ).resolves.toBe(false);
   });
 
-  it("supports numeric and group membership conditions", () => {
-    expect(
+  it("supports numeric and group membership conditions", async () => {
+    await expect(
       evaluateConditions(
         [
           { field: "generationCount", operator: "gte", value: 3 },
-          { field: "groupId", operator: "contains", value: "vip" },
+          { field: "userGroupId", operator: "isMember", value: "vip" },
         ],
         {
           ...baseState,
@@ -61,7 +69,16 @@ describe("evaluateConditions", () => {
           groupIds: ["vip", "promo-users"],
         },
       ),
-    ).toBe(true);
+    ).resolves.toBe(true);
+  });
+
+  it("supports dynamic group conditions", async () => {
+    await expect(
+      evaluateConditions(
+        [{ field: "dynamicUserGroupId", operator: "matches", value: "group_new" }],
+        baseState,
+      ),
+    ).resolves.toBe(true);
   });
 });
 
@@ -158,6 +175,30 @@ describe("createTriggerService", () => {
     expect(createScheduledMock).not.toHaveBeenCalled();
   });
 
+  it("schedules a trigger when the user belongs to the selected manual group", async () => {
+    findActiveRulesByEventMock.mockResolvedValue([
+      {
+        ...baseRule,
+        conditions: [{ field: "userGroupId", operator: "isMember", value: "vip" }],
+      },
+    ]);
+    findExistingScheduledMock.mockResolvedValue(null);
+
+    await service.scheduleTrigger("user.started", "12345", {
+      ...baseState,
+      groupIds: ["vip"],
+    });
+
+    expect(createScheduledMock).toHaveBeenCalledTimes(1);
+    expect(createScheduledMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        triggerRuleId: "rule_1",
+        triggerEventKey: "user.started",
+        chatId: "12345",
+      }),
+    );
+  });
+
   it("uses the event time to snapshot the message and compute sendAt", async () => {
     const eventOccurredAt = new Date("2026-07-13T10:00:00.000Z");
     findActiveRulesByEventMock.mockResolvedValue([
@@ -190,16 +231,18 @@ describe("createTriggerService", () => {
     });
   });
 
-  it("processes pending scheduled trigger messages", async () => {
+  it("sends queued trigger payloads using the stored snapshot", async () => {
     findPendingScheduledMock.mockResolvedValue([
       {
-        id: "scheduled_1",
+        id: "pending_1",
         triggerRuleId: "rule_1",
         triggerEventKey: "user.started",
         chatId: "12345",
-        text: "Hello!",
-        imageUrl: null,
-        buttons: null,
+        text: "Snapshot text",
+        imageUrl: "/uploads/admin/triggers/hero.webp",
+        buttons: [
+          { text: "Try free", type: "url", value: "https://example.com" },
+        ],
         triggeredAt: new Date("2026-07-13T10:00:00.000Z"),
         sendAt: new Date("2026-07-13T10:15:00.000Z"),
         sentAt: null,
@@ -207,10 +250,17 @@ describe("createTriggerService", () => {
       },
     ]);
 
-    const sent = await service.processPendingTriggers(async () => undefined);
+    const sendMessageMock = vi.fn(async () => undefined);
+    const sent = await service.processPendingTriggers(sendMessageMock);
 
     expect(sent).toBe(1);
-    expect(markSentMock).toHaveBeenCalledWith("scheduled_1");
+    expect(sendMessageMock).toHaveBeenCalledWith("12345", "Snapshot text", {
+      imageUrl: "/uploads/admin/triggers/hero.webp",
+      buttons: [
+        { text: "Try free", type: "url", value: "https://example.com" },
+      ],
+    });
+    expect(markSentMock).toHaveBeenCalledWith("pending_1");
   });
 
   it("marks a pending row as sent when message delivery fails", async () => {

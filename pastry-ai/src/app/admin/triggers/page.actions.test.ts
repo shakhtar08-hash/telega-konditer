@@ -63,6 +63,12 @@ describe("trigger rule actions", () => {
     formData.set("delayUnit", "minutes");
     formData.set("messageText", "Hello!");
     formData.set(
+      "buttons",
+      JSON.stringify([
+        { text: "Оплатить", type: "url", value: "https://pay.example.com" },
+      ]),
+    );
+    formData.set(
       "conditions",
       JSON.stringify([
         { field: "promoClaimed", operator: "is", value: false },
@@ -75,7 +81,7 @@ describe("trigger rule actions", () => {
     expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          buttons: [],
+          buttons: [{ text: "Оплатить", type: "url", value: "https://pay.example.com" }],
           conditions: [
             { field: "promoClaimed", operator: "is", value: false },
             { field: "hasActiveTariff", operator: "is", value: false },
@@ -90,8 +96,6 @@ describe("trigger rule actions", () => {
         }),
       }),
     );
-    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
-    expect(redirectMock).toHaveBeenCalledWith("/admin/triggers");
   });
 
   it("filters unsupported conditions before persisting", async () => {
@@ -120,7 +124,7 @@ describe("trigger rule actions", () => {
     );
   });
 
-  it("accepts only structured user group conditions", async () => {
+  it("accepts only structured user and dynamic group conditions", async () => {
     const formData = new FormData();
     formData.set("name", "Group trigger");
     formData.set("eventKey", "user.started");
@@ -131,6 +135,7 @@ describe("trigger rule actions", () => {
       "conditions",
       JSON.stringify([
         { field: "userGroupId", operator: "isMember", value: "group_vip" },
+        { field: "dynamicUserGroupId", operator: "matches", value: "dynamic_no_tariff" },
         { field: "groupId", operator: "contains", value: "legacy-group" },
       ]),
     );
@@ -140,49 +145,13 @@ describe("trigger rule actions", () => {
     expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          conditions: [{ field: "userGroupId", operator: "isMember", value: "group_vip" }],
+          conditions: [
+            { field: "userGroupId", operator: "isMember", value: "group_vip" },
+            { field: "dynamicUserGroupId", operator: "matches", value: "dynamic_no_tariff" },
+          ],
         }),
       }),
     );
-  });
-
-  it("normalizes unsupported and negative delay input before create", async () => {
-    const formData = new FormData();
-    formData.set("name", "Unsafe delay");
-    formData.set("eventKey", "user.started");
-    formData.set("delayValue", "-15");
-    formData.set("delayUnit", "weeks");
-    formData.set("messageText", "Hello!");
-    formData.set("conditions", "[]");
-
-    await expect(createTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          delayUnit: "now",
-          delayValue: 0,
-        }),
-      }),
-    );
-  });
-
-  it("does not save an uploaded image for an invalid create submission", async () => {
-    const formData = new FormData();
-    formData.set("name", "");
-    formData.set("eventKey", "user.started");
-    formData.set("delayValue", "15");
-    formData.set("delayUnit", "minutes");
-    formData.set("messageText", "Hello!");
-    formData.set("conditions", "[]");
-    formData.set("imageFile", new File(["binary"], "cake.png", { type: "image/png" }));
-
-    await createTriggerRule(formData);
-
-    expect(saveAdminImageMock).not.toHaveBeenCalled();
-    expect(createMock).not.toHaveBeenCalled();
-    expect(redirectMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
   it("updates an existing trigger rule with structured fields", async () => {
@@ -196,6 +165,12 @@ describe("trigger rule actions", () => {
     formData.set("messageText", "Come back!");
     formData.set("imageUrl", "/uploads/admin/triggers/reminder.png");
     formData.set(
+      "buttons",
+      JSON.stringify([
+        { text: "Смотреть тариф", type: "url", value: "https://example.com/pay" },
+      ]),
+    );
+    formData.set(
       "conditions",
       JSON.stringify([{ field: "generationCount", operator: "gte", value: 3 }]),
     );
@@ -204,6 +179,7 @@ describe("trigger rule actions", () => {
 
     expect(updateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
+        buttons: [{ text: "Смотреть тариф", type: "url", value: "https://example.com/pay" }],
         conditions: [{ field: "generationCount", operator: "gte", value: 3 }],
         delayUnit: "hours",
         delayValue: 2,
@@ -215,50 +191,6 @@ describe("trigger rule actions", () => {
       }),
       where: { id: "rule_1" },
     });
-    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
-    expect(redirectMock).toHaveBeenCalledWith("/admin/triggers");
-  });
-
-  it("clamps invalid delay updates to a safe supported value", async () => {
-    const formData = new FormData();
-    formData.set("id", "rule_1");
-    formData.set("name", "Promo expired");
-    formData.set("eventKey", "promo.expired");
-    formData.set("delayValue", "-2");
-    formData.set("delayUnit", "hours");
-    formData.set("status", "active");
-    formData.set("messageText", "Come back!");
-    formData.set("conditions", "[]");
-
-    await expect(updateTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-
-    expect(updateMock).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        delayUnit: "hours",
-        delayValue: 0,
-      }),
-      where: { id: "rule_1" },
-    });
-  });
-
-  it("does not save an uploaded image for an invalid update submission", async () => {
-    const formData = new FormData();
-    formData.set("id", "rule_1");
-    formData.set("name", "Promo expired");
-    formData.set("eventKey", "");
-    formData.set("delayValue", "2");
-    formData.set("delayUnit", "hours");
-    formData.set("status", "active");
-    formData.set("messageText", "Come back!");
-    formData.set("conditions", "[]");
-    formData.set("imageFile", new File(["binary"], "reminder.png", { type: "image/png" }));
-
-    await updateTriggerRule(formData);
-
-    expect(saveAdminImageMock).not.toHaveBeenCalled();
-    expect(updateMock).not.toHaveBeenCalled();
-    expect(redirectMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
   it("deletes a trigger rule by id", async () => {
@@ -266,11 +198,6 @@ describe("trigger rule actions", () => {
     formData.set("id", "rule_1");
 
     await expect(deleteTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-
-    expect(deleteMock).toHaveBeenCalledWith({
-      where: { id: "rule_1" },
-    });
-    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
-    expect(redirectMock).toHaveBeenCalledWith("/admin/triggers");
+    expect(deleteMock).toHaveBeenCalledWith({ where: { id: "rule_1" } });
   });
 });

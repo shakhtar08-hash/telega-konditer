@@ -1,0 +1,8 @@
+- Keep `Onboarding` separate from trigger automation.
+- Support exactly one event per trigger rule.
+- Support multiple conditions joined by `AND` only in the first version.
+- Do not add `OR` logic, visual branching, or manual campaign scheduling to this feature.
+- Keep the visual direction close to the supplied two-panel dark references.
+- Keep Telegram preview on the right side of the create/edit screen.
+- Continue snapshotting queued message payloads in scheduled rows.
+- Prefer business-facing event labels in the UI instead of raw technical slugs.

@@ -1,7 +1,9 @@
 import { AdminPageHeader } from "@/components/admin/data-table";
+import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
 import {
   AdminButton,
   AdminField,
+  AdminImageField,
   AdminInput,
   AdminPanel,
   AdminTextarea,
@@ -9,6 +11,10 @@ import {
 } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
+import { parseBuyButtons, parseBuyButtonsFromFormData } from "./buy-buttons-form";
+import { AdminBuyButtonsEditor } from "./buy-buttons-editor";
+import { AdminNextActionSelect } from "./next-action-select";
+import { saveAdminImage } from "../_lib/save-admin-image";
 
 export const dynamic = "force-dynamic";
 
@@ -19,33 +25,33 @@ export async function updateFunnelStep(formData: FormData) {
   const sortOrder = Number(formData.get("sortOrder"));
   const active = formData.get("active") === "on";
   const title = String(formData.get("title") ?? "").trim();
-  const imagePath = String(formData.get("imagePath") ?? "").trim();
+  const imagePath = await saveAdminImage({
+    entity: "funnel",
+    file: (formData.get("imageFile") as File | null) ?? null,
+    manualValue: String(formData.get("imagePath") ?? ""),
+  }) ?? "";
   const text = String(formData.get("text") ?? "").trim();
   const nextButtonText = String(formData.get("nextButtonText") ?? "").trim();
-  const buyButtonText = String(formData.get("buyButtonText") ?? "").trim();
-  const buyButtonUrl = String(formData.get("buyButtonUrl") ?? "").trim();
+  const nextAction = String(formData.get("nextAction") ?? "next").trim();
   const offerButtonText = String(formData.get("offerButtonText") ?? "").trim();
 
-  if (
-    !id ||
-    !title ||
-    !imagePath ||
-    !text ||
-    !nextButtonText ||
-    !buyButtonText ||
-    Number.isNaN(sortOrder)
-  ) {
+  if (!id || !title || !imagePath || !text || Number.isNaN(sortOrder)) {
     return;
   }
+
+  const buyButtons = parseBuyButtonsFromFormData(formData);
+  const firstBuyButton = buyButtons.find((button) => button.active);
 
   await prisma.funnelStep.update({
     where: { id },
     data: {
       active,
-      buyButtonText,
-      buyButtonUrl: buyButtonUrl || null,
+      buyButtons,
+      buyButtonText: firstBuyButton?.text ?? "",
+      buyButtonUrl: firstBuyButton?.url || null,
       imagePath,
       nextButtonText,
+      nextAction,
       offerButtonText: offerButtonText || null,
       sortOrder,
       text,
@@ -62,24 +68,33 @@ export async function createFunnelStep(formData: FormData) {
   const slug = String(formData.get("slug") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder"));
   const title = String(formData.get("title") ?? "").trim();
-  const imagePath = String(formData.get("imagePath") ?? "").trim();
+  const imagePath = await saveAdminImage({
+    entity: "funnel",
+    file: (formData.get("imageFile") as File | null) ?? null,
+    manualValue: String(formData.get("imagePath") ?? ""),
+  }) ?? "";
   const text = String(formData.get("text") ?? "").trim();
-  const nextButtonText = String(formData.get("nextButtonText") ?? "").trim() || "Далее";
-  const buyButtonText = String(formData.get("buyButtonText") ?? "").trim() || "Купить";
-  const buyButtonUrl = String(formData.get("buyButtonUrl") ?? "").trim();
+  const nextButtonText =
+    String(formData.get("nextButtonText") ?? "").trim() || "Далее";
+  const nextAction = String(formData.get("nextAction") ?? "next").trim();
   const offerButtonText = String(formData.get("offerButtonText") ?? "").trim();
 
   if (!slug || !title || !imagePath || !text || Number.isNaN(sortOrder)) {
     return;
   }
 
+  const buyButtons = parseBuyButtonsFromFormData(formData);
+  const firstBuyButton = buyButtons.find((button) => button.active);
+
   await prisma.funnelStep.create({
     data: {
       active: true,
-      buyButtonText,
-      buyButtonUrl: buyButtonUrl || null,
+      buyButtons,
+      buyButtonText: firstBuyButton?.text ?? "",
+      buyButtonUrl: firstBuyButton?.url || null,
       imagePath,
       nextButtonText,
+      nextAction,
       offerButtonText: offerButtonText || null,
       slug,
       sortOrder,
@@ -96,11 +111,13 @@ export default async function AdminFunnelPage() {
     orderBy: { sortOrder: "asc" },
     select: {
       active: true,
+      buyButtons: true,
       buyButtonText: true,
       buyButtonUrl: true,
       id: true,
       imagePath: true,
       nextButtonText: true,
+      nextAction: true,
       offerButtonText: true,
       slug: true,
       sortOrder: true,
@@ -115,6 +132,7 @@ export default async function AdminFunnelPage() {
         description="Редактирование приветствия, изображений, порядка и кнопок Telegram-воронки."
         title="Воронка"
       />
+      <ChatBotSubNav />
 
       <form action={createFunnelStep}>
         <AdminPanel className="space-y-4">
@@ -123,8 +141,7 @@ export default async function AdminFunnelPage() {
               <h3 className="font-semibold text-[#f4f7fb]">Создать новый шаг</h3>
               <p className="text-sm leading-6 text-[#97a4b8]">
                 Добавьте новый пост воронки со своим изображением, текстом и
-                кнопками. URL покупки можно оставить пустым, тогда бот построит
-                ссылку оплаты автоматически.
+                кнопками.
               </p>
             </div>
             <AdminButton type="submit">Создать</AdminButton>
@@ -142,34 +159,30 @@ export default async function AdminFunnelPage() {
             </AdminField>
           </div>
 
-          <AdminField label="Путь к изображению или URL">
-            <AdminInput name="imagePath" placeholder="/onboarding/new-step.png" />
-          </AdminField>
+          <AdminImageField
+            fileName="imageFile"
+            label="Путь к изображению или URL"
+            placeholder="/onboarding/new-step.png"
+            textName="imagePath"
+          />
 
           <AdminField label="Текст сообщения">
             <AdminTextarea className="min-h-32" name="text" />
           </AdminField>
 
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <AdminField label="Кнопка далее">
               <AdminInput defaultValue="Далее" name="nextButtonText" />
             </AdminField>
-            <AdminField label="Кнопка покупки">
-              <AdminInput defaultValue="Купить" name="buyButtonText" />
+            <AdminField label="Действие при нажатии">
+              <AdminNextActionSelect initialValue="next" />
             </AdminField>
             <AdminField label="Кнопка оффера">
               <AdminInput name="offerButtonText" />
             </AdminField>
-            <AdminField
-              hint="Поддерживает {{baseUrl}} и {{telegramId}}."
-              label="Свой URL покупки"
-            >
-              <AdminInput
-                name="buyButtonUrl"
-                placeholder="{{baseUrl}}/pay?telegramId={{telegramId}}"
-              />
-            </AdminField>
           </div>
+
+          <AdminBuyButtonsEditor initialButtons={[]} />
         </AdminPanel>
       </form>
 
@@ -181,81 +194,83 @@ export default async function AdminFunnelPage() {
         </AdminPanel>
       ) : (
         <div className="grid gap-4">
-          {steps.map((step) => (
-            <form action={updateFunnelStep} key={step.id}>
-              <AdminPanel className="space-y-4">
-                <input name="id" type="hidden" value={step.id} />
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold text-[#f4f7fb]">{step.title}</h3>
-                    <p className="font-mono text-xs text-[#97a4b8]">{step.slug}</p>
+          {steps.map((step) => {
+            const buyButtons = parseBuyButtons(step.buyButtons);
+
+            return (
+              <form action={updateFunnelStep} key={step.id}>
+                <AdminPanel className="space-y-4">
+                  <input name="id" type="hidden" value={step.id} />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-[#f4f7fb]">{step.title}</h3>
+                      <p className="font-mono text-xs text-[#97a4b8]">{step.slug}</p>
+                    </div>
+                    <AdminButton type="submit">Сохранить</AdminButton>
                   </div>
-                  <AdminButton type="submit">Сохранить</AdminButton>
-                </div>
 
-                <div className="grid gap-3 md:grid-cols-[120px_1fr_180px]">
-                  <AdminField label="Порядок">
-                    <AdminInput
-                      defaultValue={step.sortOrder}
-                      name="sortOrder"
-                      type="number"
-                    />
-                  </AdminField>
-                  <AdminField label="Заголовок">
-                    <AdminInput defaultValue={step.title} name="title" />
-                  </AdminField>
-                  <div className="flex items-end pb-2">
-                    <AdminToggle defaultChecked={step.active} name="active">
-                      Активен
-                    </AdminToggle>
+                  <div className="grid gap-3 md:grid-cols-[120px_1fr_180px]">
+                    <AdminField label="Порядок">
+                      <AdminInput
+                        defaultValue={step.sortOrder}
+                        name="sortOrder"
+                        type="number"
+                      />
+                    </AdminField>
+                    <AdminField label="Заголовок">
+                      <AdminInput defaultValue={step.title} name="title" />
+                    </AdminField>
+                    <div className="flex items-end pb-2">
+                      <AdminToggle defaultChecked={step.active} name="active">
+                        Активен
+                      </AdminToggle>
+                    </div>
                   </div>
-                </div>
 
-                <AdminField label="Путь к изображению или URL">
-                  <AdminInput defaultValue={step.imagePath} name="imagePath" />
-                </AdminField>
-
-                <AdminField label="Текст сообщения">
-                  <AdminTextarea
-                    className="min-h-40"
-                    defaultValue={step.text}
-                    name="text"
+                  <AdminImageField
+                    fileName="imageFile"
+                    label="Путь к изображению или URL"
+                    defaultValue={step.imagePath}
+                    placeholder="/onboarding/new-step.png"
+                    textName="imagePath"
                   />
-                </AdminField>
 
-                <div className="grid gap-3 md:grid-cols-4">
-                  <AdminField label="Кнопка далее">
-                    <AdminInput
-                      defaultValue={step.nextButtonText}
-                      name="nextButtonText"
+                  <AdminField label="Текст сообщения">
+                    <AdminTextarea
+                      className="min-h-40"
+                      defaultValue={step.text}
+                      name="text"
                     />
                   </AdminField>
-                  <AdminField label="Кнопка покупки">
-                    <AdminInput
-                      defaultValue={step.buyButtonText}
-                      name="buyButtonText"
-                    />
-                  </AdminField>
-                  <AdminField label="Кнопка оффера">
-                    <AdminInput
-                      defaultValue={step.offerButtonText ?? ""}
-                      name="offerButtonText"
-                    />
-                  </AdminField>
-                  <AdminField
-                    hint="Можно оставить пустым для стандартной оплаты."
-                    label="Свой URL покупки"
-                  >
-                    <AdminInput
-                      defaultValue={step.buyButtonUrl ?? ""}
-                      name="buyButtonUrl"
-                      placeholder="{{baseUrl}}/pay?telegramId={{telegramId}}"
-                    />
-                  </AdminField>
-                </div>
-              </AdminPanel>
-            </form>
-          ))}
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <AdminField label="Кнопка далее">
+                      <AdminInput
+                        defaultValue={step.nextButtonText}
+                        name="nextButtonText"
+                      />
+                    </AdminField>
+                    <AdminField label="Действие при нажатии">
+                      <AdminNextActionSelect
+                        initialValue={
+                          (step.nextAction as "next" | "activate_promo_and_next") ??
+                          "next"
+                        }
+                      />
+                    </AdminField>
+                    <AdminField label="Кнопка оффера">
+                      <AdminInput
+                        defaultValue={step.offerButtonText ?? ""}
+                        name="offerButtonText"
+                      />
+                    </AdminField>
+                  </div>
+
+                  <AdminBuyButtonsEditor initialButtons={buyButtons} />
+                </AdminPanel>
+              </form>
+            );
+          })}
         </div>
       )}
     </section>

@@ -1,36 +1,12 @@
-# Task 2 Report: sizeConfig and shared render utils
+# Task 2 Report: Create UsageLogService
 
-## What was implemented
-
-- **size-config.ts** — `CardSize` type, `SizeConfigEntry` type, `sizeConfig` record with exact values for compact/normal/long
-- **utils.ts** — `determineCardSize`, `renderMetaHtml`, `renderIngredientRows`, `renderStepItems`, `renderTipItems`, `sizeCssVars`
-- **utils.test.ts** — Vitest tests for `determineCardSize`, `renderMetaHtml`, `renderTipItems`
-
-## Test results
-
-All 7 new tests pass:
-- `determineCardSize` — compact at 500/1000, normal at 1500/2500, long at 2501/3000
-- `renderMetaHtml` — renders all fields, omits null fields
-- `renderTipItems` — limits to maxTips, returns empty string for empty tips
-
-Pre-existing test failures (4) are unrelated (env config, encoding, KIE provider, chat-bot page).
-
-## Typecheck
-
-`npm run typecheck` — passes cleanly.
-
-## Files changed
-
-- `src/components/recipe-card/templates/size-config.ts` (new)
-- `src/components/recipe-card/templates/utils.ts` (new)
-- `src/components/recipe-card/templates/utils.test.ts` (new)
-
-## Self-review findings
-
-- All functions are pure string utilities with no runtime deps, as required.
-- Emoji icons match the brief exactly (⏱ ⭐ 🍪 ⚖️ 📦).
-- Boundary values for `determineCardSize` use `<=` for both compact and normal thresholds per brief.
-
-## Issues or concerns
-
-None.
+- **Status**: DONE
+- **Commits**: none (user did not request commit)
+- **Test results**:
+  - `src/db/repositories/usage-log-service.test.ts` — 4/4 passed
+  - Full suite: 60/63 files passed, 254/255 tests passed (3 pre-existing failures unrelated to this change)
+- **Files created**:
+  - `src/db/repositories/usage-log-service.ts` — service with `recordSuccess` and `recordError` methods
+  - `src/db/repositories/usage-log-service.test.ts` — 4 tests covering success, error, optional conversationId, and missing model
+- **Concerns**: none
+- **Report file**: `.superpowers/sdd/task-2-report.md`

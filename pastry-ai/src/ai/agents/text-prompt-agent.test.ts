@@ -5,6 +5,7 @@ import { createTextPromptAgent } from "./text-prompt-agent";
 describe("TextPromptAgent", () => {
   it("appends recipe context for recalculation prompts when the template omits it", async () => {
     const prompts: string[] = [];
+    const systems: string[] = [];
     const agent = createTextPromptAgent({
       promptLoader: {
         load: async () => ({
@@ -24,6 +25,7 @@ describe("TextPromptAgent", () => {
       aiService: {
         generateText: async (input: Record<string, unknown>) => {
           prompts.push(input.prompt as string);
+          systems.push(input.system as string);
           return "ok";
         },
         generateObject: async () => {
@@ -43,5 +45,6 @@ describe("TextPromptAgent", () => {
 
     expect(prompts[0]).toContain("Пересчитай на форму 20 см");
     expect(prompts[0]).toContain("Исходный рецепт: шоколадный бисквит");
+    expect(systems[0]).toContain("AI-кондитера Лисы");
   });
 });

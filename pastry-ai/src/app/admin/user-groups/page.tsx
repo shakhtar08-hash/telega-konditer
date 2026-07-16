@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { loadUserGroupsOrEmpty } from "@/app/admin/_lib/user-groups";
 import { AdminPageHeader, DataTable, formatDate } from "@/components/admin/data-table";
 import {
   AdminButton,
@@ -23,16 +24,18 @@ type UserGroupRow = {
 };
 
 export default async function AdminUserGroupsPage() {
-  const groups = (await prisma.userGroup.findMany({
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      updatedAt: true,
-      _count: { select: { memberships: true } },
-    },
-  })) as UserGroupRow[];
+  const { groups, unavailable } = await loadUserGroupsOrEmpty(async () =>
+    (await prisma.userGroup.findMany({
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        updatedAt: true,
+        _count: { select: { memberships: true } },
+      },
+    })) as UserGroupRow[],
+  );
 
   return (
     <section className="space-y-5">
@@ -43,27 +46,39 @@ export default async function AdminUserGroupsPage() {
 
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <AdminPanel>
-          <form action={createUserGroup} className="space-y-4">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-[#f4f7fb]">Создать группу</h3>
+          {unavailable ? (
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-[#f4f7fb]">
+                Группы пользователей пока недоступны
+              </h3>
               <p className="text-sm text-[#97a4b8]">
-                Добавьте ручную группу, чтобы использовать ее в сегментации и триггерах.
+                Таблица групп ещё не создана в базе. Страница продолжает открываться, но
+                создавать и редактировать группы получится после применения миграции.
               </p>
             </div>
+          ) : (
+            <form action={createUserGroup} className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-[#f4f7fb]">Создать группу</h3>
+                <p className="text-sm text-[#97a4b8]">
+                  Добавьте ручную группу, чтобы использовать ее в сегментации и триггерах.
+                </p>
+              </div>
 
-            <AdminField label="Название группы">
-              <AdminInput name="name" placeholder="Например, VIP" required />
-            </AdminField>
+              <AdminField label="Название группы">
+                <AdminInput name="name" placeholder="Например, VIP" required />
+              </AdminField>
 
-            <AdminField label="Описание">
-              <AdminTextarea
-                name="description"
-                placeholder="Для каких пользователей нужна эта группа"
-              />
-            </AdminField>
+              <AdminField label="Описание">
+                <AdminTextarea
+                  name="description"
+                  placeholder="Для каких пользователей нужна эта группа"
+                />
+              </AdminField>
 
-            <AdminButton type="submit">Создать группу</AdminButton>
-          </form>
+              <AdminButton type="submit">Создать группу</AdminButton>
+            </form>
+          )}
         </AdminPanel>
 
         <DataTable
@@ -109,10 +124,22 @@ export default async function AdminUserGroupsPage() {
             },
           ]}
           empty={
-            <>
-              <p>Групп пока нет.</p>
-              <p className="mt-2">Создайте первую ручную группу, чтобы начать сегментацию.</p>
-            </>
+            unavailable ? (
+              <>
+                <p>Группы пользователей пока недоступны.</p>
+                <p className="mt-2">
+                  Таблица групп ещё не создана в базе. После миграции список появится
+                  здесь.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>Групп пока нет.</p>
+                <p className="mt-2">
+                  Создайте первую ручную группу, чтобы начать сегментацию.
+                </p>
+              </>
+            )
           }
           getKey={(group) => group.id}
           rows={groups}

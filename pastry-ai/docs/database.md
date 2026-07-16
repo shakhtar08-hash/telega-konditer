@@ -31,7 +31,7 @@ npx prisma migrate deploy
 - `Subscription` - legacy access status (replaced by `UserTariff`).
 - `Payment` - CloudPayments/payment records.
 - `Conversation` and `Message` - dialog history.
-- `Usage` - feature usage, token counts, cost, latency.
+- `Usage` - feature usage, token counts, cost, latency, provider, model, status, error details.
 - `Prompt` - editable prompt records for AI features.
 - `BotMenuButton` - dynamic Telegram menu buttons.
 - `TelegramSession` - persistent grammY session records and Telegram `update_id` claim records used to deduplicate webhook retries.
@@ -41,6 +41,26 @@ npx prisma migrate deploy
 - `ApiSecret` - encrypted managed API keys.
 - `TriggerMessage` - automatic scheduled message templates.
 - `ScheduledMessage` - queued messages to be sent by cron trigger processor.
+
+## Usage
+
+`Usage` logs each AI provider call:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String, cuid | |
+| `userId` | String, FK→User | |
+| `feature` | String | e.g. `recipes`, `vision`, `photoshoot` |
+| `provider` | String | e.g. `openrouter`, `openai`, `kie` |
+| `model` | String? | Model name, nullable |
+| `inputTokens` | Int | From provider response, 0 if unknown |
+| `outputTokens` | Int | From provider response, 0 if unknown |
+| `cost` | Decimal | From provider response, 0 if unknown |
+| `latency` | Int | Milliseconds from call start to completion |
+| `status` | String | `success` or `error` |
+| `errorMessage` | String? | Error details if status=error |
+| `conversationId` | String? | Optional link to Conversation |
+| `createdAt` | DateTime | |
 
 ## Generated Recipe Context
 

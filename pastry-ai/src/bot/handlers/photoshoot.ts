@@ -17,6 +17,13 @@ type PhotoshootService = {
   }): Promise<PhotoshootOutput>;
 };
 
+type ConversationLogService = {
+  startConversation(input: { userId: string; feature: string }): Promise<string>;
+  appendUserMessage(input: { conversationId: string; content: string; caption?: string }): Promise<void>;
+  appendAssistantMessage(input: { conversationId: string; content: string; model?: string | null }): Promise<void>;
+  appendErrorMessage(input: { conversationId: string; content: string }): Promise<void>;
+};
+
 const readPhotoErrorMessage =
   "Не получилось прочитать фото. Попробуйте отправить его ещё раз.";
 const missingTelegramFilePathMessage =
@@ -31,6 +38,7 @@ export function registerPhotoshootPhotoHandler(
     botToken: string;
     photoshootService: PhotoshootService;
     tokenGuard: TokenGuardService;
+    conversationLogService?: ConversationLogService;
   },
 ): void {
   composer.on("message:photo", async (ctx, next) => {
@@ -73,6 +81,15 @@ export function registerPhotoshootPhotoHandler(
       return;
     }
 
+    const log = dependencies.conversationLogService;
+    let convId: string | undefined;
+
+    if (log) {
+      const caption = ctx.message.caption ?? "";
+      convId = await log.startConversation({ userId, feature: "photoshoot" });
+      await log.appendUserMessage({ conversationId: convId, content: "", caption });
+    }
+
 if (styleCount > 0) {
       try {
         await dependencies.tokenGuard.ensureSufficientTokens(userId, styleCount);
@@ -113,12 +130,19 @@ if (styleCount > 0) {
           ),
         },
       );
-      await dependencies.tokenGuard.chargeTokens(
+await dependencies.tokenGuard.chargeTokens(
         userId,
         "photoshoot",
         "product-photo",
         1,
       );
+    }
+
+    if (log && convId) {
+      await log.appendAssistantMessage({
+        conversationId: convId,
+        content: `Сгенерировано ${result.images.length} стилизованных фото.`,
+      });
     }
   });
 }

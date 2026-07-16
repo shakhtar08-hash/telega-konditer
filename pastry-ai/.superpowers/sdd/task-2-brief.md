@@ -1,36 +1,98 @@
-﻿# Task 2: Create sizeConfig and shared render utils
+### Task 2: Teach Recipe Card Service to Reuse Saved Context
 
-**Files to create:**
-- `src/components/recipe-card/templates/size-config.ts`
-- `src/components/recipe-card/templates/utils.ts`
-- `src/components/recipe-card/templates/utils.test.ts`
+**Files:**
+- Modify: `C:\Users\Roof\Documents\РўРµР»РµРіР°\pastry-ai\src\features\recipe-card\recipe-card-service.ts`
+- Create: `C:\Users\Roof\Documents\РўРµР»РµРіР°\pastry-ai\src\bot\handlers\recipe-card.test.ts`
 
-**Interfaces produced:**
-- `CardSize = "compact" | "normal" | "long"`
-- `sizeConfig: Record<CardSize, SizeConfigEntry>` with width/minHeight/padding/titleFontSize/bodyFontSize/stepFontSize/gap/heroHeight/maxTips
-- `determineCardSize(recipeText: string): CardSize`
-- `renderMetaHtml(meta: RecipeCardOutput["meta"]): string`
-- `renderIngredientRows(ingredients): string`
-- `renderStepItems(steps): string`
-- `renderTipItems(tips, maxTips): string`
-- `sizeCssVars(size: CardSize): string`
+**Interfaces:**
+- Consumes: `StructuredRecipe`, `RecipeCardOutput`, `AIService`
+- Produces: `recipeCardService.createCard(input: { recipeText?: string; recipeJson?: StructuredRecipe; imageUrl?: string | null; promptSlug?: string; template?: CardTemplate; }): Promise<{ urls: string[] } | { text: string }>`
 
-**Steps (TDD):**
-1. Write failing tests in `utils.test.ts`
-2. Create `size-config.ts`
-3. Create `utils.ts`
-4. Run tests to pass
-5. Commit
+- [ ] **Step 1: Write the failing service test for saved image reuse**
 
-**Key requirements:**
-- `determineCardSize`: ≤1000 → compact, 1001-2500 → normal, >2500 → long
-- `renderMetaHtml`: only show non-null fields, use emoji icons (⏱ ⭐ 🍪 ⚖️ 📦)
-- `renderTipItems`: limit to `maxTips`, return "" for empty input
-- `sizeCssVars`: returns CSS custom properties string for `:root`
-- Output format: string functions only (no JSX, no runtime deps)
-- All text in Russian
+```ts
+import { describe, expect, it, vi } from "vitest";
+import { createRecipeCardService } from "@/features/recipe-card/recipe-card-service";
 
-**sizeConfig values (exact):**
-- compact: width=1080, minHeight=1450, padding=80, titleFontSize=60, bodyFontSize=25, stepFontSize=24, gap=34, heroHeight=320, maxTips=4
-- normal: width=1080, minHeight=1620, padding=70, titleFontSize=56, bodyFontSize=24, stepFontSize=23, gap=30, heroHeight=280, maxTips=3
-- long: width=1080, minHeight=2100, padding=56, titleFontSize=48, bodyFontSize=21, stepFontSize=20, gap=22, heroHeight=220, maxTips=2
+describe("recipe card service", () => {
+  it("reuses saved imageUrl instead of generating a new image", async () => {
+    const recipeCardAgent = {
+      execute: vi.fn().mockResolvedValue({
+        title: "РўР°СЂС‚",
+        description: "РЇРіРѕРґРЅС‹Р№ РґРµСЃРµСЂС‚",
+        ingredients: [],
+        steps: ["РЎРјРµС€Р°С‚СЊ"],
+        tips: [],
+        meta: { time: "30 РјРёРЅСѓС‚", yield: "1 С‚РѕСЂС‚", difficulty: null, storage: null, weight: null },
+      }),
+    };
+    const aiService = {
+      generateImage: vi.fn(),
+    } as any;
+
+    const service = createRecipeCardService({ recipeCardAgent, aiService });
+
+    await service.createCard({
+      recipeJson: {
+        name: "РўР°СЂС‚",
+        whyFits: "РџРѕРґС…РѕРґРёС‚",
+        ingredients: ["РЇРіРѕРґС‹"],
+        steps: ["РЎРјРµС€Р°С‚СЊ"],
+        activeTime: "10 РјРёРЅСѓС‚",
+        chillingTime: "20 РјРёРЅСѓС‚",
+        totalTime: "30 РјРёРЅСѓС‚",
+        difficulty: "easy",
+        pastryTip: "РћС…Р»Р°РґРёС‚СЊ",
+        imagePrompt: "Berry tart",
+      },
+      imageUrl: "https://img.test/tart.png",
+      template: "minimal",
+    });
+
+    expect(aiService.generateImage).not.toHaveBeenCalled();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run src/bot/handlers/recipe-card.test.ts`
+Expected: FAIL because `createCard` does not accept `recipeJson`/`imageUrl`
+
+- [ ] **Step 3: Write the minimal implementation**
+
+```ts
+const recipeCardInputSchema = z.object({
+  recipeText: z.string().trim().min(1).optional(),
+  recipeJson: z.custom<StructuredRecipe>().optional(),
+  imageUrl: z.string().trim().optional().nullable(),
+}).refine((value) => value.recipeText || value.recipeJson, {
+  message: "Recipe text or recipe json is required",
+});
+
+function recipeSourceToText(input: { recipeText?: string; recipeJson?: StructuredRecipe }) {
+  if (input.recipeText) {
+    return input.recipeText;
+  }
+
+  return [
+    input.recipeJson?.name,
+    "",
+    "РРЅРіСЂРµРґРёРµРЅС‚С‹:",
+    ...(input.recipeJson?.ingredients ?? []),
+    "",
+    "РџСЂРёРіРѕС‚РѕРІР»РµРЅРёРµ:",
+    ...(input.recipeJson?.steps ?? []),
+  ].join("\n");
+}
+
+const parsed = recipeCardInputSchema.parse(input);
+const recipeText = recipeSourceToText(parsed);
+const imageUrl = parsed.imageUrl ?? (await maybeGenerateImage());
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run src/bot/handlers/recipe-card.test.ts`
+Expected: PASS
+

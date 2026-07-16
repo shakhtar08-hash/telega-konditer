@@ -8,6 +8,7 @@ import {
   AdminSelect,
 } from "@/components/admin/form";
 import { prisma } from "@/db/prisma";
+import { listMatchingDynamicUserGroupsForUser } from "@/features/dynamic-user-groups/service";
 import {
   addUserToGroup,
   removeUserFromGroup,
@@ -81,7 +82,7 @@ export default async function AdminUserDetailPage({
 }: AdminUserDetailPageProps) {
   const resolvedParams = await params;
 
-  const [user, groups, tariffPlans] = await Promise.all([
+  const [user, groups, tariffPlans, matchingDynamicGroups] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: resolvedParams.userId },
       include: {
@@ -124,6 +125,7 @@ export default async function AdminUserDetailPage({
         slug: true,
       },
     }) as Promise<TariffPlanRecord[]>,
+    listMatchingDynamicUserGroupsForUser(resolvedParams.userId),
   ]);
 
   const membershipIds = new Set(
@@ -135,7 +137,7 @@ export default async function AdminUserDetailPage({
     <section className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <AdminPageHeader
-          description="Профиль пользователя, тариф и ручные группы для триггеров."
+          description="Профиль пользователя, тариф, ручные и динамические группы для сегментации."
           title={getUserDisplayName(user)}
         />
         <Link
@@ -226,6 +228,32 @@ export default async function AdminUserDetailPage({
               </AdminButton>
             </form>
           </AdminPanel>
+
+          <AdminPanel className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-[#f4f7fb]">Динамические группы</h3>
+              <p className="mt-1 text-sm text-[#97a4b8]">
+                Виртуальные сегменты, под которые пользователь подходит прямо сейчас.
+              </p>
+            </div>
+
+            {matchingDynamicGroups.length === 0 ? (
+              <p className="text-sm text-[#97a4b8]">
+                Сейчас пользователь не попадает ни в одну динамическую группу.
+              </p>
+            ) : (
+              <ul className="space-y-2 text-sm text-[#dbe3ef]">
+                {matchingDynamicGroups.map((group) => (
+                  <li
+                    className="rounded-lg border border-[#223047] bg-[#0d1522] px-3 py-2"
+                    key={group.id}
+                  >
+                    {group.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </AdminPanel>
         </div>
 
         <div className="space-y-4">
@@ -235,8 +263,7 @@ export default async function AdminUserDetailPage({
                 Группы пользователя
               </h3>
               <p className="mt-1 text-sm text-[#97a4b8]">
-                Ручные сегменты, которые можно использовать в триггерах и
-                административных сценариях.
+                Ручные сегменты, которые можно использовать в триггерах и административных сценариях.
               </p>
             </div>
 

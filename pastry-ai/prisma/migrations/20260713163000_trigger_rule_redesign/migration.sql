@@ -1,4 +1,4 @@
-CREATE TABLE "TriggerRule" (
+CREATE TABLE IF NOT EXISTS "TriggerRule" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "eventKey" TEXT NOT NULL,
@@ -15,7 +15,8 @@ CREATE TABLE "TriggerRule" (
     CONSTRAINT "TriggerRule_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "TriggerRule_eventKey_status_idx" ON "TriggerRule"("eventKey", "status");
+CREATE INDEX IF NOT EXISTS "TriggerRule_eventKey_status_idx"
+ON "TriggerRule"("eventKey", "status");
 
 INSERT INTO "TriggerRule" (
     "id",
@@ -57,15 +58,38 @@ SELECT
     END,
     "createdAt",
     "updatedAt"
-FROM "TriggerMessage";
+FROM "TriggerMessage"
+ON CONFLICT ("id") DO NOTHING;
 
-ALTER TABLE "ScheduledMessage" ADD COLUMN "triggerRuleId" TEXT;
-ALTER TABLE "ScheduledMessage" ADD COLUMN "triggerEventKey" TEXT;
+ALTER TABLE "ScheduledMessage" ADD COLUMN IF NOT EXISTS "triggerRuleId" TEXT;
+ALTER TABLE "ScheduledMessage" ADD COLUMN IF NOT EXISTS "triggerEventKey" TEXT;
 
-UPDATE "ScheduledMessage"
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'ScheduledMessage'
+          AND column_name = 'triggerMessageId'
+    ) THEN
+        EXECUTE '
+            UPDATE "ScheduledMessage"
+            SET
+                "triggerRuleId" = COALESCE("triggerRuleId", "triggerMessageId"),
+                "triggerEventKey" = COALESCE("triggerEventKey", "triggerSlug")
+            WHERE "triggerRuleId" IS NULL OR "triggerEventKey" IS NULL
+        ';
+    END IF;
+END $$;
+
+UPDATE "ScheduledMessage" sm
 SET
-    "triggerRuleId" = "triggerMessageId",
-    "triggerEventKey" = "triggerSlug";
+    "triggerRuleId" = COALESCE(sm."triggerRuleId", tr."id"),
+    "triggerEventKey" = COALESCE(sm."triggerEventKey", tr."eventKey")
+FROM "TriggerRule" tr
+WHERE sm."triggerSlug" = tr."eventKey"
+  AND (sm."triggerRuleId" IS NULL OR sm."triggerEventKey" IS NULL);
 
 ALTER TABLE "ScheduledMessage" ALTER COLUMN "triggerRuleId" SET NOT NULL;
 ALTER TABLE "ScheduledMessage" ALTER COLUMN "triggerEventKey" SET NOT NULL;
@@ -73,13 +97,13 @@ ALTER TABLE "ScheduledMessage" ALTER COLUMN "triggerEventKey" SET NOT NULL;
 DROP INDEX IF EXISTS "ScheduledMessage_triggerMessageId_chatId_sentAt_idx";
 DROP INDEX IF EXISTS "ScheduledMessage_triggerSlug_idx";
 
-ALTER TABLE "ScheduledMessage" DROP COLUMN "triggerMessageId";
-ALTER TABLE "ScheduledMessage" DROP COLUMN "triggerSlug";
+ALTER TABLE "ScheduledMessage" DROP COLUMN IF EXISTS "triggerMessageId";
+ALTER TABLE "ScheduledMessage" DROP COLUMN IF EXISTS "triggerSlug";
 
-CREATE INDEX "ScheduledMessage_triggerRuleId_chatId_sentAt_idx"
+CREATE INDEX IF NOT EXISTS "ScheduledMessage_triggerRuleId_chatId_sentAt_idx"
 ON "ScheduledMessage"("triggerRuleId", "chatId", "sentAt");
 
-CREATE INDEX "ScheduledMessage_triggerEventKey_idx"
+CREATE INDEX IF NOT EXISTS "ScheduledMessage_triggerEventKey_idx"
 ON "ScheduledMessage"("triggerEventKey");
 
-DROP TABLE "TriggerMessage";
+DROP TABLE IF EXISTS "TriggerMessage";

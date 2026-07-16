@@ -1,11 +1,17 @@
 import { notFound } from "next/navigation";
+import { loadDynamicUserGroupsOrEmpty } from "@/app/admin/_lib/dynamic-user-groups";
 import { AdminPageHeader } from "@/components/admin/data-table";
 import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
 import { prisma } from "@/db/prisma";
 import { getTriggerEventOptions } from "@/features/triggers/trigger-template";
 import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
 import { deleteTriggerRule, updateTriggerRule } from "../actions";
-import { TriggerForm, type TriggerUserGroupOption } from "../trigger-form";
+import { parseTriggerButtons } from "../trigger-buttons-form";
+import {
+  TriggerForm,
+  type TriggerDynamicUserGroupOption,
+  type TriggerUserGroupOption,
+} from "../trigger-form";
 
 type TriggerRulePageProps = {
   params: Promise<{ triggerId: string }> | { triggerId: string };
@@ -52,7 +58,7 @@ function getLocalizedEventOptions() {
 
 export default async function TriggerRulePage({ params }: TriggerRulePageProps) {
   const resolvedParams = await params;
-  const [rule, userGroups] = await Promise.all([
+  const [rule, userGroups, dynamicGroupsResult] = await Promise.all([
     prisma.triggerRule.findUnique({
       where: { id: resolvedParams.triggerId },
       select: {
@@ -64,6 +70,7 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
         imageUrl: true,
         messageText: true,
         name: true,
+        buttons: true,
         status: true,
       },
     }),
@@ -71,15 +78,26 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    loadDynamicUserGroupsOrEmpty(() =>
+      prisma.dynamicUserGroup.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, status: true },
+      }),
+    ),
   ]);
 
   if (!rule) {
     notFound();
   }
+  const dynamicGroups = dynamicGroupsResult.groups;
 
   const userGroupOptions: TriggerUserGroupOption[] = userGroups.map((group) => ({
     value: group.id,
     label: group.name,
+  }));
+  const dynamicUserGroupOptions: TriggerDynamicUserGroupOption[] = dynamicGroups.map((group) => ({
+    value: group.id,
+    label: group.status === "active" ? group.name : `${group.name} (выключена)`,
   }));
 
   return (
@@ -93,6 +111,7 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
         action={updateTriggerRule}
         cancelHref="/admin/triggers"
         deleteAction={deleteTriggerRule}
+        dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}
         initial={{
           conditions: Array.isArray(rule.conditions)
@@ -105,6 +124,7 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
           imageUrl: rule.imageUrl,
           messageText: rule.messageText,
           name: rule.name,
+          buttons: parseTriggerButtons(rule.buttons),
           status: rule.status as "draft" | "active" | "disabled",
         }}
         submitLabel="Сохранить изменения"

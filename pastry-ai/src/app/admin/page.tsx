@@ -24,6 +24,21 @@ const currencyFormat = new Intl.NumberFormat("ru-RU", {
 const activity = [210, 270, 215, 295, 235, 205, 325];
 const revenueBars = [42, 52, 59, 64, 67, 74, 86];
 
+const featureGroups = {
+  recipes: ["recipes", "best-recipe-search", "recipe-recalculation", "recipe-card", "margin-calculator"],
+  photo: ["photoshoot"],
+  analysis: ["vision"],
+  consulting: ["ask-chef", "free-lesson"],
+  content: ["carousel"],
+} as const;
+
+function groupFeature(feature: string): string {
+  for (const [group, features] of Object.entries(featureGroups)) {
+    if ((features as readonly string[]).includes(feature)) return group;
+  }
+  return "other";
+}
+
 function toNumber(value: unknown) {
   if (value === null || value === undefined) {
     return 0;
@@ -104,18 +119,21 @@ function MiniLineChart() {
 }
 
 function DonutChart({
-  conversations,
-  photoStyles,
-  prompts,
+  recipeCount,
+  photoCount,
+  analysisCount,
+  otherCount,
 }: {
-  conversations: number;
-  photoStyles: number;
-  prompts: number;
+  recipeCount: number;
+  photoCount: number;
+  analysisCount: number;
+  otherCount: number;
 }) {
-  const total = Math.max(conversations + photoStyles + prompts, 1);
-  const recipePercent = Math.round((prompts / total) * 100);
-  const photoPercent = Math.round((photoStyles / total) * 100);
-  const analysisPercent = Math.max(100 - recipePercent - photoPercent, 0);
+  const total = Math.max(recipeCount + photoCount + analysisCount + otherCount, 1);
+  const recipePercent = Math.round((recipeCount / total) * 100);
+  const photoPercent = Math.round((photoCount / total) * 100);
+  const analysisPercent = Math.round((analysisCount / total) * 100);
+  const otherPercent = Math.max(100 - recipePercent - photoPercent - analysisPercent, 0);
 
   return (
     <div className="grid gap-5 sm:grid-cols-[150px_1fr]">
@@ -140,7 +158,7 @@ function DonutChart({
       <div className="space-y-3 text-sm">
         <ChartLegend color="#35d08b" label="Рецепты" value={`${recipePercent}%`} />
         <ChartLegend color="#2b91ff" label="Фото" value={`${photoPercent}%`} />
-        <ChartLegend color="#ff8a1f" label="Анализ" value={`${analysisPercent}%`} />
+        <ChartLegend color="#ff8a1f" label="Прочее" value={`${analysisPercent + otherPercent}%`} />
       </div>
     </div>
   );
@@ -185,23 +203,25 @@ function RevenueChart() {
 export default async function AdminDashboardPage() {
   const [
     userCount,
-    promptCount,
-    photoStyleCount,
-    conversationCount,
     subscriptionCount,
     usageAggregate,
     paymentAggregate,
+    recipeCount,
+    photosSentAgg,
+    usageByFeature,
+    usageByProvider,
     users,
     conversations,
     photoStyles,
   ] = await Promise.all([
     prisma.user.count(),
-    prisma.prompt.count(),
-    prisma.photoStyle.count(),
-    prisma.conversation.count(),
     prisma.subscription.count(),
     prisma.usage.aggregate({ _sum: { cost: true } }),
     prisma.payment.aggregate({ _sum: { amount: true } }),
+    prisma.generatedRecipeContext.count(),
+    prisma.tokenUsage.aggregate({ _sum: { imagesSent: true } }),
+    prisma.usage.groupBy({ by: ["feature"], _count: true }),
+    prisma.usage.groupBy({ by: ["provider"], _sum: { cost: true }, _count: true }),
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -247,45 +267,61 @@ export default async function AdminDashboardPage() {
   const apiCost = toNumber(usageAggregate._sum.cost);
   const revenue = toNumber(paymentAggregate._sum.amount);
   const conversion = userCount > 0 ? (subscriptionCount / userCount) * 100 : 0;
-  const generatedPhotos = photoStyleCount * 100 + conversationCount;
+  const photosSent = toNumber(photosSentAgg._sum.imagesSent);
+
+  const distribution: Record<string, number> = {};
+  for (const item of usageByFeature) {
+    const group = groupFeature(item.feature);
+    distribution[group] = (distribution[group] ?? 0) + item._count;
+  }
 
   const metricCards = [
     {
       accent: "bg-[#7257ff]",
-      delta: "+128 за неделю",
       icon: Users,
       label: "Пользователи",
       value: formatNumber(userCount),
     },
     {
       accent: "bg-[#35d08b]",
-      delta: "+312 за неделю",
       icon: CupSoda,
       label: "Рецепты создано",
-      value: formatNumber(conversationCount),
+      value: formatNumber(recipeCount),
     },
     {
       accent: "bg-[#2b91ff]",
-      delta: "+842 за неделю",
       icon: ImageIcon,
       label: "Фото сгенерировано",
-      value: formatNumber(generatedPhotos),
+      value: formatNumber(photosSent),
     },
     {
       accent: "bg-[#f5a524]",
-      delta: "+12 430 ₽ за неделю",
       icon: Coins,
       label: "Выручка",
       value: formatCurrency(revenue),
     },
     {
       accent: "bg-[#8b5cf6]",
-      delta: "+2 140 ₽ за неделю",
       icon: ChartPie,
       label: "Расходы на API",
       value: formatCurrency(apiCost),
     },
   ];
+
+  const donutRecipe = distribution.recipes ?? 0;
+  const donutPhoto = distribution.photo ?? 0;
+  const donutAnalysis = (distribution.analysis ?? 0) + (distribution.consulting ?? 0) + (distribution.content ?? 0);
+  const donutOther = distribution.other ?? 0;
+
+  const providerLabels: Record<string, string> = {
+    openrouter: "OpenRouter",
+    openai: "OpenAI",
+    kie: "KIE",
+  };
+  const maxProviderCost = Math.max(
+    ...usageByProvider.map((p) => toNumber(p._sum.cost)),
+    1,
+  );
 
   return (
     <section className="space-y-5">
@@ -325,7 +361,6 @@ export default async function AdminDashboardPage() {
                 <div>
                   <p className="text-xs text-[#97a4b8]">{card.label}</p>
                   <p className="mt-1 text-2xl font-semibold">{card.value}</p>
-                  <p className="mt-1 text-xs text-[#35d08b]">{card.delta} ↗</p>
                 </div>
               </div>
             </Card>
@@ -346,9 +381,10 @@ export default async function AdminDashboardPage() {
         <Card>
           <h3 className="mb-5 font-semibold">Генерации по типам</h3>
           <DonutChart
-            conversations={conversationCount}
-            photoStyles={photoStyleCount}
-            prompts={promptCount}
+            recipeCount={donutRecipe}
+            photoCount={donutPhoto}
+            analysisCount={donutAnalysis}
+            otherCount={donutOther}
           />
         </Card>
         <Card>
@@ -433,8 +469,23 @@ export default async function AdminDashboardPage() {
       <div className="grid gap-4 xl:grid-cols-[0.95fr_0.7fr_1fr]">
         <Card>
           <h3 className="mb-4 font-semibold">Использование API</h3>
-          <ApiUsage label="OpenAI" percent={23} value="$23.45 / $100" />
-          <ApiUsage label="Nano Banana (Gemini)" percent={35} value="$34.67 / $100" />
+          {usageByProvider.length === 0 ? (
+            <p className="text-sm text-[#97a4b8]">Нет данных по провайдерам</p>
+          ) : (
+            usageByProvider.map((p) => {
+              const cost = toNumber(p._sum.cost);
+              const percent = Math.round((cost / maxProviderCost) * 100);
+              const label = providerLabels[p.provider] ?? p.provider;
+              return (
+                <ApiUsage
+                  key={p.provider}
+                  label={label}
+                  percent={percent}
+                  value={`$${cost.toFixed(2)} · ${p._count} вызовов`}
+                />
+              );
+            })
+          )}
         </Card>
         <Card>
           <h3 className="mb-4 font-semibold">Конверсия в оплату</h3>
