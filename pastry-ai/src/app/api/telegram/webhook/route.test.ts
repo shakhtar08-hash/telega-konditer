@@ -197,6 +197,21 @@ describe("isValidTelegramSecret", () => {
     expect(maxDuration).toBeGreaterThan(10);
   });
 
+  it("keeps rejecting public requests without the Telegram webhook secret", async () => {
+    const response = await POST(
+      new Request("https://example.com/api/telegram/webhook", {
+        body: JSON.stringify({ update_id: 42 }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(initMock).not.toHaveBeenCalled();
+    expect(handleUpdateMock).not.toHaveBeenCalled();
+  });
+
   it("acknowledges Telegram immediately and processes the update in after()", async () => {
     const request = new Request("https://example.com/api/telegram/webhook", {
       body: JSON.stringify({ message: { text: "hi" }, update_id: 42 }),
