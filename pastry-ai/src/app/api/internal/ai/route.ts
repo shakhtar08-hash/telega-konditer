@@ -14,7 +14,14 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const payload = (await request.json()) as GenerateImageInput;
-  const result = await generateOpenAIImageDirect(payload);
+  try {
+    const result = await generateOpenAIImageDirect(payload);
 
-  return Response.json(result);
+    return Response.json(result);
+  } catch {
+    return Response.json(
+      { error: "Internal AI gateway request failed." },
+      { status: 502 },
+    );
+  }
 }

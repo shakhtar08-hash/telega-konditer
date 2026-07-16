@@ -107,4 +107,34 @@ describe("POST /api/internal/ai", () => {
       provider: "kie",
     });
   });
+
+  it("returns a sanitized provider failure without rethrowing prompt-bearing details", async () => {
+    generateImageDirectMock.mockRejectedValueOnce(
+      Object.assign(new Error("Billing hard limit has been reached."), {
+        requestBodyValues: {
+          prompt: "phase-e-ai-probe-20260716",
+        },
+      }),
+    );
+
+    const response = await POST(
+      new Request("https://example.com/api/internal/ai", {
+        body: JSON.stringify({
+          model: "gpt-image-1",
+          prompt: "phase-e-ai-probe-20260716",
+          provider: "openai",
+        }),
+        headers: {
+          "content-type": "application/json",
+          "x-internal-shared-secret": "internal-secret",
+        },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({
+      error: "Internal AI gateway request failed.",
+    });
+  });
 });
