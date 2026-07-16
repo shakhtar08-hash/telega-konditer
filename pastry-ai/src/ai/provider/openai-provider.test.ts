@@ -2,7 +2,12 @@ import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
 import { createOpenAIAIService } from "./openai-provider";
 
-const { generateObjectMock, generateImageMock } = vi.hoisted(() => ({
+const {
+  createAITransportMock,
+  generateObjectMock,
+  generateImageMock,
+} = vi.hoisted(() => ({
+  createAITransportMock: vi.fn(),
   generateImageMock: vi.fn(),
   generateObjectMock: vi.fn(),
 }));
@@ -14,16 +19,62 @@ vi.mock("ai", () => ({
 }));
 
 vi.mock("@ai-sdk/openai", () => ({
-  createOpenAI: () => (model: string) => ({ model }),
-  openai: (model: string) => ({ model }),
+  createOpenAI: () => {
+    const provider = ((model: string) => ({ model })) as ((
+      model: string,
+    ) => { model: string }) & {
+      image: (model: string) => { model: string };
+    };
+    provider.image = (model: string) => ({ model });
+    return provider;
+  },
+  openai: Object.assign((model: string) => ({ model }), {
+    image: (model: string) => ({ model }),
+  }),
 }));
 
 vi.mock("@/lib/api-secrets", () => ({
   resolveManagedApiKey: async () => "test-key",
 }));
 
+vi.mock("./ai-transport", () => ({
+  createAITransport: createAITransportMock,
+}));
+
 describe("createOpenAIAIService", () => {
+  it("routes image generation through the shared AI transport", async () => {
+    const directGenerateImageMock = vi
+      .fn()
+      .mockResolvedValue({ url: "data:image/jpeg;base64,transported" });
+    createAITransportMock.mockImplementation(({ directGenerateImage }) => {
+      directGenerateImageMock.mockImplementation(directGenerateImage);
+      return {
+        generateImage: vi
+          .fn()
+          .mockResolvedValue({ url: "data:image/jpeg;base64,transported" }),
+      };
+    });
+
+    const result = await createOpenAIAIService().generateImage({
+      model: "gpt-image-1",
+      prompt: "  premium dessert \n with berries ",
+      provider: "openai",
+      size: "1024x1024",
+    });
+
+    expect(result).toEqual({ url: "data:image/jpeg;base64,transported" });
+    expect(createAITransportMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        directGenerateImage: expect.any(Function),
+      }),
+    );
+    expect(directGenerateImageMock).not.toHaveBeenCalled();
+  });
+
   it("uses the OpenAI image edits API when a source image URL is provided", async () => {
+    createAITransportMock.mockImplementation(({ directGenerateImage }) => ({
+      generateImage: directGenerateImage,
+    }));
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -63,6 +114,9 @@ describe("createOpenAIAIService", () => {
   });
 
   it("sends image URLs as multimodal message content for structured vision", async () => {
+    createAITransportMock.mockImplementation(({ directGenerateImage }) => ({
+      generateImage: directGenerateImage,
+    }));
     generateObjectMock.mockResolvedValue({ object: { title: "Dessert" } });
 
     await createOpenAIAIService().generateObject({
@@ -90,6 +144,29 @@ describe("createOpenAIAIService", () => {
             ],
           },
         ],
+      }),
+    );
+  });
+
+  it("passes the previous direct image logic into the shared transport", async () => {
+    createAITransportMock.mockImplementation(({ directGenerateImage }) => ({
+      generateImage: directGenerateImage,
+    }));
+    generateImageMock.mockResolvedValue({
+      images: [{ base64: "abc", mediaType: "image/png" }],
+    });
+
+    const result = await createOpenAIAIService().generateImage({
+      model: "gpt-image-1",
+      prompt: "premium dessert",
+      provider: "openai",
+      size: "1024x1024",
+    });
+
+    expect(result).toEqual({ url: "data:image/png;base64,abc" });
+    expect(generateImageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "premium dessert",
       }),
     );
   });

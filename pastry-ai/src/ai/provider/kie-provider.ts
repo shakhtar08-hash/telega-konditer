@@ -1,6 +1,7 @@
 import { resolveManagedApiKey } from "@/lib/api-secrets";
 import { assertAllowedImageUrl } from "@/lib/image-url-validator";
 import { UserFacingError } from "@/lib/user-facing-error";
+import { sanitizeOutboundPrompt } from "./ai-request-sanitizer";
 
 const KIE_BASE = "https://api.kie.ai";
 const KIE_PROMPT_MAX = 3000;
@@ -69,7 +70,7 @@ async function submitFluxKontextTask(params: {
   const apiKey = await getApiKey();
 
   const body: Record<string, unknown> = {
-    prompt: truncatePrompt(params.prompt),
+    prompt: truncatePrompt(sanitizeOutboundPrompt(params.prompt)),
     enableTranslation: true,
     model: params.model ?? "flux-kontext-pro",
     outputFormat: "jpeg",

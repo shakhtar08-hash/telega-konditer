@@ -9,6 +9,52 @@ vi.mock("@/lib/api-secrets", () => ({
 }));
 
 describe("generateFluxKontextImage", () => {
+  it("sanitizes prompts before submitting a KIE task", async () => {
+    resolveManagedApiKeyMock.mockResolvedValue("kie-key");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: { taskId: "task-1" },
+        }),
+        ok: true,
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 200,
+          data: {
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.kie.ai/output/final.jpg"],
+            }),
+            state: "success",
+          },
+        }),
+        ok: true,
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateFluxKontextImage({
+      model: "flux-kontext-pro",
+      prompt: "  premium   dessert \n with berries ",
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://api.kie.ai/api/v1/flux/kontext/generate",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+    expect(
+      JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string).prompt,
+    ).toBe("premium dessert with berries");
+  });
+
   it("throws when the KIE API key is missing", async () => {
     resolveManagedApiKeyMock.mockResolvedValueOnce(undefined);
 

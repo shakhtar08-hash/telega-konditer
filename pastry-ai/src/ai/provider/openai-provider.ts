@@ -6,10 +6,15 @@ import {
 } from "ai";
 import { resolveManagedApiKey } from "@/lib/api-secrets";
 import type { AIService, GenerateImageInput } from "./ai-service";
+import { createAITransport } from "./ai-transport";
 import { generateFluxKontextImage } from "./kie-provider";
 import { assertAllowedImageUrl } from "@/lib/image-url-validator";
 
 export function createOpenAIAIService(): AIService {
+  const transport = createAITransport({
+    directGenerateImage: generateImageDirect,
+  });
+
   return {
     async generateText(input) {
       const provider = await createTextProvider(input.provider);
@@ -80,44 +85,48 @@ export function createOpenAIAIService(): AIService {
     },
 
     async generateImage(input: GenerateImageInput) {
-      if (input.provider === "openrouter") {
-        return generateFluxImage(input);
-      }
-
-      if (input.provider === "kie") {
-        return generateFluxKontextImage({
-          aspectRatio: input.aspectRatio,
-          imageUrl: input.imageUrl,
-          model: input.model,
-          prompt: input.prompt,
-        });
-      }
-
-      if (input.imageUrl) {
-        return generateImageEdit({
-          imageUrl: input.imageUrl,
-          model: input.model,
-          prompt: input.prompt,
-          size: input.size,
-        });
-      }
-
-      const provider = await createOpenAIProvider();
-      const result = await generateImage({
-        model: provider.image(input.model),
-        prompt: input.prompt,
-        size: input.size ?? "1024x1024",
-      });
-
-      const [image] = result.images;
-
-      if (!image) {
-        throw new Error("Image generation returned no image");
-      }
-
-      return { url: `data:${image.mediaType};base64,${image.base64}` };
+      return transport.generateImage(input);
     },
   };
+}
+
+async function generateImageDirect(input: GenerateImageInput) {
+  if (input.provider === "openrouter") {
+    return generateFluxImage(input);
+  }
+
+  if (input.provider === "kie") {
+    return generateFluxKontextImage({
+      aspectRatio: input.aspectRatio,
+      imageUrl: input.imageUrl,
+      model: input.model,
+      prompt: input.prompt,
+    });
+  }
+
+  if (input.imageUrl) {
+    return generateImageEdit({
+      imageUrl: input.imageUrl,
+      model: input.model,
+      prompt: input.prompt,
+      size: input.size,
+    });
+  }
+
+  const provider = await createOpenAIProvider();
+  const result = await generateImage({
+    model: provider.image(input.model),
+    prompt: input.prompt,
+    size: input.size ?? "1024x1024",
+  });
+
+  const [image] = result.images;
+
+  if (!image) {
+    throw new Error("Image generation returned no image");
+  }
+
+  return { url: `data:${image.mediaType};base64,${image.base64}` };
 }
 
 async function generateImageEdit(input: {
