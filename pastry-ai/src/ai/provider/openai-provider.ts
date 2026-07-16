@@ -9,6 +9,7 @@ import type { AIService, GenerateImageInput } from "./ai-service";
 import { createAITransport } from "./ai-transport";
 import { generateFluxKontextImage } from "./kie-provider";
 import { assertAllowedImageUrl } from "@/lib/image-url-validator";
+import { INTERNAL_AUTH_HEADER } from "@/lib/internal-service-auth";
 
 export function createOpenAIAIService(): AIService {
   const transport = createAITransport({
@@ -186,17 +187,10 @@ async function generateImageEdit(input: {
 }
 
 async function generateFluxImage(input: GenerateImageInput) {
-  const apiKey = await resolveManagedApiKey("OPENROUTER_API_KEY");
-
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is required for FLUX image generation");
-  }
+  const provider = await createOpenRouterProvider();
 
   const result = await generateImage({
-    model: createOpenAI({
-      apiKey,
-      baseURL: "https://openrouter.ai/api/v1",
-    }).image(input.model),
+    model: provider.image(input.model),
     prompt: input.imageUrl
       ? (assertAllowedImageUrl(input.imageUrl, "openai-provider generateFluxImage"),
         { text: input.prompt, images: [input.imageUrl] })
@@ -215,10 +209,7 @@ async function generateFluxImage(input: GenerateImageInput) {
 
 async function createTextProvider(provider: string) {
   if (provider === "openrouter") {
-    return createOpenAI({
-      apiKey: await resolveManagedApiKey("OPENROUTER_API_KEY"),
-      baseURL: "https://openrouter.ai/api/v1",
-    });
+    return createOpenRouterProvider();
   }
 
   return createOpenAIProvider();
@@ -228,4 +219,41 @@ async function createOpenAIProvider() {
   const apiKey = await resolveManagedApiKey("OPENAI_API_KEY");
 
   return apiKey ? createOpenAI({ apiKey }) : openai;
+}
+
+async function createOpenRouterProvider() {
+  const sharedSecret = process.env.INTERNAL_API_SHARED_SECRET;
+  const gatewayUrl = resolveOpenRouterGatewayUrl(
+    process.env.INTERNAL_AI_GATEWAY_URL,
+  );
+
+  if (gatewayUrl && sharedSecret) {
+    return createOpenAI({
+      apiKey: "internal-openrouter-proxy",
+      baseURL: gatewayUrl,
+      headers: {
+        [INTERNAL_AUTH_HEADER]: sharedSecret,
+      },
+      name: "openrouter-proxy",
+    });
+  }
+
+  const apiKey = await resolveManagedApiKey("OPENROUTER_API_KEY");
+
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is required for OpenRouter requests");
+  }
+
+  return createOpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+  });
+}
+
+function resolveOpenRouterGatewayUrl(aiGatewayUrl?: string) {
+  if (!aiGatewayUrl) {
+    return undefined;
+  }
+
+  return aiGatewayUrl.replace(/\/api\/internal\/ai\/?$/, "/api/internal/openrouter");
 }

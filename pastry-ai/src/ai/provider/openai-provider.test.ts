@@ -7,10 +7,12 @@ import {
 
 const {
   createAITransportMock,
+  createOpenAIMock,
   generateObjectMock,
   generateImageMock,
 } = vi.hoisted(() => ({
   createAITransportMock: vi.fn(),
+  createOpenAIMock: vi.fn(),
   generateImageMock: vi.fn(),
   generateObjectMock: vi.fn(),
 }));
@@ -22,7 +24,7 @@ vi.mock("ai", () => ({
 }));
 
 vi.mock("@ai-sdk/openai", () => ({
-  createOpenAI: () => {
+  createOpenAI: createOpenAIMock.mockImplementation(() => {
     const provider = ((model: string) => ({ model })) as ((
       model: string,
     ) => { model: string }) & {
@@ -30,7 +32,7 @@ vi.mock("@ai-sdk/openai", () => ({
     };
     provider.image = (model: string) => ({ model });
     return provider;
-  },
+  }),
   openai: Object.assign((model: string) => ({ model }), {
     image: (model: string) => ({ model }),
   }),
@@ -147,6 +149,42 @@ describe("createOpenAIAIService", () => {
             ],
           },
         ],
+      }),
+    );
+  });
+
+  it("routes OpenRouter text/object calls through the internal EU proxy when configured", async () => {
+    createAITransportMock.mockImplementation(({ directGenerateImage }) => ({
+      generateImage: directGenerateImage,
+    }));
+    generateObjectMock.mockResolvedValue({ object: { title: "Dessert" } });
+
+    const previousEnv = { ...process.env };
+    process.env.INTERNAL_AI_GATEWAY_URL =
+      "http://10.10.0.2:3001/api/internal/ai";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    try {
+      await createOpenAIAIService().generateObject({
+        model: "openai/gpt-4o-mini",
+        prompt: "Analyze this dessert.",
+        provider: "openrouter",
+        schema: z.object({ title: z.string() }),
+        system: "You are a pastry chef.",
+        temperature: 0.2,
+      });
+    } finally {
+      process.env = previousEnv;
+    }
+
+    expect(createOpenAIMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: "internal-openrouter-proxy",
+        baseURL: "http://10.10.0.2:3001/api/internal/openrouter",
+        headers: {
+          "x-internal-shared-secret": "shared-secret",
+        },
+        name: "openrouter-proxy",
       }),
     );
   });
