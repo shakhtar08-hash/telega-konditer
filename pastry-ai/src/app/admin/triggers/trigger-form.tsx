@@ -42,9 +42,9 @@ export type TriggerDynamicUserGroupOption = {
 };
 
 type TriggerFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: string | ((formData: FormData) => Promise<void>);
   cancelHref: string;
-  deleteAction?: (formData: FormData) => Promise<void>;
+  deleteAction?: string | ((formData: FormData) => Promise<void>);
   eventOptions: readonly TriggerEventOption[];
   initial: TriggerFormValues;
   submitLabel: string;

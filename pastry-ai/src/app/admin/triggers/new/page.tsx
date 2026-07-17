@@ -6,7 +6,7 @@ import {
   getTriggerEventOptions,
   getTriggerTemplates,
 } from "@/features/triggers/trigger-template";
-import { createTriggerRule, sendTriggerTestMessage } from "../actions";
+import { sendTriggerTestMessage } from "../actions";
 import {
   TriggerForm,
   type TriggerDynamicUserGroupOption,
@@ -120,7 +120,7 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
       />
       <ChatBotSubNav />
       <TriggerForm
-        action={createTriggerRule}
+        action="/api/admin/triggers/save"
         cancelHref="/admin/triggers"
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}

@@ -5,11 +5,7 @@ import { fetchInternalAdminTriggerEditorData } from "@/features/admin/triggers/i
 import { loadAdminTriggerEditorData } from "@/features/admin/triggers/service";
 import { getTriggerEventOptions } from "@/features/triggers/trigger-template";
 import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
-import {
-  deleteTriggerRule,
-  sendTriggerTestMessage,
-  updateTriggerRule,
-} from "../actions";
+import { sendTriggerTestMessage } from "../actions";
 import { parseTriggerButtons } from "../trigger-buttons-form";
 import {
   TriggerForm,
@@ -98,9 +94,9 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
       />
       <ChatBotSubNav />
       <TriggerForm
-        action={updateTriggerRule}
+        action="/api/admin/triggers/save"
         cancelHref="/admin/triggers"
-        deleteAction={deleteTriggerRule}
+        deleteAction="/api/admin/triggers/delete"
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}
         initial={{

@@ -21,7 +21,7 @@ describe("TriggerForm", () => {
   it("renders the create form in Russian with structured conditions", () => {
     const html = renderToStaticMarkup(
       <TriggerForm
-        action={async () => {}}
+        action="/api/admin/triggers/save"
         cancelHref="/admin/triggers"
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={eventOptions}
@@ -51,6 +51,7 @@ describe("TriggerForm", () => {
     expect(html).toContain("Оплатить");
     expect(html).toContain('name="buttons"');
     expect(html).toContain("HTML-форматирование");
+    expect(html).toContain('action="/api/admin/triggers/save"');
     expect(html).toContain('data-format="bold"');
     expect(html).toContain('data-format="italic"');
     expect(html).toContain('data-format="strikethrough"');
@@ -61,9 +62,9 @@ describe("TriggerForm", () => {
   it("renders delete flow for existing triggers", () => {
     const html = renderToStaticMarkup(
       <TriggerForm
-        action={async () => {}}
+        action="/api/admin/triggers/save"
         cancelHref="/admin/triggers"
-        deleteAction={async () => {}}
+        deleteAction="/api/admin/triggers/delete"
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={eventOptions}
         initial={{
@@ -87,6 +88,7 @@ describe("TriggerForm", () => {
     expect(html).toContain('name="id"');
     expect(html).toContain("Сохранить изменения");
     expect(html).toContain("Удалить триггер");
+    expect(html).toContain('formAction="/api/admin/triggers/delete"');
     expect(html).toContain("/uploads/admin/triggers/existing.png");
     expect(html).toContain("Telegram HTML");
     expect(html).toContain("Состоит в группе VIP клиенты");
@@ -108,7 +110,7 @@ describe("TriggerForm", () => {
   it("renders real user and dynamic groups in the condition builder", () => {
     const html = renderToStaticMarkup(
       <TriggerForm
-        action={async () => {}}
+        action="/api/admin/triggers/save"
         cancelHref="/admin/triggers"
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={eventOptions}
