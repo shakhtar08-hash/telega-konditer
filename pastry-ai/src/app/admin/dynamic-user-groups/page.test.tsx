@@ -22,6 +22,9 @@ import AdminDynamicUserGroupsPage from "./page";
 describe("AdminDynamicUserGroupsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.APP_ROLE;
+    delete process.env.INTERNAL_API_BASE_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
   });
 
   it("renders the dynamic groups list", async () => {
@@ -64,5 +67,35 @@ describe("AdminDynamicUserGroupsPage", () => {
 
     expect(html).toContain("Динамические группы");
     expect(html).toContain("Динамические группы пока недоступны");
+  });
+  it("reads dynamic groups from RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          groups: [
+            {
+              conditionsJson: [{ field: "hasActiveTariff", operator: "is", value: false }],
+              description: "Пользователи без оплаты",
+              id: "group_new",
+              logicOperator: "AND",
+              name: "Без активного тарифа",
+              previewCount: 0,
+              status: "active",
+              updatedAt: new Date("2026-07-14T08:00:00.000Z").toISOString(),
+            },
+          ],
+        }),
+      }),
+    );
+
+    const html = renderToStaticMarkup(await AdminDynamicUserGroupsPage());
+
+    expect(html).toContain("Без активного тарифа");
+    expect(prismaMock.dynamicUserGroup.findMany).not.toHaveBeenCalled();
   });
 });

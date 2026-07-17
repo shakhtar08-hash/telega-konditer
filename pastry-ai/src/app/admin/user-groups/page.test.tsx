@@ -18,6 +18,9 @@ import AdminUserGroupsPage from "./page";
 describe("AdminUserGroupsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.APP_ROLE;
+    delete process.env.INTERNAL_API_BASE_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
   });
 
   it("renders groups with create, open, and delete affordances", async () => {
@@ -66,5 +69,32 @@ describe("AdminUserGroupsPage", () => {
     expect(html).toContain("Группы пользователей пока недоступны");
     expect(html).toContain("Таблица групп ещё не создана в базе");
     expect(html).not.toContain("Создать группу");
+  });
+  it("reads user groups from RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          groups: [
+            {
+              id: "group_1",
+              name: "Админы",
+              description: null,
+              membersCount: 1,
+              updatedAt: new Date("2026-07-13T09:00:00.000Z").toISOString(),
+            },
+          ],
+        }),
+      }),
+    );
+
+    const html = renderToStaticMarkup(await AdminUserGroupsPage());
+
+    expect(html).toContain("Админы");
+    expect(prismaMock.userGroup.findMany).not.toHaveBeenCalled();
   });
 });

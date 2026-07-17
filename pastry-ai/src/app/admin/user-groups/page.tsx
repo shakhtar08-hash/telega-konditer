@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { loadUserGroupsOrEmpty } from "@/app/admin/_lib/user-groups";
 import { AdminPageHeader, DataTable, formatDate } from "@/components/admin/data-table";
 import {
   AdminButton,
@@ -8,34 +7,18 @@ import {
   AdminPanel,
   AdminTextarea,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
+import {
+  fetchInternalAdminUserGroupsPageData,
+} from "@/features/admin/groups/internal-admin-client";
+import { loadAdminUserGroupsPageData } from "@/features/admin/groups/service";
 import { createUserGroup, deleteUserGroup } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type UserGroupRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  updatedAt: Date;
-  _count: {
-    memberships: number;
-  };
-};
-
 export default async function AdminUserGroupsPage() {
-  const { groups, unavailable } = await loadUserGroupsOrEmpty(async () =>
-    (await prisma.userGroup.findMany({
-      orderBy: { updatedAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        updatedAt: true,
-        _count: { select: { memberships: true } },
-      },
-    })) as UserGroupRow[],
-  );
+  const { groups, unavailable } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminUserGroupsPageData()
+    : await loadAdminUserGroupsPageData();
 
   return (
     <section className="space-y-5">
@@ -96,7 +79,7 @@ export default async function AdminUserGroupsPage() {
             },
             {
               header: "Участники",
-              cell: (group) => String(group._count.memberships),
+              cell: (group) => String(group.membersCount),
             },
             {
               header: "Обновлена",

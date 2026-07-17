@@ -1,15 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  addUserToGroupFromTask2Mock,
   prismaMock,
-  removeUserFromGroupFromTask2Mock,
   revalidatePathMock,
 } = vi.hoisted(() => ({
-  addUserToGroupFromTask2Mock: vi.fn(),
   prismaMock: {
+    $transaction: vi.fn(),
     tariffPlan: {
       findUnique: vi.fn(),
+    },
+    conversation: {
+      deleteMany: vi.fn(),
+    },
+    generatedRecipeContext: {
+      deleteMany: vi.fn(),
+    },
+    payment: {
+      deleteMany: vi.fn(),
+    },
+    subscription: {
+      deleteMany: vi.fn(),
+    },
+    tokenUsage: {
+      deleteMany: vi.fn(),
+    },
+    usage: {
+      deleteMany: vi.fn(),
+    },
+    user: {
+      delete: vi.fn(),
+    },
+    userGroupMember: {
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
     },
     userTariff: {
       create: vi.fn(),
@@ -18,7 +41,6 @@ const {
       update: vi.fn(),
     },
   },
-  removeUserFromGroupFromTask2Mock: vi.fn(),
   revalidatePathMock: vi.fn(),
 }));
 
@@ -30,13 +52,9 @@ vi.mock("@/db/prisma", () => ({
   prisma: prismaMock,
 }));
 
-vi.mock("../user-groups/actions", () => ({
-  addUserToGroup: addUserToGroupFromTask2Mock,
-  removeUserFromGroup: removeUserFromGroupFromTask2Mock,
-}));
-
 import {
   addUserToGroup,
+  deleteUser,
   removeUserFromGroup,
   updateUserTariff,
 } from "./actions";
@@ -53,9 +71,19 @@ describe("admin user actions", () => {
     prismaMock.userTariff.update.mockResolvedValue(undefined);
     prismaMock.userTariff.create.mockResolvedValue(undefined);
     prismaMock.userTariff.deleteMany.mockResolvedValue(undefined);
+    prismaMock.userGroupMember.upsert.mockResolvedValue(undefined);
+    prismaMock.userGroupMember.deleteMany.mockResolvedValue(undefined);
+    prismaMock.tokenUsage.deleteMany.mockResolvedValue(undefined);
+    prismaMock.usage.deleteMany.mockResolvedValue(undefined);
+    prismaMock.generatedRecipeContext.deleteMany.mockResolvedValue(undefined);
+    prismaMock.conversation.deleteMany.mockResolvedValue(undefined);
+    prismaMock.payment.deleteMany.mockResolvedValue(undefined);
+    prismaMock.subscription.deleteMany.mockResolvedValue(undefined);
+    prismaMock.user.delete.mockResolvedValue(undefined);
+    prismaMock.$transaction.mockImplementation(async (operations) => Promise.all(operations));
   });
 
-  it("delegates user group membership actions to the shared handlers", async () => {
+  it("updates user group membership and refreshes both admin pages", async () => {
     const addFormData = new FormData();
     addFormData.set("userId", "user_1");
     addFormData.set("userGroupId", "group_1");
@@ -67,8 +95,18 @@ describe("admin user actions", () => {
     await addUserToGroup(addFormData);
     await removeUserFromGroup(removeFormData);
 
-    expect(addUserToGroupFromTask2Mock).toHaveBeenCalledWith(addFormData);
-    expect(removeUserFromGroupFromTask2Mock).toHaveBeenCalledWith(removeFormData);
+    expect(prismaMock.userGroupMember.upsert).toHaveBeenCalledWith({
+      create: { userId: "user_1", userGroupId: "group_1" },
+      update: {},
+      where: {
+        userId_userGroupId: { userId: "user_1", userGroupId: "group_1" },
+      },
+    });
+    expect(prismaMock.userGroupMember.deleteMany).toHaveBeenCalledWith({
+      where: { userGroupId: "group_1", userId: "user_1" },
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users/user_1");
   });
 
   it("refreshes both the list and detail pages after a tariff update", async () => {
@@ -87,6 +125,43 @@ describe("admin user actions", () => {
         remainingTokens: 24,
         tariffPlanId: "plan_1",
       },
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users/user_1");
+  });
+
+  it("deletes related user data before deleting the user and refreshes both admin pages", async () => {
+    const formData = new FormData();
+    formData.set("id", "user_1");
+
+    await deleteUser(formData);
+
+    expect(prismaMock.userTariff.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.userGroupMember.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.tokenUsage.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.usage.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.generatedRecipeContext.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.conversation.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.payment.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.subscription.deleteMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(prismaMock.user.delete).toHaveBeenCalledWith({
+      where: { id: "user_1" },
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users/user_1");

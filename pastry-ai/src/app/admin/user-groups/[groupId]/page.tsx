@@ -7,7 +7,10 @@ import {
   AdminPanel,
   AdminTextarea,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
+import {
+  fetchInternalAdminUserGroupDetailPageData,
+} from "@/features/admin/groups/internal-admin-client";
+import { loadAdminUserGroupDetailPageData } from "@/features/admin/groups/service";
 import { addUserToGroup, removeUserFromGroup, updateUserGroup } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -54,54 +57,20 @@ export default async function AdminUserGroupPage({
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const search = resolvedSearchParams.search?.trim() || "";
 
-  const group = (await prisma.userGroup.findUniqueOrThrow({
-    where: { id: resolvedParams.groupId },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      updatedAt: true,
-    },
-  })) as GroupRecord;
-
-  const members = (await prisma.userGroupMember.findMany({
-    where: { userGroupId: group.id },
-    include: {
-      user: {
-        select: {
-          id: true,
-          telegramId: true,
-          username: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  })) as GroupMemberRecord[];
-
-  const memberIds = members.map((member) => member.userId);
-  const candidateUsers = (await prisma.user.findMany({
-    where: {
-      ...(memberIds.length > 0 ? { id: { notIn: memberIds } } : {}),
-      ...(search
-        ? {
-            OR: [
-              { telegramId: { contains: search } },
-              { username: { contains: search, mode: "insensitive" } },
-              { name: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      telegramId: true,
-      username: true,
-      name: true,
-    },
-    take: 20,
-  })) as CandidateUserRecord[];
+  const { candidateUsers, group, members } = process.env.APP_ROLE === "ingress"
+    ? ((await fetchInternalAdminUserGroupDetailPageData(
+        resolvedParams.groupId,
+        search,
+      )) as {
+        group: GroupRecord;
+        members: GroupMemberRecord[];
+        candidateUsers: CandidateUserRecord[];
+      })
+    : ((await loadAdminUserGroupDetailPageData(resolvedParams.groupId, search)) as {
+        group: GroupRecord;
+        members: GroupMemberRecord[];
+        candidateUsers: CandidateUserRecord[];
+      });
 
   return (
     <section className="space-y-5">

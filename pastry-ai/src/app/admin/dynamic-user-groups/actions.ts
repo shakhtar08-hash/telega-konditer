@@ -1,29 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/db/prisma";
-import { parseDynamicUserGroupDefinition } from "@/features/dynamic-user-groups/rule-validator";
+import {
+  performCreateDynamicUserGroup,
+  performDeleteDynamicUserGroup,
+  performUpdateDynamicUserGroup,
+} from "@/features/admin/groups/service";
+import {
+  postInternalAdminGroupAction,
+} from "@/features/admin/groups/internal-admin-client";
 
 function readTrimmedString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
-}
-
-function readStatus(formData: FormData) {
-  return readTrimmedString(formData, "status") === "disabled" ? "disabled" : "active";
-}
-
-function readDefinition(formData: FormData) {
-  const raw = String(formData.get("definition") ?? "");
-
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return parseDynamicUserGroupDefinition(JSON.parse(raw));
-  } catch {
-    return null;
-  }
 }
 
 function revalidateDynamicUserGroupPaths(groupId?: string) {
@@ -38,47 +26,23 @@ function revalidateDynamicUserGroupPaths(groupId?: string) {
 }
 
 export async function createDynamicUserGroup(formData: FormData): Promise<void> {
-  const name = readTrimmedString(formData, "name");
-  const description = readTrimmedString(formData, "description");
-  const definition = readDefinition(formData);
-
-  if (!name || !definition) {
-    return;
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("createDynamicUserGroup", formData);
+  } else {
+    await performCreateDynamicUserGroup(formData);
   }
-
-  await prisma.dynamicUserGroup.create({
-    data: {
-      name,
-      description: description || null,
-      status: readStatus(formData),
-      logicOperator: definition.logicOperator,
-      conditionsJson: definition.conditions,
-    },
-  });
 
   revalidateDynamicUserGroupPaths();
 }
 
 export async function updateDynamicUserGroup(formData: FormData): Promise<void> {
   const id = readTrimmedString(formData, "id");
-  const name = readTrimmedString(formData, "name");
-  const description = readTrimmedString(formData, "description");
-  const definition = readDefinition(formData);
 
-  if (!id || !name || !definition) {
-    return;
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("updateDynamicUserGroup", formData);
+  } else {
+    await performUpdateDynamicUserGroup(formData);
   }
-
-  await prisma.dynamicUserGroup.update({
-    where: { id },
-    data: {
-      name,
-      description: description || null,
-      status: readStatus(formData),
-      logicOperator: definition.logicOperator,
-      conditionsJson: definition.conditions,
-    },
-  });
 
   revalidateDynamicUserGroupPaths(id);
 }
@@ -90,9 +54,11 @@ export async function deleteDynamicUserGroup(formData: FormData): Promise<void> 
     return;
   }
 
-  await prisma.dynamicUserGroup.delete({
-    where: { id },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("deleteDynamicUserGroup", { id });
+  } else {
+    await performDeleteDynamicUserGroup(id);
+  }
 
   revalidateDynamicUserGroupPaths(id);
 }

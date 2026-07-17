@@ -199,4 +199,47 @@ describe("trigger admin pages", () => {
     expect(fetchInternalAdminTriggersPageDataMock).toHaveBeenCalled();
     expect(loadAdminTriggersPageDataMock).not.toHaveBeenCalled();
   });
+
+  it("loads the new trigger editor from RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    await renderToStaticMarkup(await NewTriggerPage({}));
+
+    expect(fetchInternalAdminTriggerEditorDataMock).toHaveBeenCalledWith();
+    expect(loadAdminTriggerEditorDataMock).not.toHaveBeenCalled();
+  });
+
+  it("loads the edit trigger editor from RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+    fetchInternalAdminTriggerEditorDataMock.mockResolvedValue({
+      dynamicGroups: [],
+      dynamicGroupsUnavailable: false,
+      rule: {
+        buttons: [],
+        conditions: [],
+        delayUnit: "now",
+        delayValue: 0,
+        eventKey: "user.started",
+        id: "rule_1",
+        imageUrl: null,
+        messageText: "Hi",
+        name: "Trigger",
+        status: "active",
+      },
+      userGroups: [],
+    });
+
+    await renderToStaticMarkup(
+      await TriggerRulePage({
+        params: Promise.resolve({ triggerId: "rule_1" }),
+      }),
+    );
+
+    expect(fetchInternalAdminTriggerEditorDataMock).toHaveBeenCalledWith("rule_1");
+    expect(loadAdminTriggerEditorDataMock).not.toHaveBeenCalled();
+  });
 });

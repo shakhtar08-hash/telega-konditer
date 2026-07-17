@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AdminPageHeader, formatDate } from "@/components/admin/data-table";
-import { prisma } from "@/db/prisma";
-import { buildDynamicUserGroupPreview } from "@/features/dynamic-user-groups/query";
+import {
+  fetchInternalAdminDynamicGroupDetailPageData,
+} from "@/features/admin/groups/internal-admin-client";
+import { loadAdminDynamicGroupDetailPageData } from "@/features/admin/groups/service";
 import { deleteDynamicUserGroup, updateDynamicUserGroup } from "../actions";
 import { DynamicGroupForm } from "../dynamic-group-form";
 
@@ -15,7 +17,9 @@ export default async function AdminDynamicUserGroupPage({
   params,
 }: AdminDynamicUserGroupPageProps) {
   const resolvedParams = await params;
-  const preview = await buildDynamicUserGroupPreview(resolvedParams.groupId);
+  const { preview, usedBy } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminDynamicGroupDetailPageData(resolvedParams.groupId)
+    : await loadAdminDynamicGroupDetailPageData(resolvedParams.groupId);
 
   if (!preview.group) {
     return (
@@ -33,29 +37,6 @@ export default async function AdminDynamicUserGroupPage({
       </section>
     );
   }
-
-  const triggerRules = await prisma.triggerRule.findMany({
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      conditions: true,
-    },
-  });
-
-  const usedBy = triggerRules.filter((rule) =>
-    Array.isArray(rule.conditions)
-      ? rule.conditions.some(
-          (condition) =>
-            typeof condition === "object" &&
-            condition !== null &&
-            "field" in condition &&
-            "value" in condition &&
-            (condition as { field?: unknown }).field === "dynamicUserGroupId" &&
-            (condition as { value?: unknown }).value === preview.group?.id,
-        )
-      : false,
-  );
 
   return (
     <section className="space-y-5">

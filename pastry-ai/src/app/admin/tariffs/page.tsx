@@ -11,8 +11,17 @@ import {
   AdminPanel,
   AdminToggle,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
+import {
+  fetchInternalAdminTariffsPageData,
+  postInternalAdminTariffAction,
+} from "@/features/admin/tariffs/internal-admin-client";
+import {
+  loadAdminTariffsPageData,
+  performCreateTariff,
+  performToggleTariff,
+  performUpdateTariff,
+} from "@/features/admin/tariffs/service";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +36,11 @@ async function createTariff(formData: FormData) {
 
   if (!slug || !name || tokenAmount < 0 || !durationDays) return;
 
-  await prisma.tariffPlan.create({
-    data: { slug, name, tokenAmount, durationDays, active },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminTariffAction("createTariff", formData);
+  } else {
+    await performCreateTariff(formData);
+  }
 
   revalidatePath("/admin/tariffs");
 }
@@ -45,10 +56,11 @@ async function updateTariff(formData: FormData) {
 
   if (!id || !name || tokenAmount < 0 || !durationDays) return;
 
-  await prisma.tariffPlan.update({
-    data: { name, tokenAmount, durationDays, active },
-    where: { id },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminTariffAction("updateTariff", formData);
+  } else {
+    await performUpdateTariff(formData);
+  }
 
   revalidatePath("/admin/tariffs");
 }
@@ -61,18 +73,19 @@ async function toggleTariff(formData: FormData) {
 
   if (!id) return;
 
-  await prisma.tariffPlan.update({
-    data: { active },
-    where: { id },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminTariffAction("toggleTariff", formData);
+  } else {
+    await performToggleTariff(formData);
+  }
 
   revalidatePath("/admin/tariffs");
 }
 
 export default async function AdminTariffsPage() {
-  const tariffs = await prisma.tariffPlan.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
+  const { tariffs } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminTariffsPageData()
+    : await loadAdminTariffsPageData();
 
   return (
     <section className="space-y-5">

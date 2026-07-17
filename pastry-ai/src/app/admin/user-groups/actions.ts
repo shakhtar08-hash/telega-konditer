@@ -1,7 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/db/prisma";
+import {
+  performAddUserToGroup,
+  performCreateUserGroup,
+  performDeleteUserGroup,
+  performRemoveUserFromGroup,
+  performUpdateUserGroup,
+} from "@/features/admin/groups/service";
+import {
+  postInternalAdminGroupAction,
+} from "@/features/admin/groups/internal-admin-client";
 
 function readTrimmedString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -27,12 +36,11 @@ export async function createUserGroup(formData: FormData): Promise<void> {
     return;
   }
 
-  await prisma.userGroup.create({
-    data: {
-      description: description || null,
-      name,
-    },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("createUserGroup", { description, name });
+  } else {
+    await performCreateUserGroup({ description, name });
+  }
 
   revalidateUserGroupPaths();
 }
@@ -46,13 +54,11 @@ export async function updateUserGroup(formData: FormData): Promise<void> {
     return;
   }
 
-  await prisma.userGroup.update({
-    data: {
-      description: description || null,
-      name,
-    },
-    where: { id },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("updateUserGroup", { description, id, name });
+  } else {
+    await performUpdateUserGroup({ description, id, name });
+  }
 
   revalidateUserGroupPaths(id);
 }
@@ -64,9 +70,11 @@ export async function deleteUserGroup(formData: FormData): Promise<void> {
     return;
   }
 
-  await prisma.userGroup.delete({
-    where: { id },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("deleteUserGroup", { id });
+  } else {
+    await performDeleteUserGroup(id);
+  }
 
   revalidateUserGroupPaths(id);
 }
@@ -79,13 +87,11 @@ export async function addUserToGroup(formData: FormData): Promise<void> {
     return;
   }
 
-  await prisma.userGroupMember.upsert({
-    create: { userId, userGroupId },
-    update: {},
-    where: {
-      userId_userGroupId: { userId, userGroupId },
-    },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("addUserToGroup", { userGroupId, userId });
+  } else {
+    await performAddUserToGroup(userId, userGroupId);
+  }
 
   revalidateUserGroupPaths(userGroupId, userId);
 }
@@ -98,9 +104,11 @@ export async function removeUserFromGroup(formData: FormData): Promise<void> {
     return;
   }
 
-  await prisma.userGroupMember.deleteMany({
-    where: { userGroupId, userId },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminGroupAction("removeUserFromGroup", { userGroupId, userId });
+  } else {
+    await performRemoveUserFromGroup(userId, userGroupId);
+  }
 
   revalidateUserGroupPaths(userGroupId, userId);
 }

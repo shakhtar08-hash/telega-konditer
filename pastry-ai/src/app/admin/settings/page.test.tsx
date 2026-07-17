@@ -66,4 +66,29 @@ describe("AdminSettingsPage", () => {
 
     expect(html).toContain("sk-...1234");
   });
+
+  it("does not fall back to local env previews on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+    process.env.OPENAI_API_KEY = "sk-local-should-not-appear";
+    prismaMock.apiSecret.findMany.mockResolvedValue([]);
+    prismaMock.$queryRaw.mockResolvedValue([{ "?column?": 1 }]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        json: async () => ({
+          dbStatus: "ok",
+          storedSecrets: [],
+        }),
+        ok: true,
+      }),
+    );
+
+    const html = renderToStaticMarkup(await AdminSettingsPage());
+
+    expect(html).not.toContain("Окружение");
+    expect(html).not.toContain("sk-l");
+    delete process.env.OPENAI_API_KEY;
+  });
 });

@@ -77,60 +77,65 @@ export async function clearApiSecret(formData: FormData) {
 }
 
 export default async function AdminSettingsPage() {
-  const { dbStatus, storedSecrets } = process.env.APP_ROLE === "ingress"
+  const isIngress = process.env.APP_ROLE === "ingress";
+  const { dbStatus, storedSecrets } = isIngress
     ? await fetchInternalAdminSettingsPageData()
     : await loadAdminSettingsPageData();
   const storedSecretMap = new Map(
     storedSecrets.map((secret) => [secret.key, secret]),
   );
-  const rows = envKeys.map((key) => ({
-    key,
-    preview:
-      storedSecretMap.get(key)?.valuePreview ??
-      (process.env[key] ? maskSecretValue(process.env[key] ?? "") : "-"),
-    source: storedSecretMap.has(key)
-      ? "Админка"
-      : process.env[key]
-        ? "Окружение"
-        : "-",
-    status:
-      storedSecretMap.has(key) || process.env[key]
-        ? "Задано"
-        : "Не задано",
-  }));
+  const rows = envKeys.map((key) => {
+    const envValue = isIngress ? undefined : process.env[key];
+
+    return {
+      key,
+      preview:
+        storedSecretMap.get(key)?.valuePreview ??
+        (envValue ? maskSecretValue(envValue) : "-"),
+      source: storedSecretMap.has(key)
+        ? "РђРґРјРёРЅРєР°"
+        : envValue
+          ? "РћРєСЂСѓР¶РµРЅРёРµ"
+          : "-",
+      status:
+        storedSecretMap.has(key) || envValue
+          ? "Р—Р°РґР°РЅРѕ"
+          : "РќРµ Р·Р°РґР°РЅРѕ",
+    };
+  });
   const databaseStatus =
-    dbStatus === "ok" ? "Подключена" : "Недоступна";
+    dbStatus === "ok" ? "РџРѕРґРєР»СЋС‡РµРЅР°" : "РќРµРґРѕСЃС‚СѓРїРЅР°";
 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Runtime-настройки приложения. Значения секретов никогда не показываются полностью."
-        title="Настройки"
+        description="Runtime-РЅР°СЃС‚СЂРѕР№РєРё РїСЂРёР»РѕР¶РµРЅРёСЏ. Р—РЅР°С‡РµРЅРёСЏ СЃРµРєСЂРµС‚РѕРІ РЅРёРєРѕРіРґР° РЅРµ РїРѕРєР°Р·С‹РІР°СЋС‚СЃСЏ РїРѕР»РЅРѕСЃС‚СЊСЋ."
+        title="РќР°СЃС‚СЂРѕР№РєРё"
       />
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <AdminPanel>
-          <p className="text-sm text-[#97a4b8]">База данных</p>
+          <p className="text-sm text-[#97a4b8]">Р‘Р°Р·Р° РґР°РЅРЅС‹С…</p>
           <p className="mt-2 text-2xl font-semibold text-[#f4f7fb]">
             {databaseStatus}
           </p>
           <p className="mt-2 text-xs text-[#7f8da3]">
-            Проверяется коротким запросом к PostgreSQL.
+            РџСЂРѕРІРµСЂСЏРµС‚СЃСЏ РєРѕСЂРѕС‚РєРёРј Р·Р°РїСЂРѕСЃРѕРј Рє PostgreSQL.
           </p>
         </AdminPanel>
 
         <AdminPanel className="space-y-4">
           <AdminSectionTitle
-            description="Здесь можно переопределить ключи OpenAI, OpenRouter и Fal AI без показа полного значения."
-            title="API-ключи"
+            description="Р—РґРµСЃСЊ РјРѕР¶РЅРѕ РїРµСЂРµРѕРїСЂРµРґРµР»РёС‚СЊ РєР»СЋС‡Рё OpenAI, OpenRouter Рё Fal AI Р±РµР· РїРѕРєР°Р·Р° РїРѕР»РЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ."
+            title="API-РєР»СЋС‡Рё"
           />
           <div className="grid gap-4 lg:grid-cols-2">
             {managedApiKeys.map((key) => {
               const storedSecret = storedSecretMap.get(key);
-              const envValue = process.env[key];
+              const envValue = isIngress ? undefined : process.env[key];
               const preview =
                 storedSecret?.valuePreview ??
-                (envValue ? maskSecretValue(envValue) : "Не задано");
+                (envValue ? maskSecretValue(envValue) : "РќРµ Р·Р°РґР°РЅРѕ");
 
               return (
                 <form action={saveApiSecret} className="space-y-3" key={key}>
@@ -147,19 +152,19 @@ export default async function AdminSettingsPage() {
                       type="submit"
                       variant="secondary"
                     >
-                      Очистить
+                      РћС‡РёСЃС‚РёС‚СЊ
                     </AdminButton>
                   </div>
                   <div className="flex gap-2">
-                    <AdminField label="Новый ключ">
+                    <AdminField label="РќРѕРІС‹Р№ РєР»СЋС‡">
                       <AdminInput
                         name="value"
-                        placeholder="Вставьте новый ключ"
+                        placeholder="Р’СЃС‚Р°РІСЊС‚Рµ РЅРѕРІС‹Р№ РєР»СЋС‡"
                         type="password"
                       />
                     </AdminField>
                     <div className="flex items-end">
-                      <AdminButton type="submit">Сохранить</AdminButton>
+                      <AdminButton type="submit">РЎРѕС…СЂР°РЅРёС‚СЊ</AdminButton>
                     </div>
                   </div>
                 </form>
@@ -171,12 +176,12 @@ export default async function AdminSettingsPage() {
 
       <DataTable
         columns={[
-          { header: "Переменная", cell: (row) => row.key },
-          { header: "Статус", cell: (row) => row.status },
-          { header: "Источник", cell: (row) => row.source },
-          { header: "Превью", cell: (row) => row.preview },
+          { header: "РџРµСЂРµРјРµРЅРЅР°СЏ", cell: (row) => row.key },
+          { header: "РЎС‚Р°С‚СѓСЃ", cell: (row) => row.status },
+          { header: "РСЃС‚РѕС‡РЅРёРє", cell: (row) => row.source },
+          { header: "РџСЂРµРІСЊСЋ", cell: (row) => row.preview },
         ]}
-        empty="Переменные конфигурации не заданы."
+        empty="РџРµСЂРµРјРµРЅРЅС‹Рµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРµ Р·Р°РґР°РЅС‹."
         getKey={(row) => row.key}
         rows={rows}
       />

@@ -7,8 +7,11 @@ import {
   AdminPanel,
   AdminSelect,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
-import { listMatchingDynamicUserGroupsForUser } from "@/features/dynamic-user-groups/service";
+import {
+  fetchInternalAdminUserDetailPageData,
+  shouldUseInternalAdminBridge,
+} from "@/features/admin/users/internal-admin-client";
+import { loadAdminUserDetailPageData } from "@/features/admin/users/service";
 import {
   addUserToGroup,
   removeUserFromGroup,
@@ -82,51 +85,19 @@ export default async function AdminUserDetailPage({
 }: AdminUserDetailPageProps) {
   const resolvedParams = await params;
 
-  const [user, groups, tariffPlans, matchingDynamicGroups] = await Promise.all([
-    prisma.user.findUniqueOrThrow({
-      where: { id: resolvedParams.userId },
-      include: {
-        userTariff: {
-          include: {
-            tariffPlan: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
-            },
-          },
-        },
-        groupMemberships: {
-          include: {
-            userGroup: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    }) as Promise<UserRecord>,
-    prisma.userGroup.findMany({
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-      },
-    }) as Promise<UserGroupRecord[]>,
-    prisma.tariffPlan.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-      },
-    }) as Promise<TariffPlanRecord[]>,
-    listMatchingDynamicUserGroupsForUser(resolvedParams.userId),
-  ]);
+  const { groups, matchingDynamicGroups, tariffPlans, user } = shouldUseInternalAdminBridge()
+    ? ((await fetchInternalAdminUserDetailPageData(resolvedParams.userId)) as {
+        groups: UserGroupRecord[];
+        matchingDynamicGroups: Array<{ id: string; name: string }>;
+        tariffPlans: TariffPlanRecord[];
+        user: UserRecord;
+      })
+    : ((await loadAdminUserDetailPageData(resolvedParams.userId)) as {
+        groups: UserGroupRecord[];
+        matchingDynamicGroups: Array<{ id: string; name: string }>;
+        tariffPlans: TariffPlanRecord[];
+        user: UserRecord;
+      });
 
   const membershipIds = new Set(
     user.groupMemberships.map((membership) => membership.userGroupId),

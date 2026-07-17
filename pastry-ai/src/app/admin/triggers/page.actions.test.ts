@@ -76,6 +76,23 @@ describe("trigger rule actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
   });
 
+  it("routes trigger creation through RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    const formData = new FormData();
+    formData.set("name", "After Start");
+
+    await expect(createTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(postInternalAdminTriggerActionMock).toHaveBeenCalledWith(
+      "createTriggerRule",
+      formData,
+    );
+    expect(performCreateTriggerRuleMock).not.toHaveBeenCalled();
+  });
+
   it("updates a trigger locally and redirects back to the list", async () => {
     const formData = new FormData();
     formData.set("id", "rule_1");
@@ -86,6 +103,23 @@ describe("trigger rule actions", () => {
     expect(postInternalAdminTriggerActionMock).not.toHaveBeenCalled();
   });
 
+  it("routes trigger updates through RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    const formData = new FormData();
+    formData.set("id", "rule_1");
+
+    await expect(updateTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(postInternalAdminTriggerActionMock).toHaveBeenCalledWith(
+      "updateTriggerRule",
+      formData,
+    );
+    expect(performUpdateTriggerRuleMock).not.toHaveBeenCalled();
+  });
+
   it("deletes a trigger locally by id", async () => {
     const formData = new FormData();
     formData.set("id", "rule_1");
@@ -94,6 +128,23 @@ describe("trigger rule actions", () => {
 
     expect(performDeleteTriggerRuleMock).toHaveBeenCalledWith("rule_1");
     expect(postInternalAdminTriggerActionMock).not.toHaveBeenCalled();
+  });
+
+  it("routes trigger deletion through RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    const formData = new FormData();
+    formData.set("id", "rule_1");
+
+    await expect(deleteTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(postInternalAdminTriggerActionMock).toHaveBeenCalledWith(
+      "deleteTriggerRule",
+      formData,
+    );
+    expect(performDeleteTriggerRuleMock).not.toHaveBeenCalled();
   });
 
   it("returns a validation error when test-send form data is missing", async () => {

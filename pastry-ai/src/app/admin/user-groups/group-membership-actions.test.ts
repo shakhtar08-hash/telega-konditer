@@ -4,6 +4,7 @@ const {
   createGroupMock,
   deleteGroupMock,
   deleteMembershipMock,
+  fetchMock,
   revalidatePathMock,
   updateGroupMock,
   upsertMembershipMock,
@@ -11,6 +12,7 @@ const {
   createGroupMock: vi.fn(),
   deleteGroupMock: vi.fn(),
   deleteMembershipMock: vi.fn(),
+  fetchMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   updateGroupMock: vi.fn(),
   upsertMembershipMock: vi.fn(),
@@ -45,11 +47,19 @@ import {
 describe("user group actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.APP_ROLE;
+    delete process.env.INTERNAL_API_BASE_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
     createGroupMock.mockResolvedValue(undefined);
     updateGroupMock.mockResolvedValue(undefined);
     deleteGroupMock.mockResolvedValue(undefined);
     upsertMembershipMock.mockResolvedValue(undefined);
     deleteMembershipMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
   });
 
   it("adds a user to a group without creating duplicates", async () => {
@@ -130,5 +140,25 @@ describe("user group actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/user-groups");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/user-groups/group_1");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users/user_1");
+  });
+  it("routes group mutations through RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    const createFormData = new FormData();
+    createFormData.set("name", " VIP ");
+    createFormData.set("description", " Главные клиенты ");
+
+    const membershipFormData = new FormData();
+    membershipFormData.set("userId", "user_1");
+    membershipFormData.set("userGroupId", "group_1");
+
+    await createUserGroup(createFormData);
+    await addUserToGroup(membershipFormData);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(createGroupMock).not.toHaveBeenCalled();
+    expect(upsertMembershipMock).not.toHaveBeenCalled();
   });
 });

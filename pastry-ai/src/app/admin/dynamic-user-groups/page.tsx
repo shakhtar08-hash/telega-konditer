@@ -1,44 +1,18 @@
 import Link from "next/link";
-import { loadDynamicUserGroupsOrEmpty } from "@/app/admin/_lib/dynamic-user-groups";
 import { AdminPageHeader, DataTable, StatusBadge, formatDate } from "@/components/admin/data-table";
-import { prisma } from "@/db/prisma";
-import { countDynamicUserGroupMatches } from "@/features/dynamic-user-groups/service";
+import {
+  fetchInternalAdminDynamicGroupsPageData,
+} from "@/features/admin/groups/internal-admin-client";
+import { loadAdminDynamicGroupsPageData } from "@/features/admin/groups/service";
 import { createDynamicUserGroup, deleteDynamicUserGroup } from "./actions";
 import { DynamicGroupForm } from "./dynamic-group-form";
 
 export const dynamic = "force-dynamic";
 
-type DynamicUserGroupRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  logicOperator: string;
-  conditionsJson: unknown;
-  updatedAt: Date;
-};
-
 export default async function AdminDynamicUserGroupsPage() {
-  const { groups, unavailable } = await loadDynamicUserGroupsOrEmpty(async () =>
-    (await prisma.dynamicUserGroup.findMany({
-      orderBy: { updatedAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        status: true,
-        logicOperator: true,
-        conditionsJson: true,
-        updatedAt: true,
-      },
-    })) as DynamicUserGroupRow[],
-  );
-
-  const previewCounts = Object.fromEntries(
-    await Promise.all(
-      groups.map(async (group) => [group.id, await countDynamicUserGroupMatches(group.id)] as const),
-    ),
-  );
+  const { groups, unavailable } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminDynamicGroupsPageData()
+    : await loadAdminDynamicGroupsPageData();
 
   return (
     <section className="space-y-5">
@@ -104,7 +78,7 @@ export default async function AdminDynamicUserGroupsPage() {
             },
             {
               header: "Превью",
-              cell: (group) => String(previewCounts[group.id] ?? 0),
+              cell: (group) => String(group.previewCount),
             },
             {
               header: "Обновлена",
