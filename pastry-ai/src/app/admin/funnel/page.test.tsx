@@ -78,8 +78,8 @@ describe("AdminFunnelPage", () => {
           {
             id: "step_1",
             slug: "welcome",
-            title: "Приветствие",
-            text: "Текст шага",
+            title: "РџСЂРёРІРµС‚СЃС‚РІРёРµ",
+            text: "РўРµРєСЃС‚ С€Р°РіР°",
             imagePath: "/onboarding/1.jpg",
             sortOrder: 0,
             active: true,
@@ -98,7 +98,17 @@ describe("AdminFunnelPage", () => {
     const html = renderToStaticMarkup(await AdminFunnelPage());
 
     expect(loadAdminFunnelPageDataMock).not.toHaveBeenCalled();
-    expect(html).toContain("Приветствие");
+    expect(html).toContain("РџСЂРёРІРµС‚СЃС‚РІРёРµ");
     expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("fails closed on ingress when the bridge is not configured", async () => {
+    process.env.APP_ROLE = "ingress";
+    loadAdminFunnelPageDataMock.mockResolvedValue({ steps: [] });
+
+    await expect(AdminFunnelPage()).rejects.toThrow(
+      "Internal admin bridge is not configured",
+    );
+    expect(loadAdminFunnelPageDataMock).not.toHaveBeenCalled();
   });
 });

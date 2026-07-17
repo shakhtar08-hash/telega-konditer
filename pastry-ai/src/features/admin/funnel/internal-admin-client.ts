@@ -19,8 +19,22 @@ export async function fetchInternalAdminFunnelPageData() {
 
 export async function postInternalAdminFunnelAction(
   action: "createFunnelStep" | "updateFunnelStep",
-  payload: FunnelActionPayload,
+  payload: FunnelActionPayload | FormData,
 ) {
+  if (payload instanceof FormData) {
+    const requestBody = new FormData();
+    for (const [key, value] of payload.entries()) {
+      requestBody.append(key, value);
+    }
+    requestBody.set("action", action);
+
+    await fetchInternalAdminJson("/api/internal/admin/funnel/actions", {
+      body: requestBody,
+      method: "POST",
+    });
+    return;
+  }
+
   await fetchInternalAdminJson("/api/internal/admin/funnel/actions", {
     body: JSON.stringify({ action, payload }),
     method: "POST",

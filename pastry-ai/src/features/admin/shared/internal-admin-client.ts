@@ -27,7 +27,9 @@ export async function fetchInternalAdminJson<T>(
 
   const headers = new Headers(init?.headers);
   headers.set(INTERNAL_AUTH_HEADER, config.secret);
-  headers.set("content-type", "application/json");
+  if (!(init?.body instanceof FormData)) {
+    headers.set("content-type", "application/json");
+  }
 
   const response = await fetch(new URL(path, config.baseUrl), {
     ...init,

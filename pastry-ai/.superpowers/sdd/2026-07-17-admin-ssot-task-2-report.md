@@ -48,3 +48,21 @@ Status: DONE
 
 ## Concerns
 - None.
+
+## Follow-up fix after review
+- Enforced bridge-only behavior for funnel on EU ingress by branching on `APP_ROLE === "ingress"` directly, so missing bridge configuration now throws instead of falling back to local Prisma for `/admin/funnel` reads or writes.
+- Moved ingress mutation routing ahead of local image persistence so EU no longer runs `saveAdminImage(...)` for migrated funnel writes.
+- Updated funnel bridge posting to forward raw `FormData` with the shared secret header, preserving file uploads for RU handling.
+- Extended `src/app/api/internal/admin/funnel/actions/route.ts` to accept multipart form data, parse the funnel mutation on RU, and execute `saveAdminImage(...)` there before calling the funnel service.
+- Adjusted tests to cover fail-closed ingress reads, fail-closed ingress writes, and RU-owned upload forwarding.
+- Tightened `loadAdminFunnelPageData()` typing after the follow-up `npm run typecheck` surfaced an incorrect `Promise<FunnelAdminStep[]>` cast.
+
+## Follow-up verification
+- Regression red step before the fix:
+  - `npm run test -- src/app/admin/funnel/page.actions.test.ts src/app/admin/funnel/page.test.tsx`
+  - Result: FAIL in the expected ingress fallback and local-upload spots.
+- Required verification after the fix:
+  - `npm run test -- src/app/admin/funnel/page.actions.test.ts src/app/admin/funnel/page.test.tsx src/bot/onboarding.test.ts`
+  - Result: PASS (3 files, 26 tests)
+  - `npm run typecheck`
+  - Result: PASS

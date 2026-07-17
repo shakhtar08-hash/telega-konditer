@@ -13,7 +13,6 @@ import { revalidatePath } from "next/cache";
 import {
   fetchInternalAdminFunnelPageData,
   postInternalAdminFunnelAction,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/funnel/internal-admin-client";
 import {
   loadAdminFunnelPageData,
@@ -70,16 +69,21 @@ async function parseFunnelMutationInput(
 export async function updateFunnelStep(formData: FormData) {
   "use server";
 
+  const isIngress = process.env.APP_ROLE === "ingress";
   const id = String(formData.get("id") ?? "").trim();
-  const input = await parseFunnelMutationInput(formData);
 
-  if (!id || !input) {
+  if (!id) {
     return;
   }
 
-  if (shouldUseInternalAdminBridge()) {
-    await postInternalAdminFunnelAction("updateFunnelStep", { id, ...input });
+  if (isIngress) {
+    await postInternalAdminFunnelAction("updateFunnelStep", formData);
   } else {
+    const input = await parseFunnelMutationInput(formData);
+    if (!input) {
+      return;
+    }
+
     await performUpdateFunnelStep({ id, ...input });
   }
 
@@ -89,22 +93,27 @@ export async function updateFunnelStep(formData: FormData) {
 export async function createFunnelStep(formData: FormData) {
   "use server";
 
+  const isIngress = process.env.APP_ROLE === "ingress";
   const slug = String(formData.get("slug") ?? "").trim();
-  const input = await parseFunnelMutationInput(formData);
 
-  if (!slug || !input) {
+  if (!slug) {
     return;
   }
 
-  const createInput = {
-    ...input,
-    nextButtonText: input.nextButtonText || "Далее",
-    slug,
-  };
-
-  if (shouldUseInternalAdminBridge()) {
-    await postInternalAdminFunnelAction("createFunnelStep", createInput);
+  if (isIngress) {
+    await postInternalAdminFunnelAction("createFunnelStep", formData);
   } else {
+    const input = await parseFunnelMutationInput(formData);
+    if (!input) {
+      return;
+    }
+
+    const createInput = {
+      ...input,
+      nextButtonText: input.nextButtonText || "Далее",
+      slug,
+    };
+
     await performCreateFunnelStep(createInput);
   }
 
@@ -112,9 +121,10 @@ export async function createFunnelStep(formData: FormData) {
 }
 
 export default async function AdminFunnelPage() {
-  const { steps } = shouldUseInternalAdminBridge()
-    ? await fetchInternalAdminFunnelPageData()
-    : await loadAdminFunnelPageData();
+  const { steps } =
+    process.env.APP_ROLE === "ingress"
+      ? await fetchInternalAdminFunnelPageData()
+      : await loadAdminFunnelPageData();
 
   return (
     <section className="space-y-5">

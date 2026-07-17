@@ -32,25 +32,27 @@ export type FunnelMutationInput = {
 };
 
 export async function loadAdminFunnelPageData(): Promise<{ steps: FunnelAdminStep[] }> {
+  const steps = (await prisma.funnelStep.findMany({
+    orderBy: { sortOrder: "asc" },
+    select: {
+      active: true,
+      buyButtons: true,
+      buyButtonText: true,
+      buyButtonUrl: true,
+      id: true,
+      imagePath: true,
+      nextButtonText: true,
+      nextAction: true,
+      offerButtonText: true,
+      slug: true,
+      sortOrder: true,
+      text: true,
+      title: true,
+    },
+  })) as FunnelAdminStep[];
+
   return {
-    steps: await prisma.funnelStep.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: {
-        active: true,
-        buyButtons: true,
-        buyButtonText: true,
-        buyButtonUrl: true,
-        id: true,
-        imagePath: true,
-        nextButtonText: true,
-        nextAction: true,
-        offerButtonText: true,
-        slug: true,
-        sortOrder: true,
-        text: true,
-        title: true,
-      },
-    }) as Promise<FunnelAdminStep[]>,
+    steps,
   };
 }
 
