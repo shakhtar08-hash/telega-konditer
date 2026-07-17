@@ -18,6 +18,9 @@ describe("AdminImageField", () => {
     expect(html).toContain('name="imageFile"');
     expect(html).toContain('type="file"');
     expect(html).toContain('src="/uploads/admin/triggers/cake.webp"');
+    expect(html).toContain(
+      "Большие изображения будут автоматически уменьшены перед отправкой.",
+    );
   });
 
   it("renders without preview when defaultValue is empty", () => {

@@ -1,4 +1,5 @@
 import { forwardRef, type ReactNode } from "react";
+import { AdminImageFileInput } from "./admin-image-file-input";
 
 export function AdminPanel({
   children,
@@ -153,7 +154,7 @@ export function AdminImageField({
         />
         <div className="space-y-2">
           <span className="block text-xs text-[#7f8da3]">{fileLabel}</span>
-          <AdminInput accept="image/*" name={fileName} type="file" />
+          <AdminImageFileInput name={fileName} />
         </div>
         {previewable ? (
           // eslint-disable-next-line @next/next/no-img-element
