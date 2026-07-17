@@ -1,17 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminFunnelPage, { dynamic } from "./page";
 
-const { findMany } = vi.hoisted(() => ({
-  findMany: vi.fn(),
+const { loadAdminFunnelPageDataMock } = vi.hoisted(() => ({
+  loadAdminFunnelPageDataMock: vi.fn(),
 }));
 
-vi.mock("@/db/prisma", () => ({
-  prisma: {
-    funnelStep: {
-      findMany,
-    },
-  },
+vi.mock("@/features/admin/funnel/service", () => ({
+  loadAdminFunnelPageData: loadAdminFunnelPageDataMock,
+  performCreateFunnelStep: vi.fn(),
+  performUpdateFunnelStep: vi.fn(),
 }));
 
 function expectNoMojibake(text: string) {
@@ -21,38 +19,86 @@ function expectNoMojibake(text: string) {
 }
 
 describe("AdminFunnelPage", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    delete process.env.APP_ROLE;
+    delete process.env.INTERNAL_API_BASE_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
+  });
+
   it("renders funnel steps and controls for creating new posts", async () => {
-    findMany.mockResolvedValue([
-      {
-        active: true,
-        buyButtons: [],
-        buyButtonText: "",
-        buyButtonUrl: null,
-        nextAction: "activate_promo_and_next",
-        id: "step_1",
-        imagePath: "/onboarding/welcome.png",
-        nextButtonText: "\u0414\u0430\u043b\u0435\u0435",
-        offerButtonText: null,
-        slug: "welcome",
-        sortOrder: 0,
-        text: "\u0422\u0435\u043a\u0441\u0442 \u0448\u0430\u0433\u0430",
-        title: "\u041f\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435",
-      },
-    ]);
+    loadAdminFunnelPageDataMock.mockResolvedValue({
+      steps: [
+        {
+          active: true,
+          buyButtons: [],
+          buyButtonText: "",
+          buyButtonUrl: null,
+          nextAction: "activate_promo_and_next",
+          id: "step_1",
+          imagePath: "/onboarding/1.jpg",
+          nextButtonText: "Далее",
+          offerButtonText: null,
+          slug: "welcome",
+          sortOrder: 0,
+          text: "Текст шага",
+          title: "Приветствие",
+        },
+      ],
+    });
 
     const html = renderToStaticMarkup(await AdminFunnelPage());
 
     expect(dynamic).toBe("force-dynamic");
-    expect(findMany).toHaveBeenCalled();
-    expect(html).toContain("\u041f\u0440\u0438\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0435");
-    expect(html).toContain("/onboarding/welcome.png");
-    expect(html).toContain("\u0422\u0435\u043a\u0441\u0442 \u0448\u0430\u0433\u0430");
-    expect(html).toContain("\u041e\u043f\u043b\u0430\u0442\u043d\u044b\u0435 \u043a\u043d\u043e\u043f\u043a\u0438");
-    expect(html).toContain("\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u0448\u0430\u0433");
-    expect(html).toContain("\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043f\u0440\u0438 \u043d\u0430\u0436\u0430\u0442\u0438\u0438");
+    expect(loadAdminFunnelPageDataMock).toHaveBeenCalled();
+    expect(html).toContain("Приветствие");
+    expect(html).toContain("/onboarding/1.jpg");
+    expect(html).toContain("Текст шага");
+    expect(html).toContain("Оплатные кнопки");
+    expect(html).toContain("Создать новый шаг");
+    expect(html).toContain("Действие при нажатии");
     expect(html).toContain('name="nextAction" value="activate_promo_and_next"');
     expect(html).toContain('option value="activate_promo_and_next" selected=""');
     expect(html).toContain("bg-[#121a27]");
     expectNoMojibake(html);
+  });
+
+  it("loads funnel steps from the internal bridge on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    loadAdminFunnelPageDataMock.mockResolvedValue({ steps: [] });
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        steps: [
+          {
+            id: "step_1",
+            slug: "welcome",
+            title: "Приветствие",
+            text: "Текст шага",
+            imagePath: "/onboarding/1.jpg",
+            sortOrder: 0,
+            active: true,
+            nextButtonText: "Далее",
+            nextAction: "next",
+            offerButtonText: null,
+            buyButtons: [],
+            buyButtonText: "",
+            buyButtonUrl: null,
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const html = renderToStaticMarkup(await AdminFunnelPage());
+
+    expect(loadAdminFunnelPageDataMock).not.toHaveBeenCalled();
+    expect(html).toContain("Приветствие");
+    expect(fetchMock).toHaveBeenCalled();
   });
 });

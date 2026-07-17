@@ -9,8 +9,18 @@ import {
   AdminTextarea,
   AdminToggle,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
+import {
+  fetchInternalAdminFunnelPageData,
+  postInternalAdminFunnelAction,
+  shouldUseInternalAdminBridge,
+} from "@/features/admin/funnel/internal-admin-client";
+import {
+  loadAdminFunnelPageData,
+  performCreateFunnelStep,
+  performUpdateFunnelStep,
+  type FunnelMutationInput,
+} from "@/features/admin/funnel/service";
 import { parseBuyButtons, parseBuyButtonsFromFormData } from "./buy-buttons-form";
 import { AdminBuyButtonsEditor } from "./buy-buttons-editor";
 import { AdminNextActionSelect } from "./next-action-select";
@@ -18,46 +28,60 @@ import { saveAdminImage } from "../_lib/save-admin-image";
 
 export const dynamic = "force-dynamic";
 
-export async function updateFunnelStep(formData: FormData) {
-  "use server";
-
-  const id = String(formData.get("id") ?? "");
+async function parseFunnelMutationInput(
+  formData: FormData,
+): Promise<FunnelMutationInput | null> {
   const sortOrder = Number(formData.get("sortOrder"));
   const active = formData.get("active") === "on";
   const title = String(formData.get("title") ?? "").trim();
-  const imagePath = await saveAdminImage({
-    entity: "funnel",
-    file: (formData.get("imageFile") as File | null) ?? null,
-    manualValue: String(formData.get("imagePath") ?? ""),
-  }) ?? "";
+  const imagePath =
+    (await saveAdminImage({
+      entity: "funnel",
+      file: (formData.get("imageFile") as File | null) ?? null,
+      manualValue: String(formData.get("imagePath") ?? ""),
+    })) ?? "";
   const text = String(formData.get("text") ?? "").trim();
   const nextButtonText = String(formData.get("nextButtonText") ?? "").trim();
-  const nextAction = String(formData.get("nextAction") ?? "next").trim();
+  const nextAction = String(formData.get("nextAction") ?? "next").trim() as
+    | "next"
+    | "activate_promo_and_next";
   const offerButtonText = String(formData.get("offerButtonText") ?? "").trim();
 
-  if (!id || !title || !imagePath || !text || Number.isNaN(sortOrder)) {
-    return;
+  if (!title || !imagePath || !text || Number.isNaN(sortOrder)) {
+    return null;
   }
 
   const buyButtons = parseBuyButtonsFromFormData(formData);
-  const firstBuyButton = buyButtons.find((button) => button.active);
 
-  await prisma.funnelStep.update({
-    where: { id },
-    data: {
-      active,
-      buyButtons,
-      buyButtonText: firstBuyButton?.text ?? "",
-      buyButtonUrl: firstBuyButton?.url || null,
-      imagePath,
-      nextButtonText,
-      nextAction,
-      offerButtonText: offerButtonText || null,
-      sortOrder,
-      text,
-      title,
-    },
-  });
+  return {
+    active,
+    buyButtons,
+    firstBuyButton: buyButtons.find((button) => button.active),
+    imagePath,
+    nextAction,
+    nextButtonText,
+    offerButtonText,
+    sortOrder,
+    text,
+    title,
+  };
+}
+
+export async function updateFunnelStep(formData: FormData) {
+  "use server";
+
+  const id = String(formData.get("id") ?? "").trim();
+  const input = await parseFunnelMutationInput(formData);
+
+  if (!id || !input) {
+    return;
+  }
+
+  if (shouldUseInternalAdminBridge()) {
+    await postInternalAdminFunnelAction("updateFunnelStep", { id, ...input });
+  } else {
+    await performUpdateFunnelStep({ id, ...input });
+  }
 
   revalidatePath("/admin/funnel");
 }
@@ -66,65 +90,31 @@ export async function createFunnelStep(formData: FormData) {
   "use server";
 
   const slug = String(formData.get("slug") ?? "").trim();
-  const sortOrder = Number(formData.get("sortOrder"));
-  const title = String(formData.get("title") ?? "").trim();
-  const imagePath = await saveAdminImage({
-    entity: "funnel",
-    file: (formData.get("imageFile") as File | null) ?? null,
-    manualValue: String(formData.get("imagePath") ?? ""),
-  }) ?? "";
-  const text = String(formData.get("text") ?? "").trim();
-  const nextButtonText =
-    String(formData.get("nextButtonText") ?? "").trim() || "Далее";
-  const nextAction = String(formData.get("nextAction") ?? "next").trim();
-  const offerButtonText = String(formData.get("offerButtonText") ?? "").trim();
+  const input = await parseFunnelMutationInput(formData);
 
-  if (!slug || !title || !imagePath || !text || Number.isNaN(sortOrder)) {
+  if (!slug || !input) {
     return;
   }
 
-  const buyButtons = parseBuyButtonsFromFormData(formData);
-  const firstBuyButton = buyButtons.find((button) => button.active);
+  const createInput = {
+    ...input,
+    nextButtonText: input.nextButtonText || "Далее",
+    slug,
+  };
 
-  await prisma.funnelStep.create({
-    data: {
-      active: true,
-      buyButtons,
-      buyButtonText: firstBuyButton?.text ?? "",
-      buyButtonUrl: firstBuyButton?.url || null,
-      imagePath,
-      nextButtonText,
-      nextAction,
-      offerButtonText: offerButtonText || null,
-      slug,
-      sortOrder,
-      text,
-      title,
-    },
-  });
+  if (shouldUseInternalAdminBridge()) {
+    await postInternalAdminFunnelAction("createFunnelStep", createInput);
+  } else {
+    await performCreateFunnelStep(createInput);
+  }
 
   revalidatePath("/admin/funnel");
 }
 
 export default async function AdminFunnelPage() {
-  const steps = await prisma.funnelStep.findMany({
-    orderBy: { sortOrder: "asc" },
-    select: {
-      active: true,
-      buyButtons: true,
-      buyButtonText: true,
-      buyButtonUrl: true,
-      id: true,
-      imagePath: true,
-      nextButtonText: true,
-      nextAction: true,
-      offerButtonText: true,
-      slug: true,
-      sortOrder: true,
-      text: true,
-      title: true,
-    },
-  });
+  const { steps } = shouldUseInternalAdminBridge()
+    ? await fetchInternalAdminFunnelPageData()
+    : await loadAdminFunnelPageData();
 
   return (
     <section className="space-y-5">
