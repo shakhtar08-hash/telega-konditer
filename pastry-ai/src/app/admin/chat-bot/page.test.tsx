@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminChatBotPage, { dynamic as chatBotDynamic } from "./page";
 
 const { prismaMock } = vi.hoisted(() => ({
@@ -27,6 +27,14 @@ function expectNoMojibake(text: string) {
 }
 
 describe("AdminChatBotPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+    delete process.env.APP_ROLE;
+    delete process.env.INTERNAL_API_BASE_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
+  });
+
   it("renders editable menu buttons and a Telegram preview", async () => {
     prismaMock.botMenuButton.findMany.mockResolvedValue([
       {
@@ -104,5 +112,54 @@ describe("AdminChatBotPage", () => {
     const text = renderToStaticMarkup(await AdminChatBotPage());
 
     expect(text.match(/value="recipe-card::recipe-card"/g)?.length).toBe(1);
+  });
+
+  it("reads chat-bot page data from RU when running as ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          buttons: [
+            {
+              actionType: "PROMPT",
+              active: true,
+              description: "desc",
+              emoji: "🍰",
+              fullWidth: false,
+              id: "button_1",
+              instructionText: null,
+              label: "RU Button",
+              previewImageUrl: null,
+              processingText: null,
+              promptFeature: "recipes",
+              promptSlug: "recipe-from-ingredients",
+              sortOrder: 1,
+              url: null,
+            },
+          ],
+          prompts: [
+            {
+              feature: "recipes",
+              slug: "recipe-from-ingredients",
+              title: "Recipe",
+            },
+          ],
+          menuIntro: {
+            text: "Выберите рецепт",
+          },
+        }),
+      }),
+    );
+
+    const html = renderToStaticMarkup(await AdminChatBotPage());
+
+    expect(html).toContain("RU Button");
+    expect(prismaMock.botMenuButton.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.prompt.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.botTextBlock.findUnique).not.toHaveBeenCalled();
   });
 });

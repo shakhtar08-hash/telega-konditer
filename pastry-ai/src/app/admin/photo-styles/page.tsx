@@ -15,21 +15,31 @@ import {
   AdminTextarea,
   AdminToggle,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
+import {
+  fetchInternalAdminPhotoStylesPageData,
+  postInternalAdminPhotoStyleAction,
+} from "@/features/admin/photo-styles/internal-admin-client";
+import {
+  loadAdminPhotoStylesPageData,
+  performCreatePhotoStyle,
+  performDeletePhotoStyle,
+  performUpdatePhotoStyle,
+  type PhotoStyleMutationInput,
+} from "@/features/admin/photo-styles/service";
 import { saveAdminImage } from "../_lib/save-admin-image";
 
 export const dynamic = "force-dynamic";
 
 const providers = ["openai", "openrouter", "kie"] as const;
 
-async function createStyle(formData: FormData) {
-  "use server";
-
+async function parsePhotoStyleMutationInput(
+  formData: FormData,
+): Promise<PhotoStyleMutationInput | null> {
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const prompt = String(formData.get("prompt") ?? "").trim();
-  const provider = String(formData.get("provider") ?? "");
+  const provider = String(formData.get("provider") ?? "").trim();
   const model = String(formData.get("model") ?? "").trim();
   const preview = await saveAdminImage({
     entity: "photo-styles",
@@ -40,11 +50,36 @@ async function createStyle(formData: FormData) {
   const userText = String(formData.get("userText") ?? "").trim() || null;
   const active = formData.get("active") === "on";
 
-  if (!name || !description || !prompt || !provider || !model) return;
+  if (!name || !description || !prompt || !provider || !model) {
+    return null;
+  }
 
-  await prisma.photoStyle.create({
-    data: { name, description, prompt, provider, model, preview, userPreview, userText, active },
-  });
+  return {
+    active,
+    description,
+    model,
+    name,
+    preview,
+    prompt,
+    provider,
+    userPreview,
+    userText,
+  };
+}
+
+async function createStyle(formData: FormData) {
+  "use server";
+
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminPhotoStyleAction("createPhotoStyle", formData);
+  } else {
+    const input = await parsePhotoStyleMutationInput(formData);
+    if (!input) {
+      return;
+    }
+
+    await performCreatePhotoStyle(input);
+  }
 
   revalidatePath("/admin/photo-styles");
 }
@@ -52,46 +87,46 @@ async function createStyle(formData: FormData) {
 async function updateStyle(formData: FormData) {
   "use server";
 
-  const id = String(formData.get("id") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const prompt = String(formData.get("prompt") ?? "").trim();
-  const provider = String(formData.get("provider") ?? "");
-  const model = String(formData.get("model") ?? "").trim();
-  const preview = await saveAdminImage({
-    entity: "photo-styles",
-    file: (formData.get("previewFile") as File | null) ?? null,
-    manualValue: String(formData.get("preview") ?? ""),
-  });
-  const userPreview = String(formData.get("userPreview") ?? "").trim() || null;
-  const userText = String(formData.get("userText") ?? "").trim() || null;
-  const active = formData.get("active") === "on";
+  const id = String(formData.get("id") ?? "").trim();
 
-  if (!id || !name || !description || !prompt || !provider || !model) return;
+  if (!id) {
+    return;
+  }
 
-  await prisma.photoStyle.update({
-    data: { name, description, prompt, provider, model, preview, userPreview, userText, active },
-    where: { id },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminPhotoStyleAction("updatePhotoStyle", formData);
+  } else {
+    const input = await parsePhotoStyleMutationInput(formData);
+    if (!input) {
+      return;
+    }
+
+    await performUpdatePhotoStyle({ id, ...input });
+  }
 
   revalidatePath("/admin/photo-styles");
 }
 
-async function deleteStyle(formData: FormData) {
+export async function deleteStyle(formData: FormData) {
   "use server";
 
-  const id = String(formData.get("id") ?? "");
+  const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
-  await prisma.photoStyle.delete({ where: { id } });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminPhotoStyleAction("deletePhotoStyle", { id });
+  } else {
+    await performDeletePhotoStyle(id);
+  }
 
   revalidatePath("/admin/photo-styles");
 }
 
 export default async function AdminPhotoStylesPage() {
-  const styles = await prisma.photoStyle.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const { styles } =
+    process.env.APP_ROLE === "ingress"
+      ? await fetchInternalAdminPhotoStylesPageData()
+      : await loadAdminPhotoStylesPageData();
 
   return (
     <section className="space-y-5">

@@ -8,8 +8,15 @@ import {
   AdminToggle,
 } from "@/components/admin/form";
 import { AdminPageHeader } from "@/components/admin/data-table";
-import { prisma } from "@/db/prisma";
 import type { PromptProvider } from "@/db/repositories/prompt-repository";
+import {
+  fetchInternalAdminPromptsPageData,
+  postInternalAdminPromptAction,
+} from "@/features/admin/prompts/internal-admin-client";
+import {
+  loadAdminPromptsPageData,
+  performUpdatePrompt,
+} from "@/features/admin/prompts/service";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -43,9 +50,22 @@ export async function updatePrompt(formData: FormData) {
     return;
   }
 
-  await prisma.prompt.update({
-    where: { id },
-    data: {
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminPromptAction({
+      action: "updatePrompt",
+      payload: {
+        active,
+        id,
+        model,
+        provider,
+        systemPrompt,
+        temperature,
+        title,
+        userTemplate,
+      },
+    });
+  } else {
+    await performUpdatePrompt(id, {
       active,
       model,
       provider,
@@ -53,31 +73,17 @@ export async function updatePrompt(formData: FormData) {
       temperature,
       title,
       userTemplate,
-    },
-  });
+    });
+  }
 
   revalidatePath("/admin/prompts");
 }
 
 export default async function AdminPromptsPage() {
-  const prompts = await prisma.prompt.findMany({
-    orderBy: [{ feature: "asc" }, { slug: "asc" }, { version: "desc" }],
-    select: {
-      active: true,
-      createdAt: true,
-      feature: true,
-      id: true,
-      model: true,
-      provider: true,
-      slug: true,
-      systemPrompt: true,
-      temperature: true,
-      title: true,
-      updatedAt: true,
-      userTemplate: true,
-      version: true,
-    },
-  });
+  const { prompts } =
+    process.env.APP_ROLE === "ingress"
+      ? await fetchInternalAdminPromptsPageData()
+      : await loadAdminPromptsPageData();
 
   return (
     <section className="space-y-5">

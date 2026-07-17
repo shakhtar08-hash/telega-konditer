@@ -1,10 +1,14 @@
 import { isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-import AdminPromptsPage, { dynamic } from "./page";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import AdminPromptsPage, { dynamic, updatePrompt } from "./page";
 
 const { findMany } = vi.hoisted(() => ({
   findMany: vi.fn(),
+}));
+
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
 }));
 
 vi.mock("@/db/prisma", () => ({
@@ -38,6 +42,14 @@ function collectText(node: ReactNode): string {
 }
 
 describe("AdminPromptsPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+    delete process.env.APP_ROLE;
+    delete process.env.INTERNAL_API_BASE_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
+  });
+
   it("renders fresh database data on each request", () => {
     expect(dynamic).toBe("force-dynamic");
   });
@@ -94,5 +106,66 @@ describe("AdminPromptsPage", () => {
     expect(html).toContain("\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u0432 \u043c\u0435\u043d\u044e \u0431\u043e\u0442\u0430");
     expect(html).toContain("bg-[#121a27]");
     expectNoMojibake(html);
+  });
+
+  it("reads prompts from RU when running as ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          prompts: [
+            {
+              id: "prompt_1",
+              title: "Recipe",
+              slug: "recipe",
+              feature: "recipe-card",
+              provider: "openai",
+              systemPrompt: "sys",
+              userTemplate: "user",
+              model: "gpt-4.1",
+              temperature: 0.4,
+              active: true,
+              version: 1,
+              createdAt: new Date("2026-06-28T00:00:00.000Z").toISOString(),
+              updatedAt: new Date("2026-06-28T00:00:00.000Z").toISOString(),
+            },
+          ],
+        }),
+      }),
+    );
+
+    const html = renderToStaticMarkup(await AdminPromptsPage());
+
+    expect(html).toContain("Recipe");
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("posts prompt updates to RU when running as ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const formData = new FormData();
+    formData.set("id", "prompt_1");
+    formData.set("title", "Recipe");
+    formData.set("slug", "recipe");
+    formData.set("feature", "recipe-card");
+    formData.set("systemPrompt", "sys");
+    formData.set("userTemplate", "user");
+    formData.set("model", "gpt-4.1");
+    formData.set("temperature", "0.4");
+    formData.set("provider", "openai");
+    formData.set("active", "on");
+
+    await updatePrompt(formData);
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(findMany).not.toHaveBeenCalled();
   });
 });

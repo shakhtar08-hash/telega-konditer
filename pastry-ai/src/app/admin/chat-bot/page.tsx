@@ -12,7 +12,19 @@ import {
   AdminTextarea,
   AdminToggle,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
+import {
+  fetchInternalAdminChatBotPageData,
+  postInternalAdminChatBotAction,
+} from "@/features/admin/chat-bot/internal-admin-client";
+import {
+  loadAdminChatBotPageData,
+  performCreateBotMenuButton,
+  performDeleteBotMenuButton,
+  performUpdateBotMenuButton,
+  performUpdateMenuIntro,
+  type BotMenuActionType,
+  type BotMenuButtonMutationInput,
+} from "@/features/admin/chat-bot/service";
 import { saveAdminImage } from "../_lib/save-admin-image";
 
 export const dynamic = "force-dynamic";
@@ -56,12 +68,12 @@ function isActionType(value: string): value is ActionType {
   return value === "PROMPT" || value === "URL";
 }
 
-export async function createBotMenuButton(formData: FormData) {
-  "use server";
-
+async function parseBotMenuButtonMutationInput(
+  formData: FormData,
+): Promise<BotMenuButtonMutationInput | null> {
   const label = String(formData.get("label") ?? "").trim();
   const emoji = String(formData.get("emoji") ?? "").trim();
-const description = String(formData.get("description") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
   const instructionText = String(formData.get("instructionText") ?? "").trim();
   const processingText = String(formData.get("processingText") ?? "").trim();
   const previewImageUrl = await saveAdminImage({
@@ -76,28 +88,41 @@ const description = String(formData.get("description") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder"));
 
   if (!label || !isActionType(actionTypeRaw) || Number.isNaN(sortOrder)) {
-    return;
+    return null;
   }
 
   const target = parsePromptTarget(promptTarget);
 
-  await prisma.botMenuButton.create({
-    data: {
-      actionType: actionTypeRaw,
-      active: true,
-      description,
-      emoji,
-      fullWidth,
-      instructionText: instructionText || null,
-      label,
-      previewImageUrl,
-      processingText: processingText || null,
-      promptFeature: actionTypeRaw === "PROMPT" ? target.feature || null : null,
-      promptSlug: actionTypeRaw === "PROMPT" ? target.slug || null : null,
-      sortOrder,
-      url: actionTypeRaw === "URL" ? url || null : null,
-    },
-  });
+  return {
+    actionType: actionTypeRaw as BotMenuActionType,
+    active: formData.get("active") === "on",
+    description,
+    emoji,
+    fullWidth,
+    instructionText: instructionText || null,
+    label,
+    previewImageUrl,
+    processingText: processingText || null,
+    promptFeature: actionTypeRaw === "PROMPT" ? target.feature || null : null,
+    promptSlug: actionTypeRaw === "PROMPT" ? target.slug || null : null,
+    sortOrder,
+    url: actionTypeRaw === "URL" ? url || null : null,
+  };
+}
+
+export async function createBotMenuButton(formData: FormData) {
+  "use server";
+
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminChatBotAction("createBotMenuButton", formData);
+  } else {
+    const input = await parseBotMenuButtonMutationInput(formData);
+    if (!input) {
+      return;
+    }
+
+    await performCreateBotMenuButton(input);
+  }
 
   revalidatePath("/admin/chat-bot");
 }
@@ -105,59 +130,22 @@ const description = String(formData.get("description") ?? "").trim();
 export async function updateBotMenuButton(formData: FormData) {
   "use server";
 
-  const id = String(formData.get("id") ?? "");
-  const label = String(formData.get("label") ?? "").trim();
-  const emoji = String(formData.get("emoji") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-const instructionText = String(formData.get("instructionText") ?? "").trim();
-  const processingText = String(formData.get("processingText") ?? "").trim();
-  const previewImageUrl = await saveAdminImage({
-    entity: "chat-bot",
-    file: (formData.get("previewImageFile") as File | null) ?? null,
-    manualValue: String(formData.get("previewImageUrl") ?? ""),
-  });
-  const fullWidth = formData.get("fullWidth") === "on";
-  const actionTypeRaw = String(formData.get("actionType") ?? "");
-  const promptTarget = String(formData.get("promptTarget") ?? "");
-  const url = String(formData.get("url") ?? "").trim();
-  const sortOrder = Number(formData.get("sortOrder"));
-  const active = formData.get("active") === "on";
+  const id = String(formData.get("id") ?? "").trim();
 
-  if (!id || !label || !isActionType(actionTypeRaw) || Number.isNaN(sortOrder)) {
+  if (!id) {
     return;
   }
 
-  const target = parsePromptTarget(promptTarget);
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminChatBotAction("updateBotMenuButton", formData);
+  } else {
+    const input = await parseBotMenuButtonMutationInput(formData);
+    if (!input) {
+      return;
+    }
 
-  let promptFeature = target.feature || null;
-  let promptSlug = target.slug || null;
-  if (!promptFeature && actionTypeRaw === "PROMPT") {
-    const existing = await prisma.botMenuButton.findUnique({
-      where: { id },
-      select: { promptFeature: true, promptSlug: true },
-    });
-    promptFeature = existing?.promptFeature ?? null;
-    promptSlug = existing?.promptSlug ?? null;
+    await performUpdateBotMenuButton({ id, ...input });
   }
-
-  await prisma.botMenuButton.update({
-    data: {
-      actionType: actionTypeRaw,
-      active,
-      description,
-      emoji,
-      fullWidth,
-      instructionText: instructionText || null,
-      label,
-      previewImageUrl: previewImageUrl || null,
-      processingText: processingText || null,
-      promptFeature: actionTypeRaw === "PROMPT" ? promptFeature : null,
-      promptSlug: actionTypeRaw === "PROMPT" ? promptSlug : null,
-      sortOrder,
-      url: actionTypeRaw === "URL" ? url || null : null,
-    },
-    where: { id },
-  });
 
   revalidatePath("/admin/chat-bot");
 }
@@ -165,69 +153,40 @@ const instructionText = String(formData.get("instructionText") ?? "").trim();
 export async function deleteBotMenuButton(formData: FormData) {
   "use server";
 
-  const id = String(formData.get("id") ?? "");
+  const id = String(formData.get("id") ?? "").trim();
 
   if (!id) {
     return;
   }
 
-  await prisma.botMenuButton.delete({ where: { id } });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminChatBotAction("deleteBotMenuButton", { id });
+  } else {
+    await performDeleteBotMenuButton(id);
+  }
+
   revalidatePath("/admin/chat-bot");
 }
 
 export async function updateMenuIntro(formData: FormData) {
   "use server";
 
-  const text = String(formData.get("text") ?? "").trim();
+  const text = String(formData.get("text") ?? "");
 
-  if (!text) return;
-
-  await prisma.botTextBlock.upsert({
-    where: { key: "prompt_menu_intro" },
-    update: { text },
-    create: { key: "prompt_menu_intro", text },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminChatBotAction("updateMenuIntro", { text });
+  } else {
+    await performUpdateMenuIntro(text);
+  }
 
   revalidatePath("/admin/chat-bot");
 }
 
 export default async function AdminChatBotPage() {
-  const [buttons, prompts, menuIntro] = await Promise.all([
-    prisma.botMenuButton.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: {
-        actionType: true,
-        active: true,
-        description: true,
-        emoji: true,
-        fullWidth: true,
-        id: true,
-        instructionText: true,
-        label: true,
-        previewImageUrl: true,
-        processingText: true,
-        promptFeature: true,
-        promptSlug: true,
-        sortOrder: true,
-        url: true,
-      },
-    }),
-    prisma.prompt.findMany({
-      orderBy: [{ feature: "asc" }, { slug: "asc" }, { version: "desc" }],
-      select: {
-        feature: true,
-        slug: true,
-        title: true,
-      },
-      where: {
-        active: true,
-      },
-    }),
-    prisma.botTextBlock.findUnique({
-      where: { key: "prompt_menu_intro" },
-      select: { text: true },
-    }),
-  ]);
+  const { buttons, prompts, menuIntro } =
+    process.env.APP_ROLE === "ingress"
+      ? await fetchInternalAdminChatBotPageData()
+      : await loadAdminChatBotPageData();
 
   const promptOptions = buildPromptOptions(prompts);
   const activeButtons = buttons.filter((button) => button.active);
