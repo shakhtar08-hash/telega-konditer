@@ -1,3 +1,8 @@
+import {
+  fetchInternalAdminJson,
+  shouldUseInternalAdminBridge,
+} from "@/features/admin/shared/internal-admin-client";
+
 export {
   fetchInternalAdminJson,
   shouldUseInternalAdminBridge,

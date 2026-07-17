@@ -40,3 +40,35 @@ Task 1: Establish Shared Bridge Primitive and Inventory Gate
 ## Concerns
 
 - No additional concerns in Task 1 scope after the follow-up fix.
+
+## Follow-up Fix 2
+
+Date: 2026-07-17
+
+### Issue
+
+- `src/features/admin/users/internal-admin-client.ts` re-exported `fetchInternalAdminJson` for consumers, but did not import it for local wrapper usage.
+- The wrapper methods therefore referenced an undefined identifier during compilation.
+
+### Root Cause
+
+- Re-export syntax alone does not create a local binding in the module body.
+- The shared helper remained part of the public compatibility surface, but the local wrapper functions needed a real import.
+
+### Fix Applied
+
+- Added a local import of `fetchInternalAdminJson` and `shouldUseInternalAdminBridge` from `@/features/admin/shared/internal-admin-client`.
+- Preserved the existing public compatibility surface by keeping the explicit re-export from the same shared module.
+
+### Verification
+
+- `npm run test -- src/features/admin/shared/internal-admin-client.test.ts`
+  - PASS: 1 file, 3 tests
+- `npm run test -- src/app/admin/users/user-groups-actions.test.ts src/app/admin/users/page.test.tsx src/app/admin/users/[userId]/page.test.tsx`
+  - PASS: 3 files, 6 tests
+- `npm run typecheck`
+  - PASS
+
+### Notes
+
+- Scope remained limited to the Task 1 users bridge compatibility fix plus this report update.
