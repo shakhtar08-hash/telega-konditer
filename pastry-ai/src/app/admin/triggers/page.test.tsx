@@ -108,9 +108,9 @@ describe("trigger admin pages", () => {
 
     const html = renderToStaticMarkup(await AdminTriggersPage({}));
 
-    expect(html).toContain("РўСЂРёРіРіРµСЂС‹");
+    expect(html).toContain("Триггеры");
     expect(html).toContain("After Start: no promo");
-    expect(html).toContain("РЎРѕР·РґР°С‚СЊ С‚СЂРёРіРіРµСЂ");
+    expect(html).toContain("Создать триггер");
   });
 
   it("shows filters and empty state", async () => {
@@ -125,38 +125,38 @@ describe("trigger admin pages", () => {
       }),
     );
 
-    expect(html).toContain("РџСЂРёРјРµРЅРёС‚СЊ");
-    expect(html).toContain("РќРµС‚ С‚СЂРёРіРіРµСЂРѕРІ");
+    expect(html).toContain("Применить");
+    expect(html).toContain("Нет триггеров");
   });
 
   it("passes live user and dynamic groups into the new trigger page form", async () => {
     loadAdminTriggerEditorDataMock.mockResolvedValue({
       dynamicGroups: [
-        { id: "dynamic_no_tariff", name: "Р‘РµР· Р°РєС‚РёРІРЅРѕРіРѕ С‚Р°СЂРёС„Р°", status: "active" },
+        { id: "dynamic_no_tariff", name: "Без активного тарифа", status: "active" },
       ],
       dynamicGroupsUnavailable: false,
       rule: null,
       userGroups: [
-        { id: "group_vip", name: "VIP РєР»РёРµРЅС‚С‹" },
-        { id: "group_school", name: "РЈС‡РµРЅРёРєРё РєСѓСЂСЃР°" },
+        { id: "group_vip", name: "VIP клиенты" },
+        { id: "group_school", name: "Ученики курса" },
       ],
     });
 
     const html = renderToStaticMarkup(await NewTriggerPage({}));
 
-    expect(html).toContain("РќРѕРІС‹Р№ С‚СЂРёРіРіРµСЂ");
+    expect(html).toContain("Новый триггер");
     expect(html).toContain(
-      "groups:VIP РєР»РёРµРЅС‚С‹:group_vip,РЈС‡РµРЅРёРєРё РєСѓСЂСЃР°:group_school",
+      "groups:VIP клиенты:group_vip,Ученики курса:group_school",
     );
     expect(html).toContain(
-      "dynamic:Р‘РµР· Р°РєС‚РёРІРЅРѕРіРѕ С‚Р°СЂРёС„Р°:dynamic_no_tariff",
+      "dynamic:Без активного тарифа:dynamic_no_tariff",
     );
   });
 
   it("passes live user groups and delete support into the edit trigger page form", async () => {
     loadAdminTriggerEditorDataMock.mockResolvedValue({
       dynamicGroups: [
-        { id: "dynamic_no_tariff", name: "Р‘РµР· Р°РєС‚РёРІРЅРѕРіРѕ С‚Р°СЂРёС„Р°", status: "active" },
+        { id: "dynamic_no_tariff", name: "Без активного тарифа", status: "active" },
       ],
       dynamicGroupsUnavailable: false,
       rule: {
@@ -169,11 +169,11 @@ describe("trigger admin pages", () => {
         eventKey: "user.started",
         id: "rule_group",
         imageUrl: null,
-        messageText: "РџСЂРёРІРµС‚!",
+        messageText: "Привет!",
         name: "VIP follow-up",
         status: "active",
       },
-      userGroups: [{ id: "group_vip", name: "VIP РєР»РёРµРЅС‚С‹" }],
+      userGroups: [{ id: "group_vip", name: "VIP клиенты" }],
     });
 
     const html = renderToStaticMarkup(
@@ -182,10 +182,10 @@ describe("trigger admin pages", () => {
       }),
     );
 
-    expect(html).toContain("Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С‚СЂРёРіРіРµСЂР°");
+    expect(html).toContain("Редактирование триггера");
     expect(html).toContain("delete:true");
     expect(html).toContain(
-      "dynamic:Р‘РµР· Р°РєС‚РёРІРЅРѕРіРѕ С‚Р°СЂРёС„Р°:dynamic_no_tariff",
+      "dynamic:Без активного тарифа:dynamic_no_tariff",
     );
   });
 

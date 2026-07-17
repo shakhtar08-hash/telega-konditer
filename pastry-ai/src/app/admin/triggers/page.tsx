@@ -49,62 +49,62 @@ type LocalizedTemplate = {
 };
 
 const statusOptions = [
-  { value: "all", label: "Р’СЃРµ СЃС‚Р°С‚СѓСЃС‹" },
-  { value: "active", label: "РђРєС‚РёРІРЅС‹Рµ" },
-  { value: "draft", label: "Р§РµСЂРЅРѕРІРёРєРё" },
-  { value: "disabled", label: "РћС‚РєР»СЋС‡РµРЅРЅС‹Рµ" },
+  { value: "all", label: "Все статусы" },
+  { value: "active", label: "Активные" },
+  { value: "draft", label: "Черновики" },
+  { value: "disabled", label: "Отключенные" },
 ] as const;
 
 const sortOptions = [
-  { value: "updated-desc", label: "РЎРЅР°С‡Р°Р»Р° РЅРѕРІС‹Рµ РёР·РјРµРЅРµРЅРёСЏ" },
-  { value: "created-desc", label: "РЎРЅР°С‡Р°Р»Р° РЅРѕРІС‹Рµ С‚СЂРёРіРіРµСЂС‹" },
-  { value: "name-asc", label: "РџРѕ РЅР°Р·РІР°РЅРёСЋ Рђ-РЇ" },
-  { value: "name-desc", label: "РџРѕ РЅР°Р·РІР°РЅРёСЋ РЇ-Рђ" },
+  { value: "updated-desc", label: "Сначала новые изменения" },
+  { value: "created-desc", label: "Сначала новые триггеры" },
+  { value: "name-asc", label: "По названию А-Я" },
+  { value: "name-desc", label: "По названию Я-А" },
 ] as const;
 
 const eventCopy: Record<string, LocalizedEventOption> = {
   "promo.expired": {
     description:
-      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕРіРґР° РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРї РёСЃС‚РµРєР°РµС‚.",
+      "Возвращает пользователя, когда промо-доступ истекает.",
     key: "promo.expired",
-    label: "РџСЂРѕРјРѕ-С‚Р°СЂРёС„ Р·Р°РєРѕРЅС‡РёР»СЃСЏ",
+    label: "Промо-тариф закончился",
   },
   "promo.granted": {
     description:
-      "РџРѕРјРѕРіР°РµС‚ РґРѕРіСЂРµС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕСЃР»Рµ РІС‹РґР°С‡Рё РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРїР°.",
+      "Помогает догреть пользователя после выдачи промо-доступа.",
     key: "promo.granted",
-    label: "Р’С‹РґР°РЅ РїСЂРѕРјРѕ-С‚Р°СЂРёС„",
+    label: "Выдан промо-тариф",
   },
   "tariff.paid": {
     description:
-      "РџРѕРґС‚Р°Р»РєРёРІР°РµС‚ РЅРѕРІРѕРіРѕ РїР»Р°С‚СЏС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Рє Р°РєС‚РёРІР°С†РёРё Рё РїРµСЂРІС‹Рј РґРµР№СЃС‚РІРёСЏРј.",
+      "Подталкивает нового платящего пользователя к активации и первым действиям.",
     key: "tariff.paid",
-    label: "РћРїР»Р°С‡РµРЅ С‚Р°СЂРёС„",
+    label: "Оплачен тариф",
   },
   "user.inactive_7d": {
     description:
-      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕС‚РѕСЂС‹Р№ РїРµСЂРµСЃС‚Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ РїСЂРѕРґСѓРєС‚РѕРј.",
+      "Возвращает пользователя, который перестал пользоваться продуктом.",
     key: "user.inactive_7d",
-    label: "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
+    label: "Неактивен 7 дней",
   },
   "user.started": {
     description:
-      "Р—Р°РїСѓСЃРєР°РµС‚ follow-up РёР»Рё РІРѕР·РІСЂР°С‰Р°СЋС‰СѓСЋ С†РµРїРѕС‡РєСѓ РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ /start.",
+      "Запускает follow-up или возвращающую цепочку после команды /start.",
     key: "user.started",
-    label: "РќР°Р¶Р°Р» Start",
+    label: "Нажал Start",
   },
 };
 
 const templateNameCopy: Record<string, string> = {
   "after-start-did-not-begin-using":
-    "РџРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°: РЅРµ РЅР°С‡Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ",
-  "after-start-no-promo": "РџРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°: РїСЂРѕРјРѕ РЅРµ РїРѕР»СѓС‡РµРЅРѕ",
-  "inactive-for-7-days": "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
-  "paid-but-not-activated": "РћРїР»Р°С‚РёР», РЅРѕ РЅРµ Р°РєС‚РёРІРёСЂРѕРІР°Р»СЃСЏ",
-  "promo-expired": "РџСЂРѕРјРѕ РёСЃС‚РµРєР»Рѕ",
+    "После старта: не начал пользоваться",
+  "after-start-no-promo": "После старта: промо не получено",
+  "inactive-for-7-days": "Неактивен 7 дней",
+  "paid-but-not-activated": "Оплатил, но не активировался",
+  "promo-expired": "Промо истекло",
   "promo-expired-after-active-usage":
-    "РџСЂРѕРјРѕ РёСЃС‚РµРєР»Рѕ РїРѕСЃР»Рµ Р°РєС‚РёРІРЅРѕРіРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ",
-  "promo-granted-but-unused": "РџСЂРѕРјРѕ РІС‹РґР°РЅРѕ, РЅРѕ РЅРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРѕ",
+    "Промо истекло после активного использования",
+  "promo-granted-but-unused": "Промо выдано, но не использовано",
 };
 
 function getLocalizedEventOptions() {
@@ -127,46 +127,46 @@ function getEventLabel(eventKey: string) {
 
 function formatDelay(delayValue: number, delayUnit: TriggerRuleRow["delayUnit"]) {
   if (delayUnit === "now") {
-    return "РЎСЂР°Р·Сѓ";
+    return "Сразу";
   }
 
   const unitLabel =
     delayUnit === "minutes"
       ? delayValue === 1
-        ? "РјРёРЅСѓС‚Сѓ"
+        ? "минуту"
         : delayValue < 5 || delayValue > 20
-          ? "РјРёРЅСѓС‚"
-          : "РјРёРЅСѓС‚С‹"
+          ? "минут"
+          : "минуты"
       : delayUnit === "hours"
         ? delayValue === 1
-          ? "С‡Р°СЃ"
+          ? "час"
           : delayValue < 5 || delayValue > 20
-            ? "С‡Р°СЃРѕРІ"
-            : "С‡Р°СЃР°"
+            ? "часов"
+            : "часа"
         : delayValue === 1
-          ? "РґРµРЅСЊ"
+          ? "день"
           : delayValue < 5 || delayValue > 20
-            ? "РґРЅРµР№"
-            : "РґРЅСЏ";
+            ? "дней"
+            : "дня";
 
-  return `Р§РµСЂРµР· ${delayValue} ${unitLabel}`;
+  return `Через ${delayValue} ${unitLabel}`;
 }
 
 function summarizeCondition(condition: TriggerCondition) {
   switch (condition.field) {
     case "promoClaimed":
-      return `РџСЂРѕРјРѕ РїРѕР»СѓС‡РµРЅРѕ: ${condition.value ? "РґР°" : "РЅРµС‚"}`;
+      return `Промо получено: ${condition.value ? "да" : "нет"}`;
     case "hasActiveTariff":
-      return `РђРєС‚РёРІРЅС‹Р№ С‚Р°СЂРёС„: ${condition.value ? "РґР°" : "РЅРµС‚"}`;
+      return `Активный тариф: ${condition.value ? "да" : "нет"}`;
     case "generationCount":
       return condition.operator === "gte"
-        ? `РљРѕР»РёС‡РµСЃС‚РІРѕ РіРµРЅРµСЂР°С†РёР№ РЅРµ РјРµРЅСЊС€Рµ ${condition.value}`
-        : `РљРѕР»РёС‡РµСЃС‚РІРѕ РіРµРЅРµСЂР°С†РёР№ СЂР°РІРЅРѕ ${condition.value}`;
+        ? `Количество генераций не меньше ${condition.value}`
+        : `Количество генераций равно ${condition.value}`;
     case "userGroupId":
     case "groupId":
-      return `РЎРѕСЃС‚РѕРёС‚ РІ РіСЂСѓРїРїРµ: ${condition.value}`;
+      return `Состоит в группе: ${condition.value}`;
     default:
-      return "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРѕРµ СѓСЃР»РѕРІРёРµ";
+      return "Пользовательское условие";
   }
 }
 
@@ -179,7 +179,7 @@ function summarizeConditions(
     : [];
 
   if (conditions.length === 0) {
-    return "Р‘РµР· СѓСЃР»РѕРІРёР№";
+    return "Без условий";
   }
 
   return conditions
@@ -188,13 +188,13 @@ function summarizeConditions(
         const label =
           userGroupNames.get(condition.value) ??
           condition.value ??
-          "РЈРґР°Р»РµРЅРЅР°СЏ РіСЂСѓРїРїР°";
-        return `РЎРѕСЃС‚РѕРёС‚ РІ РіСЂСѓРїРїРµ: ${label}`;
+          "Удаленная группа";
+        return `Состоит в группе: ${label}`;
       }
 
       return summarizeCondition(condition);
     })
-    .join(" Р ");
+    .join("  ");
 }
 
 function getStatusBadgeClass(status: TriggerRuleRow["status"]) {
@@ -212,12 +212,12 @@ function getStatusBadgeClass(status: TriggerRuleRow["status"]) {
 function getStatusLabel(status: TriggerRuleRow["status"]) {
   switch (status) {
     case "active":
-      return "РђРєС‚РёРІРµРЅ";
+      return "Активен";
     case "disabled":
-      return "РћС‚РєР»СЋС‡РµРЅ";
+      return "Отключен";
     case "draft":
     default:
-      return "Р§РµСЂРЅРѕРІРёРє";
+      return "Черновик";
   }
 }
 
@@ -305,12 +305,12 @@ export default async function AdminTriggersPage({
     <section className="space-y-5">
       <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <AdminPageHeader
-          description="РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РїРѕ СЃРѕР±С‹С‚РёСЏРј, СЂРµР°РєС‚РёРІР°С†РёРё Рё follow-up СЃС†РµРЅР°СЂРёСЏРј."
-          title="РўСЂРёРіРіРµСЂС‹"
+          description="Автоматические сообщения по событиям, реактивации и follow-up сценариям."
+          title="Триггеры"
         />
         <div className="rounded-lg border border-[#223047] bg-[#121a27] px-4 py-2 text-sm text-[#97a4b8]">
-          РЎРѕР±РёСЂР°Р№С‚Рµ РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РїСЂР°РІРёР»Р° РІРѕРєСЂСѓРі
-          СЃРѕР±С‹С‚РёР№ РїСЂРѕРґСѓРєС‚Р° Рё СѓСЃР»РѕРІРёР№ Р°СѓРґРёС‚РѕСЂРёРё.
+          Собирайте переиспользуемые правила вокруг
+          событий продукта и условий аудитории.
         </div>
       </header>
 
@@ -318,9 +318,9 @@ export default async function AdminTriggersPage({
 
       {userGroupsUnavailable ? (
         <div className="rounded-lg border border-[#6b4d1f] bg-[#22180d] px-4 py-3 text-sm text-[#f6d7a7]">
-          Р“СЂСѓРїРїС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ РЅРµРґРѕСЃС‚СѓРїРЅС‹: С‚Р°Р±Р»РёС†Р° РµС‰С‘
-          РЅРµ СЃРѕР·РґР°РЅР° РІ Р±Р°Р·Рµ. РЎРїРёСЃРѕРє С‚СЂРёРіРіРµСЂРѕРІ РѕС‚РєСЂС‹С‚, РЅРѕ
-          РЅР°Р·РІР°РЅРёСЏ РіСЂСѓРїРї РІСЂРµРјРµРЅРЅРѕ РЅРµ РїРѕРґРіСЂСѓР¶Р°СЋС‚СЃСЏ.
+          Группы пользователей недоступны: таблица ещё
+          не создана в базе. Список триггеров открыт, но
+          названия групп временно не подгружаются.
         </div>
       ) : null}
 
@@ -328,10 +328,10 @@ export default async function AdminTriggersPage({
         <div className="space-y-4">
           <AdminPanel className="space-y-4">
             <div>
-              <h3 className="font-semibold text-[#f4f7fb]">Р“РѕС‚РѕРІС‹Рµ С€Р°Р±Р»РѕРЅС‹</h3>
+              <h3 className="font-semibold text-[#f4f7fb]">Готовые шаблоны</h3>
               <p className="mt-1 text-sm text-[#97a4b8]">
-                РќР°С‡РЅРёС‚Рµ СЃ РіРѕС‚РѕРІРѕРіРѕ СЃС†РµРЅР°СЂРёСЏ Рё РґРѕСЂР°Р±РѕС‚Р°Р№С‚Рµ
-                РµРіРѕ РїРµСЂРµРґ СЃРѕС…СЂР°РЅРµРЅРёРµРј.
+                Начните с готового сценария и доработайте
+                его перед сохранением.
               </p>
             </div>
             <div className="space-y-2">
@@ -353,10 +353,10 @@ export default async function AdminTriggersPage({
 
           <AdminPanel className="space-y-4">
             <div>
-              <h3 className="font-semibold text-[#f4f7fb]">РЎРёСЃС‚РµРјРЅС‹Рµ СЃРѕР±С‹С‚РёСЏ</h3>
+              <h3 className="font-semibold text-[#f4f7fb]">Системные события</h3>
               <p className="mt-1 text-sm text-[#97a4b8]">
-                РџРµСЂРµРєР»СЋС‡Р°Р№С‚РµСЃСЊ РЅР° РЅСѓР¶РЅСѓСЋ РґРѕСЂРѕР¶РєСѓ СЃРѕР±С‹С‚РёР№
-                Рё СЃРјРѕС‚СЂРёС‚Рµ СЃРІСЏР·Р°РЅРЅС‹Рµ РїСЂР°РІРёР»Р°.
+                Переключайтесь на нужную дорожку событий
+                и смотрите связанные правила.
               </p>
             </div>
             <div className="space-y-2">
@@ -389,17 +389,17 @@ export default async function AdminTriggersPage({
         <AdminPanel className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="font-semibold text-[#f4f7fb]">РџСЂР°РІРёР»Р° С‚СЂРёРіРіРµСЂРѕРІ</h3>
+              <h3 className="font-semibold text-[#f4f7fb]">Правила триггеров</h3>
               <p className="mt-1 text-sm text-[#97a4b8]">
-                Р¤РёР»СЊС‚СЂСѓР№С‚Рµ Р°РІС‚РѕРјР°С‚РёР·Р°С†РёРё РїРѕ СЃРѕР±С‹С‚РёСЋ, СЃС‚Р°С‚СѓСЃСѓ
-                РёР»Рё РЅР°Р·РІР°РЅРёСЋ.
+                Фильтруйте автоматизации по событию, статусу
+                или названию.
               </p>
             </div>
             <Link
               href="/admin/triggers/new"
               className="inline-flex rounded-md bg-[#7c5cff] px-4 py-2 text-sm font-medium text-white shadow-[0_10px_30px_rgba(124,92,255,0.28)] transition hover:bg-[#8d71ff]"
             >
-              РЎРѕР·РґР°С‚СЊ С‚СЂРёРіРіРµСЂ
+              Создать триггер
             </Link>
           </div>
 
@@ -408,7 +408,7 @@ export default async function AdminTriggersPage({
               <AdminInput
                 defaultValue={filters.search}
                 name="search"
-                placeholder="РќР°Р№С‚Рё С‚СЂРёРіРіРµСЂ"
+                placeholder="Найти триггер"
               />
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -417,7 +417,7 @@ export default async function AdminTriggersPage({
                 defaultValue={filters.event}
                 name="event"
               >
-                <option value="all">Р’СЃРµ СЃРѕР±С‹С‚РёСЏ</option>
+                <option value="all">Все события</option>
                 {eventOptions.map((eventOption) => (
                   <option key={eventOption.key} value={eventOption.key}>
                     {eventOption.label}
@@ -450,26 +450,26 @@ export default async function AdminTriggersPage({
                 className="rounded-md border border-[#2a3a55] bg-[#192334] px-3 py-2 text-sm font-medium text-[#dbe3ef] transition hover:bg-[#223047]"
                 type="submit"
               >
-                РџСЂРёРјРµРЅРёС‚СЊ
+                Применить
               </button>
             </div>
           </form>
 
           {filteredRules.length === 0 ? (
             <div className="rounded-lg border border-dashed border-[#2a3a55] bg-[#0d1522] px-4 py-8 text-center text-sm text-[#97a4b8]">
-              РќРµС‚ С‚СЂРёРіРіРµСЂРѕРІ РїРѕ С‚РµРєСѓС‰РёРј С„РёР»СЊС‚СЂР°Рј.
+              Нет триггеров по текущим фильтрам.
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-[#223047] bg-[#0d1522]">
               <table className="w-full min-w-[860px] border-collapse text-left text-sm">
                 <thead className="bg-[#192334] text-xs uppercase text-[#97a4b8]">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">РўСЂРёРіРіРµСЂ</th>
-                    <th className="px-4 py-3 font-semibold">РЎРѕР±С‹С‚РёРµ</th>
-                    <th className="px-4 py-3 font-semibold">РћС‚РїСЂР°РІРєР°</th>
-                    <th className="px-4 py-3 font-semibold">РЈСЃР»РѕРІРёСЏ</th>
-                    <th className="px-4 py-3 font-semibold">РЎС‚Р°С‚СѓСЃ</th>
-                    <th className="px-4 py-3 font-semibold">Р”РµР№СЃС‚РІРёРµ</th>
+                    <th className="px-4 py-3 font-semibold">Триггер</th>
+                    <th className="px-4 py-3 font-semibold">Событие</th>
+                    <th className="px-4 py-3 font-semibold">Отправка</th>
+                    <th className="px-4 py-3 font-semibold">Условия</th>
+                    <th className="px-4 py-3 font-semibold">Статус</th>
+                    <th className="px-4 py-3 font-semibold">Действие</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -479,7 +479,7 @@ export default async function AdminTriggersPage({
                         <div>
                           <p className="font-medium text-[#f4f7fb]">{rule.name}</p>
                           <p className="mt-1 text-xs text-[#97a4b8]">
-                            РћР±РЅРѕРІР»РµРЅ{" "}
+                            Обновлен{" "}
                             {rule.updatedAt.toLocaleDateString("ru-RU")}
                           </p>
                         </div>
@@ -510,7 +510,7 @@ export default async function AdminTriggersPage({
                           href={`/admin/triggers/${rule.id}`}
                           className="text-sm font-medium text-[#b9abff] transition hover:text-[#d8d2ff]"
                         >
-                          РћС‚РєСЂС‹С‚СЊ
+                          Открыть
                         </Link>
                       </td>
                     </tr>

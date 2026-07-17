@@ -31,33 +31,33 @@ const eventCopy: Record<
 > = {
   "promo.expired": {
     description:
-      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕРіРґР° РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРї РёСЃС‚РµРєР°РµС‚.",
+      "Возвращает пользователя, когда промо-доступ истекает.",
     key: "promo.expired",
-    label: "РџСЂРѕРјРѕ-С‚Р°СЂРёС„ Р·Р°РєРѕРЅС‡РёР»СЃСЏ",
+    label: "Промо-тариф закончился",
   },
   "promo.granted": {
     description:
-      "РџРѕРјРѕРіР°РµС‚ РґРѕРіСЂРµС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕСЃР»Рµ РІС‹РґР°С‡Рё РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРїР°.",
+      "Помогает догреть пользователя после выдачи промо-доступа.",
     key: "promo.granted",
-    label: "Р’С‹РґР°РЅ РїСЂРѕРјРѕ-С‚Р°СЂРёС„",
+    label: "Выдан промо-тариф",
   },
   "tariff.paid": {
     description:
-      "РџРѕРґС‚Р°Р»РєРёРІР°РµС‚ РЅРѕРІРѕРіРѕ РїР»Р°С‚СЏС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Рє Р°РєС‚РёРІР°С†РёРё Рё РїРµСЂРІС‹Рј РґРµР№СЃС‚РІРёСЏРј.",
+      "Подталкивает нового платящего пользователя к активации и первым действиям.",
     key: "tariff.paid",
-    label: "РћРїР»Р°С‡РµРЅ С‚Р°СЂРёС„",
+    label: "Оплачен тариф",
   },
   "user.inactive_7d": {
     description:
-      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕС‚РѕСЂС‹Р№ РїРµСЂРµСЃС‚Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ РїСЂРѕРґСѓРєС‚РѕРј.",
+      "Возвращает пользователя, который перестал пользоваться продуктом.",
     key: "user.inactive_7d",
-    label: "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
+    label: "Неактивен 7 дней",
   },
   "user.started": {
     description:
-      "Р—Р°РїСѓСЃРєР°РµС‚ follow-up РёР»Рё РІРѕР·РІСЂР°С‰Р°СЋС‰СѓСЋ С†РµРїРѕС‡РєСѓ РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ /start.",
+      "Запускает follow-up или возвращающую цепочку после команды /start.",
     key: "user.started",
-    label: "РќР°Р¶Р°Р» Start",
+    label: "Нажал Start",
   },
 };
 
@@ -85,7 +85,7 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
       label:
         group.status === "active"
           ? group.name
-          : `${group.name} (РІС‹РєР»СЋС‡РµРЅР°)`,
+          : `${group.name} (выключена)`,
       value: group.id,
     }),
   );
@@ -93,8 +93,8 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="РћР±РЅРѕРІР»СЏР№С‚Рµ С‚Р°Р№РјРёРЅРі, СѓСЃР»РѕРІРёСЏ Рё С‚РµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РґР»СЏ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ С‚СЂРёРіРіРµСЂР°."
-        title="Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С‚СЂРёРіРіРµСЂР°"
+        description="Обновляйте тайминг, условия и текст сообщения для существующего триггера."
+        title="Редактирование триггера"
       />
       <ChatBotSubNav />
       <TriggerForm
@@ -117,9 +117,9 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
           name: rule.name,
           status: rule.status as "draft" | "active" | "disabled",
         }}
-        submitLabel="РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ"
+        submitLabel="Сохранить изменения"
         testSendAction={sendTriggerTestMessage}
-        title="Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С‚СЂРёРіРіРµСЂР°"
+        title="Редактирование триггера"
         userGroupOptions={userGroupOptions}
       />
     </section>

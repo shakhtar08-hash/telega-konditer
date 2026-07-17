@@ -28,46 +28,46 @@ const eventCopy: Record<
 > = {
   "promo.expired": {
     description:
-      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕРіРґР° РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРї РёСЃС‚РµРєР°РµС‚.",
+      "Возвращает пользователя, когда промо-доступ истекает.",
     key: "promo.expired",
-    label: "РџСЂРѕРјРѕ-С‚Р°СЂРёС„ Р·Р°РєРѕРЅС‡РёР»СЃСЏ",
+    label: "Промо-тариф закончился",
   },
   "promo.granted": {
     description:
-      "РџРѕРјРѕРіР°РµС‚ РґРѕРіСЂРµС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕСЃР»Рµ РІС‹РґР°С‡Рё РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРїР°.",
+      "Помогает догреть пользователя после выдачи промо-доступа.",
     key: "promo.granted",
-    label: "Р’С‹РґР°РЅ РїСЂРѕРјРѕ-С‚Р°СЂРёС„",
+    label: "Выдан промо-тариф",
   },
   "tariff.paid": {
     description:
-      "РџРѕРґС‚Р°Р»РєРёРІР°РµС‚ РЅРѕРІРѕРіРѕ РїР»Р°С‚СЏС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Рє Р°РєС‚РёРІР°С†РёРё Рё РїРµСЂРІС‹Рј РґРµР№СЃС‚РІРёСЏРј.",
+      "Подталкивает нового платящего пользователя к активации и первым действиям.",
     key: "tariff.paid",
-    label: "РћРїР»Р°С‡РµРЅ С‚Р°СЂРёС„",
+    label: "Оплачен тариф",
   },
   "user.inactive_7d": {
     description:
-      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕС‚РѕСЂС‹Р№ РїРµСЂРµСЃС‚Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ РїСЂРѕРґСѓРєС‚РѕРј.",
+      "Возвращает пользователя, который перестал пользоваться продуктом.",
     key: "user.inactive_7d",
-    label: "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
+    label: "Неактивен 7 дней",
   },
   "user.started": {
     description:
-      "Р—Р°РїСѓСЃРєР°РµС‚ follow-up РёР»Рё РІРѕР·РІСЂР°С‰Р°СЋС‰СѓСЋ С†РµРїРѕС‡РєСѓ РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ /start.",
+      "Запускает follow-up или возвращающую цепочку после команды /start.",
     key: "user.started",
-    label: "РќР°Р¶Р°Р» Start",
+    label: "Нажал Start",
   },
 };
 
 const templateNameCopy: Record<string, string> = {
   "after-start-did-not-begin-using":
-    "РџРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°: РЅРµ РЅР°С‡Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ",
-  "after-start-no-promo": "РџРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°: РїСЂРѕРјРѕ РЅРµ РїРѕР»СѓС‡РµРЅРѕ",
-  "inactive-for-7-days": "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
-  "paid-but-not-activated": "РћРїР»Р°С‚РёР», РЅРѕ РЅРµ Р°РєС‚РёРІРёСЂРѕРІР°Р»СЃСЏ",
-  "promo-expired": "РџСЂРѕРјРѕ РёСЃС‚РµРєР»Рѕ",
+    "После старта: не начал пользоваться",
+  "after-start-no-promo": "После старта: промо не получено",
+  "inactive-for-7-days": "Неактивен 7 дней",
+  "paid-but-not-activated": "Оплатил, но не активировался",
+  "promo-expired": "Промо истекло",
   "promo-expired-after-active-usage":
-    "РџСЂРѕРјРѕ РёСЃС‚РµРєР»Рѕ РїРѕСЃР»Рµ Р°РєС‚РёРІРЅРѕРіРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ",
-  "promo-granted-but-unused": "РџСЂРѕРјРѕ РІС‹РґР°РЅРѕ, РЅРѕ РЅРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРѕ",
+    "Промо истекло после активного использования",
+  "promo-granted-but-unused": "Промо выдано, но не использовано",
 };
 
 function getLocalizedEventOptions() {
@@ -107,7 +107,7 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
       label:
         group.status === "active"
           ? group.name
-          : `${group.name} (РІС‹РєР»СЋС‡РµРЅР°)`,
+          : `${group.name} (выключена)`,
       value: group.id,
     }),
   );
@@ -115,8 +115,8 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="РЎРѕР·РґР°Р№С‚Рµ РЅРѕРІРѕРµ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РїСЂР°РІРёР»Рѕ РїРѕ СЃРѕР±С‹С‚РёСЋ РґР»СЏ follow-up Рё СЂРµР°РєС‚РёРІР°С†РёРё."
-        title="РќРѕРІС‹Р№ С‚СЂРёРіРіРµСЂ"
+        description="Создайте новое автоматическое правило по событию для follow-up и реактивации."
+        title="Новый триггер"
       />
       <ChatBotSubNav />
       <TriggerForm
@@ -125,9 +125,9 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}
         initial={initial}
-        submitLabel="РЎРѕР·РґР°С‚СЊ С‚СЂРёРіРіРµСЂ"
+        submitLabel="Создать триггер"
         testSendAction={sendTriggerTestMessage}
-        title="РќРѕРІС‹Р№ С‚СЂРёРіРіРµСЂ"
+        title="Новый триггер"
         userGroupOptions={userGroupOptions}
       />
     </section>
