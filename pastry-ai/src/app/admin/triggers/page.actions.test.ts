@@ -1,25 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  createMock,
-  deleteMock,
-  findFirstUserGroupMock,
-  fetchMock,
+  performCreateTriggerRuleMock,
+  performDeleteTriggerRuleMock,
+  performSendTriggerTestMock,
+  performUpdateTriggerRuleMock,
+  postInternalAdminTriggerActionMock,
   redirectMock,
   revalidatePathMock,
-  saveAdminImageMock,
-  updateMock,
 } = vi.hoisted(() => ({
-  createMock: vi.fn(),
-  deleteMock: vi.fn(),
-  fetchMock: vi.fn(),
-  findFirstUserGroupMock: vi.fn(),
+  performCreateTriggerRuleMock: vi.fn(),
+  performDeleteTriggerRuleMock: vi.fn(),
+  performSendTriggerTestMock: vi.fn(),
+  performUpdateTriggerRuleMock: vi.fn(),
+  postInternalAdminTriggerActionMock: vi.fn(),
   redirectMock: vi.fn(() => {
     throw new Error("NEXT_REDIRECT");
   }),
   revalidatePathMock: vi.fn(),
-  saveAdminImageMock: vi.fn(),
-  updateMock: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -30,264 +28,112 @@ vi.mock("next/navigation", () => ({
   redirect: redirectMock,
 }));
 
-vi.mock("@/app/admin/_lib/save-admin-image", () => ({
-  saveAdminImage: saveAdminImageMock,
+vi.mock("@/features/admin/triggers/service", () => ({
+  performCreateTriggerRule: performCreateTriggerRuleMock,
+  performDeleteTriggerRule: performDeleteTriggerRuleMock,
+  performSendTriggerTest: performSendTriggerTestMock,
+  performUpdateTriggerRule: performUpdateTriggerRuleMock,
 }));
 
-vi.mock("@/lib/env", () => ({
-  loadEnv: vi.fn(() => ({
-    OPENAI_API_KEY: "openai-key",
-    SUPABASE_URL: "https://example.supabase.co",
-    SUPABASE_ANON_KEY: "anon",
-    SUPABASE_SERVICE_ROLE_KEY: "service",
-    DATABASE_URL: "postgresql://user:pass@localhost:5432/pastry",
-    TELEGRAM_BOT_TOKEN: "telegram-token",
-    TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
-    CRON_SECRET: "cron-secret",
-  })),
+vi.mock("@/features/admin/triggers/internal-admin-client", () => ({
+  postInternalAdminTriggerAction: postInternalAdminTriggerActionMock,
 }));
 
-vi.mock("@/db/prisma", () => ({
-  prisma: {
-    triggerRule: {
-      create: createMock,
-      delete: deleteMock,
-      update: updateMock,
-    },
-    userGroup: {
-      findFirst: findFirstUserGroupMock,
-    },
-  },
-}));
-
-import * as triggerActionExports from "./actions";
 import {
   createTriggerRule,
   deleteTriggerRule,
+  sendTriggerTestMessage,
   updateTriggerRule,
 } from "./actions";
 
 describe("trigger rule actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", fetchMock);
-    createMock.mockResolvedValue(undefined);
-    updateMock.mockResolvedValue(undefined);
-    deleteMock.mockResolvedValue(undefined);
-    findFirstUserGroupMock.mockResolvedValue(null);
-    saveAdminImageMock.mockImplementation(async ({ manualValue }) => manualValue || null);
-  });
-
-  it("creates a trigger rule with event, conditions, and delay unit", async () => {
-    const formData = new FormData();
-    formData.set("name", "After Start: no promo");
-    formData.set("eventKey", "user.started");
-    formData.set("delayValue", "15");
-    formData.set("delayUnit", "minutes");
-    formData.set("messageText", "Hello!");
-    formData.set(
-      "buttons",
-      JSON.stringify([
-        { text: "Оплатить", type: "url", value: "https://pay.example.com" },
-      ]),
-    );
-    formData.set(
-      "conditions",
-      JSON.stringify([
-        { field: "promoClaimed", operator: "is", value: false },
-        { field: "hasActiveTariff", operator: "is", value: false },
-      ]),
-    );
-
-    await expect(createTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          buttons: [{ text: "Оплатить", type: "url", value: "https://pay.example.com" }],
-          conditions: [
-            { field: "promoClaimed", operator: "is", value: false },
-            { field: "hasActiveTariff", operator: "is", value: false },
-          ],
-          delayUnit: "minutes",
-          delayValue: 15,
-          eventKey: "user.started",
-          imageUrl: null,
-          messageText: "Hello!",
-          name: "After Start: no promo",
-          status: "draft",
-        }),
-      }),
-    );
-  });
-
-  it("filters unsupported conditions before persisting", async () => {
-    const formData = new FormData();
-    formData.set("name", "Safe trigger");
-    formData.set("eventKey", "user.started");
-    formData.set("delayValue", "5");
-    formData.set("delayUnit", "minutes");
-    formData.set("messageText", "Hello!");
-    formData.set(
-      "conditions",
-      JSON.stringify([
-        { field: "promoClaimed", operator: "is", value: false },
-        { field: "unknown", operator: "hack", value: "oops" },
-      ]),
-    );
-
-    await expect(createTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          conditions: [{ field: "promoClaimed", operator: "is", value: false }],
-        }),
-      }),
-    );
-  });
-
-  it("accepts only structured user and dynamic group conditions", async () => {
-    const formData = new FormData();
-    formData.set("name", "Group trigger");
-    formData.set("eventKey", "user.started");
-    formData.set("delayValue", "5");
-    formData.set("delayUnit", "minutes");
-    formData.set("messageText", "Hello!");
-    formData.set(
-      "conditions",
-      JSON.stringify([
-        { field: "userGroupId", operator: "isMember", value: "group_vip" },
-        { field: "dynamicUserGroupId", operator: "matches", value: "dynamic_no_tariff" },
-        { field: "groupId", operator: "contains", value: "legacy-group" },
-      ]),
-    );
-
-    await expect(createTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          conditions: [
-            { field: "userGroupId", operator: "isMember", value: "group_vip" },
-            { field: "dynamicUserGroupId", operator: "matches", value: "dynamic_no_tariff" },
-          ],
-        }),
-      }),
-    );
-  });
-
-  it("updates an existing trigger rule with structured fields", async () => {
-    const formData = new FormData();
-    formData.set("id", "rule_1");
-    formData.set("name", "Promo expired");
-    formData.set("eventKey", "promo.expired");
-    formData.set("delayValue", "2");
-    formData.set("delayUnit", "hours");
-    formData.set("status", "active");
-    formData.set("messageText", "Come back!");
-    formData.set("imageUrl", "/uploads/admin/triggers/reminder.png");
-    formData.set(
-      "buttons",
-      JSON.stringify([
-        { text: "Смотреть тариф", type: "url", value: "https://example.com/pay" },
-      ]),
-    );
-    formData.set(
-      "conditions",
-      JSON.stringify([{ field: "generationCount", operator: "gte", value: 3 }]),
-    );
-
-    await expect(updateTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-
-    expect(updateMock).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        buttons: [{ text: "Смотреть тариф", type: "url", value: "https://example.com/pay" }],
-        conditions: [{ field: "generationCount", operator: "gte", value: 3 }],
-        delayUnit: "hours",
-        delayValue: 2,
-        eventKey: "promo.expired",
-        imageUrl: "/uploads/admin/triggers/reminder.png",
-        messageText: "Come back!",
-        name: "Promo expired",
-        status: "active",
-      }),
-      where: { id: "rule_1" },
+    delete process.env.APP_ROLE;
+    delete process.env.INTERNAL_API_BASE_URL;
+    delete process.env.INTERNAL_API_SHARED_SECRET;
+    performCreateTriggerRuleMock.mockResolvedValue(undefined);
+    performDeleteTriggerRuleMock.mockResolvedValue(undefined);
+    performUpdateTriggerRuleMock.mockResolvedValue(undefined);
+    performSendTriggerTestMock.mockResolvedValue({
+      message: "ok",
+      ok: true,
+    });
+    postInternalAdminTriggerActionMock.mockResolvedValue({
+      message: "bridge-ok",
+      ok: true,
     });
   });
 
-  it("deletes a trigger rule by id", async () => {
+  it("creates a trigger locally and redirects back to the list", async () => {
+    const formData = new FormData();
+    formData.set("name", "After Start");
+
+    await expect(createTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(performCreateTriggerRuleMock).toHaveBeenCalledWith(formData);
+    expect(postInternalAdminTriggerActionMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/triggers");
+  });
+
+  it("updates a trigger locally and redirects back to the list", async () => {
+    const formData = new FormData();
+    formData.set("id", "rule_1");
+
+    await expect(updateTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(performUpdateTriggerRuleMock).toHaveBeenCalledWith(formData);
+    expect(postInternalAdminTriggerActionMock).not.toHaveBeenCalled();
+  });
+
+  it("deletes a trigger locally by id", async () => {
     const formData = new FormData();
     formData.set("id", "rule_1");
 
     await expect(deleteTriggerRule(formData)).rejects.toThrow("NEXT_REDIRECT");
-    expect(deleteMock).toHaveBeenCalledWith({ where: { id: "rule_1" } });
+
+    expect(performDeleteTriggerRuleMock).toHaveBeenCalledWith("rule_1");
+    expect(postInternalAdminTriggerActionMock).not.toHaveBeenCalled();
   });
 
-  it("exports a dedicated test-send action for preview delivery", () => {
-    expect(typeof (triggerActionExports as Record<string, unknown>).sendTriggerTestMessage).toBe("function");
+  it("returns a validation error when test-send form data is missing", async () => {
+    await expect(sendTriggerTestMessage({ message: "", ok: false })).resolves.toEqual({
+      message: "Не удалось прочитать данные формы для тестовой отправки.",
+      ok: false,
+    });
   });
 
-  it("sends the current draft to the exact Админы group via Telegram sendMessage", async () => {
-    const action = (triggerActionExports as Record<string, unknown>).sendTriggerTestMessage as
-      | ((formData: FormData) => Promise<unknown>)
-      | undefined;
-
+  it("sends the current draft locally when not on ingress", async () => {
     const formData = new FormData();
     formData.set("messageText", "<b>Hello</b>");
-    formData.set("imageUrl", "");
-    formData.set(
-      "buttons",
-      JSON.stringify([{ text: "Открыть", type: "url", value: "https://example.com" }]),
-    );
-
-    findFirstUserGroupMock.mockResolvedValue({
-      id: "group_admins",
-      memberships: [
-        { user: { telegramId: "1001" } },
-        { user: { telegramId: "1002" } },
-      ],
-      name: "Админы",
-    });
-    fetchMock.mockResolvedValue({
-      json: async () => ({ ok: true }),
-      ok: true,
-    });
-
-    const result = await action?.(formData);
-
-    expect(findFirstUserGroupMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { name: "Админы" },
-      }),
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.telegram.org/bottelegram-token/sendMessage",
-      expect.objectContaining({
-        body: expect.stringContaining("\"parse_mode\":\"HTML\""),
-        method: "POST",
-      }),
-    );
-    expect(result).toEqual({
+    performSendTriggerTestMock.mockResolvedValue({
       message: "Тестовое сообщение отправлено: 2",
       ok: true,
     });
+
+    await expect(sendTriggerTestMessage(formData)).resolves.toEqual({
+      message: "Тестовое сообщение отправлено: 2",
+      ok: true,
+    });
+
+    expect(performSendTriggerTestMock).toHaveBeenCalledWith(formData);
+    expect(postInternalAdminTriggerActionMock).not.toHaveBeenCalled();
   });
 
-  it("rejects test-send when the Админы group is missing", async () => {
-    const action = (triggerActionExports as Record<string, unknown>).sendTriggerTestMessage as
-      | ((formData: FormData) => Promise<unknown>)
-      | undefined;
+  it("routes trigger test-send through RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
 
     const formData = new FormData();
-    formData.set("messageText", "<b>Hello</b>");
+    formData.set("messageText", "<b>Hi</b>");
 
-    const result = await action?.(formData);
+    await sendTriggerTestMessage(formData);
 
-    expect(result).toEqual({
-      message: "Группа «Админы» не найдена.",
-      ok: false,
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(postInternalAdminTriggerActionMock).toHaveBeenCalledWith(
+      "sendTriggerTest",
+      formData,
+    );
+    expect(performSendTriggerTestMock).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 import { AdminPageHeader } from "@/components/admin/data-table";
 import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
-import { prisma } from "@/db/prisma";
-import { loadDynamicUserGroupsOrEmpty } from "@/app/admin/_lib/dynamic-user-groups";
+import { fetchInternalAdminTriggerEditorData } from "@/features/admin/triggers/internal-admin-client";
+import { loadAdminTriggerEditorData } from "@/features/admin/triggers/service";
 import {
   getTriggerEventOptions,
   getTriggerTemplates,
@@ -26,41 +26,48 @@ const eventCopy: Record<
     label: string;
   }
 > = {
-  "user.started": {
-    key: "user.started",
-    label: "Нажал Start",
-    description: "Запускает follow-up или возвращающую цепочку после команды /start.",
+  "promo.expired": {
+    description:
+      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕРіРґР° РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРї РёСЃС‚РµРєР°РµС‚.",
+    key: "promo.expired",
+    label: "РџСЂРѕРјРѕ-С‚Р°СЂРёС„ Р·Р°РєРѕРЅС‡РёР»СЃСЏ",
   },
   "promo.granted": {
+    description:
+      "РџРѕРјРѕРіР°РµС‚ РґРѕРіСЂРµС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕСЃР»Рµ РІС‹РґР°С‡Рё РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРїР°.",
     key: "promo.granted",
-    label: "Выдан промо-тариф",
-    description: "Помогает догреть пользователя после выдачи промо-доступа.",
-  },
-  "promo.expired": {
-    key: "promo.expired",
-    label: "Промо-тариф закончился",
-    description: "Возвращает пользователя, когда промо-доступ истекает.",
+    label: "Р’С‹РґР°РЅ РїСЂРѕРјРѕ-С‚Р°СЂРёС„",
   },
   "tariff.paid": {
+    description:
+      "РџРѕРґС‚Р°Р»РєРёРІР°РµС‚ РЅРѕРІРѕРіРѕ РїР»Р°С‚СЏС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Рє Р°РєС‚РёРІР°С†РёРё Рё РїРµСЂРІС‹Рј РґРµР№СЃС‚РІРёСЏРј.",
     key: "tariff.paid",
-    label: "Оплачен тариф",
-    description: "Подталкивает нового платящего пользователя к активации и первым действиям.",
+    label: "РћРїР»Р°С‡РµРЅ С‚Р°СЂРёС„",
   },
   "user.inactive_7d": {
+    description:
+      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕС‚РѕСЂС‹Р№ РїРµСЂРµСЃС‚Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ РїСЂРѕРґСѓРєС‚РѕРј.",
     key: "user.inactive_7d",
-    label: "Неактивен 7 дней",
-    description: "Возвращает пользователя, который перестал пользоваться продуктом.",
+    label: "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
+  },
+  "user.started": {
+    description:
+      "Р—Р°РїСѓСЃРєР°РµС‚ follow-up РёР»Рё РІРѕР·РІСЂР°С‰Р°СЋС‰СѓСЋ С†РµРїРѕС‡РєСѓ РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ /start.",
+    key: "user.started",
+    label: "РќР°Р¶Р°Р» Start",
   },
 };
 
 const templateNameCopy: Record<string, string> = {
-  "after-start-no-promo": "После старта: промо не получено",
-  "after-start-did-not-begin-using": "После старта: не начал пользоваться",
-  "promo-granted-but-unused": "Промо выдано, но не использовано",
-  "promo-expired": "Промо истекло",
-  "promo-expired-after-active-usage": "Промо истекло после активного использования",
-  "paid-but-not-activated": "Оплатил, но не активировался",
-  "inactive-for-7-days": "Неактивен 7 дней",
+  "after-start-did-not-begin-using":
+    "РџРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°: РЅРµ РЅР°С‡Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ",
+  "after-start-no-promo": "РџРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°: РїСЂРѕРјРѕ РЅРµ РїРѕР»СѓС‡РµРЅРѕ",
+  "inactive-for-7-days": "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
+  "paid-but-not-activated": "РћРїР»Р°С‚РёР», РЅРѕ РЅРµ Р°РєС‚РёРІРёСЂРѕРІР°Р»СЃСЏ",
+  "promo-expired": "РџСЂРѕРјРѕ РёСЃС‚РµРєР»Рѕ",
+  "promo-expired-after-active-usage":
+    "РџСЂРѕРјРѕ РёСЃС‚РµРєР»Рѕ РїРѕСЃР»Рµ Р°РєС‚РёРІРЅРѕРіРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ",
+  "promo-granted-but-unused": "РџСЂРѕРјРѕ РІС‹РґР°РЅРѕ, РЅРѕ РЅРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРѕ",
 };
 
 function getLocalizedEventOptions() {
@@ -71,6 +78,7 @@ function buildInitialValues(templateKey?: string): TriggerFormValues {
   const template = getTriggerTemplates().find((item) => item.key === templateKey);
 
   return {
+    buttons: [],
     conditions: template?.conditions ?? [],
     delayUnit: template?.delayUnit ?? "now",
     delayValue: template?.delayValue ?? 0,
@@ -79,7 +87,6 @@ function buildInitialValues(templateKey?: string): TriggerFormValues {
     imageUrl: null,
     messageText: "",
     name: template ? (templateNameCopy[template.key] ?? template.name) : "",
-    buttons: [],
     status: "draft",
   };
 }
@@ -87,33 +94,29 @@ function buildInitialValues(templateKey?: string): TriggerFormValues {
 export default async function NewTriggerPage({ searchParams }: NewTriggerPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const initial = buildInitialValues(resolvedSearchParams.template);
-  const [userGroups, dynamicGroupsResult] = await Promise.all([
-    prisma.userGroup.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    loadDynamicUserGroupsOrEmpty(() =>
-      prisma.dynamicUserGroup.findMany({
-        orderBy: { name: "asc" },
-        select: { id: true, name: true, status: true },
-      }),
-    ),
-  ]);
-  const dynamicGroups = dynamicGroupsResult.groups;
+  const { dynamicGroups, userGroups } =
+    process.env.APP_ROLE === "ingress"
+      ? await fetchInternalAdminTriggerEditorData()
+      : await loadAdminTriggerEditorData();
   const userGroupOptions: TriggerUserGroupOption[] = userGroups.map((group) => ({
-    value: group.id,
     label: group.name,
-  }));
-  const dynamicUserGroupOptions: TriggerDynamicUserGroupOption[] = dynamicGroups.map((group) => ({
     value: group.id,
-    label: group.status === "active" ? group.name : `${group.name} (выключена)`,
   }));
+  const dynamicUserGroupOptions: TriggerDynamicUserGroupOption[] = dynamicGroups.map(
+    (group) => ({
+      label:
+        group.status === "active"
+          ? group.name
+          : `${group.name} (РІС‹РєР»СЋС‡РµРЅР°)`,
+      value: group.id,
+    }),
+  );
 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Создайте новое автоматическое правило по событию для follow-up и реактивации."
-        title="Новый триггер"
+        description="РЎРѕР·РґР°Р№С‚Рµ РЅРѕРІРѕРµ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РїСЂР°РІРёР»Рѕ РїРѕ СЃРѕР±С‹С‚РёСЋ РґР»СЏ follow-up Рё СЂРµР°РєС‚РёРІР°С†РёРё."
+        title="РќРѕРІС‹Р№ С‚СЂРёРіРіРµСЂ"
       />
       <ChatBotSubNav />
       <TriggerForm
@@ -122,11 +125,11 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}
         initial={initial}
-        submitLabel="Создать триггер"
-        title="Новый триггер"
+        submitLabel="РЎРѕР·РґР°С‚СЊ С‚СЂРёРіРіРµСЂ"
         testSendAction={sendTriggerTestMessage}
+        title="РќРѕРІС‹Р№ С‚СЂРёРіРіРµСЂ"
         userGroupOptions={userGroupOptions}
-        />
+      />
     </section>
   );
 }

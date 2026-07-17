@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { loadDynamicUserGroupsOrEmpty } from "@/app/admin/_lib/dynamic-user-groups";
 import { AdminPageHeader } from "@/components/admin/data-table";
 import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
-import { prisma } from "@/db/prisma";
+import { fetchInternalAdminTriggerEditorData } from "@/features/admin/triggers/internal-admin-client";
+import { loadAdminTriggerEditorData } from "@/features/admin/triggers/service";
 import { getTriggerEventOptions } from "@/features/triggers/trigger-template";
 import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
 import {
@@ -29,30 +29,35 @@ const eventCopy: Record<
     label: string;
   }
 > = {
-  "user.started": {
-    key: "user.started",
-    label: "Нажал Start",
-    description: "Запускает follow-up или возвращающую цепочку после команды /start.",
+  "promo.expired": {
+    description:
+      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕРіРґР° РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРї РёСЃС‚РµРєР°РµС‚.",
+    key: "promo.expired",
+    label: "РџСЂРѕРјРѕ-С‚Р°СЂРёС„ Р·Р°РєРѕРЅС‡РёР»СЃСЏ",
   },
   "promo.granted": {
+    description:
+      "РџРѕРјРѕРіР°РµС‚ РґРѕРіСЂРµС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕСЃР»Рµ РІС‹РґР°С‡Рё РїСЂРѕРјРѕ-РґРѕСЃС‚СѓРїР°.",
     key: "promo.granted",
-    label: "Выдан промо-тариф",
-    description: "Помогает догреть пользователя после выдачи промо-доступа.",
-  },
-  "promo.expired": {
-    key: "promo.expired",
-    label: "Промо-тариф закончился",
-    description: "Возвращает пользователя, когда промо-доступ истекает.",
+    label: "Р’С‹РґР°РЅ РїСЂРѕРјРѕ-С‚Р°СЂРёС„",
   },
   "tariff.paid": {
+    description:
+      "РџРѕРґС‚Р°Р»РєРёРІР°РµС‚ РЅРѕРІРѕРіРѕ РїР»Р°С‚СЏС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Рє Р°РєС‚РёРІР°С†РёРё Рё РїРµСЂРІС‹Рј РґРµР№СЃС‚РІРёСЏРј.",
     key: "tariff.paid",
-    label: "Оплачен тариф",
-    description: "Подталкивает нового платящего пользователя к активации и первым действиям.",
+    label: "РћРїР»Р°С‡РµРЅ С‚Р°СЂРёС„",
   },
   "user.inactive_7d": {
+    description:
+      "Р’РѕР·РІСЂР°С‰Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєРѕС‚РѕСЂС‹Р№ РїРµСЂРµСЃС‚Р°Р» РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ РїСЂРѕРґСѓРєС‚РѕРј.",
     key: "user.inactive_7d",
-    label: "Неактивен 7 дней",
-    description: "Возвращает пользователя, который перестал пользоваться продуктом.",
+    label: "РќРµР°РєС‚РёРІРµРЅ 7 РґРЅРµР№",
+  },
+  "user.started": {
+    description:
+      "Р—Р°РїСѓСЃРєР°РµС‚ follow-up РёР»Рё РІРѕР·РІСЂР°С‰Р°СЋС‰СѓСЋ С†РµРїРѕС‡РєСѓ РїРѕСЃР»Рµ РєРѕРјР°РЅРґС‹ /start.",
+    key: "user.started",
+    label: "РќР°Р¶Р°Р» Start",
   },
 };
 
@@ -62,53 +67,34 @@ function getLocalizedEventOptions() {
 
 export default async function TriggerRulePage({ params }: TriggerRulePageProps) {
   const resolvedParams = await params;
-  const [rule, userGroups, dynamicGroupsResult] = await Promise.all([
-    prisma.triggerRule.findUnique({
-      where: { id: resolvedParams.triggerId },
-      select: {
-        conditions: true,
-        delayUnit: true,
-        delayValue: true,
-        eventKey: true,
-        id: true,
-        imageUrl: true,
-        messageText: true,
-        name: true,
-        buttons: true,
-        status: true,
-      },
-    }),
-    prisma.userGroup.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    loadDynamicUserGroupsOrEmpty(() =>
-      prisma.dynamicUserGroup.findMany({
-        orderBy: { name: "asc" },
-        select: { id: true, name: true, status: true },
-      }),
-    ),
-  ]);
+  const { dynamicGroups, rule, userGroups } =
+    process.env.APP_ROLE === "ingress"
+      ? await fetchInternalAdminTriggerEditorData(resolvedParams.triggerId)
+      : await loadAdminTriggerEditorData(resolvedParams.triggerId);
 
   if (!rule) {
     notFound();
   }
-  const dynamicGroups = dynamicGroupsResult.groups;
 
   const userGroupOptions: TriggerUserGroupOption[] = userGroups.map((group) => ({
-    value: group.id,
     label: group.name,
-  }));
-  const dynamicUserGroupOptions: TriggerDynamicUserGroupOption[] = dynamicGroups.map((group) => ({
     value: group.id,
-    label: group.status === "active" ? group.name : `${group.name} (выключена)`,
   }));
+  const dynamicUserGroupOptions: TriggerDynamicUserGroupOption[] = dynamicGroups.map(
+    (group) => ({
+      label:
+        group.status === "active"
+          ? group.name
+          : `${group.name} (РІС‹РєР»СЋС‡РµРЅР°)`,
+      value: group.id,
+    }),
+  );
 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Обновляйте тайминг, условия и текст сообщения для существующего триггера."
-        title="Редактирование триггера"
+        description="РћР±РЅРѕРІР»СЏР№С‚Рµ С‚Р°Р№РјРёРЅРі, СѓСЃР»РѕРІРёСЏ Рё С‚РµРєСЃС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РґР»СЏ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ С‚СЂРёРіРіРµСЂР°."
+        title="Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С‚СЂРёРіРіРµСЂР°"
       />
       <ChatBotSubNav />
       <TriggerForm
@@ -118,6 +104,7 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}
         initial={{
+          buttons: parseTriggerButtons(rule.buttons),
           conditions: Array.isArray(rule.conditions)
             ? (rule.conditions as TriggerCondition[])
             : [],
@@ -128,12 +115,11 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
           imageUrl: rule.imageUrl,
           messageText: rule.messageText,
           name: rule.name,
-          buttons: parseTriggerButtons(rule.buttons),
           status: rule.status as "draft" | "active" | "disabled",
         }}
-        submitLabel="Сохранить изменения"
-        title="Редактирование триггера"
+        submitLabel="РЎРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ"
         testSendAction={sendTriggerTestMessage}
+        title="Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С‚СЂРёРіРіРµСЂР°"
         userGroupOptions={userGroupOptions}
       />
     </section>
