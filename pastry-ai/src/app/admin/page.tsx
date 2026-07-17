@@ -9,7 +9,8 @@ import {
   Users,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { prisma } from "@/db/prisma";
+import { fetchInternalAdminDashboardPageData } from "@/features/admin/dashboard/internal-admin-client";
+import { loadAdminDashboardPageData } from "@/features/admin/dashboard/service";
 import { getPlanLabel } from "@/features/subscriptions/plans";
 
 export const dynamic = "force-dynamic";
@@ -23,37 +24,6 @@ const currencyFormat = new Intl.NumberFormat("ru-RU", {
 
 const activity = [210, 270, 215, 295, 235, 205, 325];
 const revenueBars = [42, 52, 59, 64, 67, 74, 86];
-
-const featureGroups = {
-  recipes: ["recipes", "best-recipe-search", "recipe-recalculation", "recipe-card", "margin-calculator"],
-  photo: ["photoshoot"],
-  analysis: ["vision"],
-  consulting: ["ask-chef", "free-lesson"],
-  content: ["carousel"],
-} as const;
-
-function groupFeature(feature: string): string {
-  for (const [group, features] of Object.entries(featureGroups)) {
-    if ((features as readonly string[]).includes(feature)) return group;
-  }
-  return "other";
-}
-
-function toNumber(value: unknown) {
-  if (value === null || value === undefined) {
-    return 0;
-  }
-
-  if (typeof value === "number") {
-    return value;
-  }
-
-  if (typeof value === "object" && "toString" in value) {
-    return Number(value.toString());
-  }
-
-  return Number(value);
-}
 
 function formatNumber(value: number) {
   return numberFormat.format(value);
@@ -133,7 +103,10 @@ function DonutChart({
   const recipePercent = Math.round((recipeCount / total) * 100);
   const photoPercent = Math.round((photoCount / total) * 100);
   const analysisPercent = Math.round((analysisCount / total) * 100);
-  const otherPercent = Math.max(100 - recipePercent - photoPercent - analysisPercent, 0);
+  const otherPercent = Math.max(
+    100 - recipePercent - photoPercent - analysisPercent,
+    0,
+  );
 
   return (
     <div className="grid gap-5 sm:grid-cols-[150px_1fr]">
@@ -158,7 +131,11 @@ function DonutChart({
       <div className="space-y-3 text-sm">
         <ChartLegend color="#35d08b" label="Рецепты" value={`${recipePercent}%`} />
         <ChartLegend color="#2b91ff" label="Фото" value={`${photoPercent}%`} />
-        <ChartLegend color="#ff8a1f" label="Прочее" value={`${analysisPercent + otherPercent}%`} />
+        <ChartLegend
+          color="#ff8a1f"
+          label="Прочее"
+          value={`${analysisPercent + otherPercent}%`}
+        />
       </div>
     </div>
   );
@@ -200,126 +177,40 @@ function RevenueChart() {
   );
 }
 
+const metricCardIcons = {
+  apiCost: ChartPie,
+  photos: ImageIcon,
+  recipes: CupSoda,
+  revenue: Coins,
+  users: Users,
+} as const;
+
 export default async function AdminDashboardPage() {
-  const [
-    userCount,
-    subscriptionCount,
-    usageAggregate,
-    paymentAggregate,
-    recipeCount,
-    photosSentAgg,
-    usageByFeature,
-    usageByProvider,
-    users,
+  const {
     conversations,
+    conversion,
+    distribution,
+    metricCards,
     photoStyles,
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.subscription.count(),
-    prisma.usage.aggregate({ _sum: { cost: true } }),
-    prisma.payment.aggregate({ _sum: { amount: true } }),
-    prisma.generatedRecipeContext.count(),
-    prisma.tokenUsage.aggregate({ _sum: { imagesSent: true } }),
-    prisma.usage.groupBy({ by: ["feature"], _count: true }),
-    prisma.usage.groupBy({ by: ["provider"], _sum: { cost: true }, _count: true }),
-    prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        createdAt: true,
-        credits: true,
-        id: true,
-        name: true,
-        plan: true,
-        telegramId: true,
-        username: true,
-      },
-      take: 5,
-    }),
-    prisma.conversation.findMany({
-      include: {
-        messages: {
-          orderBy: { createdAt: "desc" },
-          select: { content: true },
-          take: 1,
-        },
-        user: {
-          select: {
-            name: true,
-            telegramId: true,
-            username: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-    }),
-    prisma.photoStyle.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        preview: true,
-      },
-      take: 5,
-    }),
-  ]);
+    providerUsage,
+    users,
+  } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminDashboardPageData()
+    : await loadAdminDashboardPageData();
 
-  const apiCost = toNumber(usageAggregate._sum.cost);
-  const revenue = toNumber(paymentAggregate._sum.amount);
-  const conversion = userCount > 0 ? (subscriptionCount / userCount) * 100 : 0;
-  const photosSent = toNumber(photosSentAgg._sum.imagesSent);
-
-  const distribution: Record<string, number> = {};
-  for (const item of usageByFeature) {
-    const group = groupFeature(item.feature);
-    distribution[group] = (distribution[group] ?? 0) + item._count;
-  }
-
-  const metricCards = [
-    {
-      accent: "bg-[#7257ff]",
-      icon: Users,
-      label: "Пользователи",
-      value: formatNumber(userCount),
-    },
-    {
-      accent: "bg-[#35d08b]",
-      icon: CupSoda,
-      label: "Рецепты создано",
-      value: formatNumber(recipeCount),
-    },
-    {
-      accent: "bg-[#2b91ff]",
-      icon: ImageIcon,
-      label: "Фото сгенерировано",
-      value: formatNumber(photosSent),
-    },
-    {
-      accent: "bg-[#f5a524]",
-      icon: Coins,
-      label: "Выручка",
-      value: formatCurrency(revenue),
-    },
-    {
-      accent: "bg-[#8b5cf6]",
-      icon: ChartPie,
-      label: "Расходы на API",
-      value: formatCurrency(apiCost),
-    },
-  ];
-
-  const donutRecipe = distribution.recipes ?? 0;
-  const donutPhoto = distribution.photo ?? 0;
-  const donutAnalysis = (distribution.analysis ?? 0) + (distribution.consulting ?? 0) + (distribution.content ?? 0);
-  const donutOther = distribution.other ?? 0;
+  const donutRecipe = distribution.recipes;
+  const donutPhoto = distribution.photo;
+  const donutAnalysis =
+    distribution.analysis + distribution.consulting + distribution.content;
+  const donutOther = distribution.other;
 
   const providerLabels: Record<string, string> = {
-    openrouter: "OpenRouter",
-    openai: "OpenAI",
     kie: "KIE",
+    openai: "OpenAI",
+    openrouter: "OpenRouter",
   };
   const maxProviderCost = Math.max(
-    ...usageByProvider.map((p) => toNumber(p._sum.cost)),
+    ...providerUsage.map((provider) => provider.cost),
     1,
   );
 
@@ -350,7 +241,12 @@ export default async function AdminDashboardPage() {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {metricCards.map((card) => {
-          const Icon = card.icon;
+          const Icon =
+            ("key" in card && card.key
+              ? metricCardIcons[
+                  card.key as keyof typeof metricCardIcons
+                ]
+              : undefined) ?? Users;
 
           return (
             <Card className="min-h-28" key={card.label}>
@@ -381,10 +277,10 @@ export default async function AdminDashboardPage() {
         <Card>
           <h3 className="mb-5 font-semibold">Генерации по типам</h3>
           <DonutChart
-            recipeCount={donutRecipe}
-            photoCount={donutPhoto}
             analysisCount={donutAnalysis}
             otherCount={donutOther}
+            photoCount={donutPhoto}
+            recipeCount={donutRecipe}
           />
         </Card>
         <Card>
@@ -408,7 +304,9 @@ export default async function AdminDashboardPage() {
                 key={user.id}
               >
                 <div>
-                  <p className="font-medium">{user.name ?? user.username ?? "Без имени"}</p>
+                  <p className="font-medium">
+                    {user.name ?? user.username ?? "Без имени"}
+                  </p>
                   <p className="text-xs text-[#97a4b8]">
                     @{user.username ?? user.telegramId}
                   </p>
@@ -416,7 +314,12 @@ export default async function AdminDashboardPage() {
                 <span className="text-[#97a4b8]">{getPlanLabel(user.plan)}</span>
                 <span>{user.credits} фото</span>
                 <span className="text-xs text-[#97a4b8]">
-                  {new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", year: "numeric", month: "2-digit", day: "2-digit" }).format(user.createdAt)}
+                  {new Intl.DateTimeFormat("ru-RU", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    timeZone: "Europe/Moscow",
+                    year: "numeric",
+                  }).format(user.createdAt)}
                 </span>
               </div>
             ))}
@@ -469,19 +372,18 @@ export default async function AdminDashboardPage() {
       <div className="grid gap-4 xl:grid-cols-[0.95fr_0.7fr_1fr]">
         <Card>
           <h3 className="mb-4 font-semibold">Использование API</h3>
-          {usageByProvider.length === 0 ? (
+          {providerUsage.length === 0 ? (
             <p className="text-sm text-[#97a4b8]">Нет данных по провайдерам</p>
           ) : (
-            usageByProvider.map((p) => {
-              const cost = toNumber(p._sum.cost);
-              const percent = Math.round((cost / maxProviderCost) * 100);
-              const label = providerLabels[p.provider] ?? p.provider;
+            providerUsage.map((provider) => {
+              const percent = Math.round((provider.cost / maxProviderCost) * 100);
+              const label = providerLabels[provider.provider] ?? provider.provider;
               return (
                 <ApiUsage
-                  key={p.provider}
+                  key={provider.provider}
                   label={label}
                   percent={percent}
-                  value={`$${cost.toFixed(2)} · ${p._count} вызовов`}
+                  value={`$${provider.cost.toFixed(2)} · ${provider.count} вызовов`}
                 />
               );
             })

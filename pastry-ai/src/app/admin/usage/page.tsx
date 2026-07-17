@@ -3,7 +3,8 @@ import {
   DataTable,
   formatDate,
 } from "@/components/admin/data-table";
-import { prisma } from "@/db/prisma";
+import { fetchInternalAdminUsagePageData } from "@/features/admin/dashboard/internal-admin-client";
+import { loadAdminUsagePageData } from "@/features/admin/dashboard/service";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ interface UsageRow {
   model: string | null;
   inputTokens: number;
   outputTokens: number;
-  cost: { toString(): string };
+  cost: string;
   latency: number;
   status: string;
   errorMessage: string | null;
@@ -26,18 +27,9 @@ interface UsageRow {
 }
 
 export default async function AdminUsagePage() {
-  const usage = await prisma.usage.findMany({
-    include: {
-      user: {
-        select: {
-          telegramId: true,
-          username: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  }) as unknown as UsageRow[];
+  const { usage } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminUsagePageData()
+    : await loadAdminUsagePageData();
 
   function statusBadge(status: string) {
     if (status === "success") {
@@ -60,7 +52,7 @@ export default async function AdminUsagePage() {
           { header: "Модель", cell: (row: UsageRow) => row.model ?? "—" },
           { header: "Вход", cell: (row: UsageRow) => row.inputTokens },
           { header: "Выход", cell: (row: UsageRow) => row.outputTokens },
-          { header: "Стоимость", cell: (row: UsageRow) => `$${row.cost.toString()}` },
+          { header: "Стоимость", cell: (row: UsageRow) => `$${row.cost}` },
           { header: "Задержка", cell: (row: UsageRow) => `${row.latency} ms` },
           { header: "Статус", cell: (row: UsageRow) => statusBadge(row.status) },
           {
@@ -80,7 +72,7 @@ export default async function AdminUsagePage() {
         ]}
         empty="Записей использования пока нет. Они появятся после запуска AI-функций."
         getKey={(row: UsageRow) => row.id}
-        rows={usage as never}
+        rows={usage as UsageRow[] as never}
       />
     </section>
   );

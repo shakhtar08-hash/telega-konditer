@@ -6,14 +6,16 @@ import {
   AdminPanel,
   AdminSectionTitle,
 } from "@/components/admin/form";
-import { prisma } from "@/db/prisma";
 import {
-  encryptApiSecretValue,
-  getSecretEncryptionKey,
-  managedApiKeys,
-  maskSecretValue,
-  type ManagedApiKey,
-} from "@/lib/api-secrets";
+  fetchInternalAdminSettingsPageData,
+  postInternalAdminSettingsAction,
+} from "@/features/admin/settings/internal-admin-client";
+import {
+  loadAdminSettingsPageData,
+  performClearApiSecret,
+  performSaveApiSecret,
+} from "@/features/admin/settings/service";
+import { managedApiKeys, maskSecretValue } from "@/lib/api-secrets";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -35,11 +37,7 @@ const envKeys = [
   "ADMIN_USERNAME",
   "ADMIN_PASSWORD",
   "ADMIN_SESSION_SECRET",
-];
-
-function isManagedApiKey(key: string): key is ManagedApiKey {
-  return managedApiKeys.includes(key as ManagedApiKey);
-}
+] as const;
 
 export async function saveApiSecret(formData: FormData) {
   "use server";
@@ -47,22 +45,15 @@ export async function saveApiSecret(formData: FormData) {
   const key = String(formData.get("key") ?? "");
   const value = String(formData.get("value") ?? "").trim();
 
-  if (!isManagedApiKey(key) || !value) {
+  if (!key || !value) {
     return;
   }
 
-  await prisma.apiSecret.upsert({
-    where: { key },
-    update: {
-      encryptedValue: encryptApiSecretValue(value, getSecretEncryptionKey()),
-      valuePreview: maskSecretValue(value),
-    },
-    create: {
-      key,
-      encryptedValue: encryptApiSecretValue(value, getSecretEncryptionKey()),
-      valuePreview: maskSecretValue(value),
-    },
-  });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminSettingsAction("saveApiSecret", { key, value });
+  } else {
+    await performSaveApiSecret(key, value);
+  }
 
   revalidatePath("/admin/settings");
 }
@@ -72,31 +63,23 @@ export async function clearApiSecret(formData: FormData) {
 
   const key = String(formData.get("key") ?? "");
 
-  if (!isManagedApiKey(key)) {
+  if (!key) {
     return;
   }
 
-  await prisma.apiSecret.deleteMany({ where: { key } });
+  if (process.env.APP_ROLE === "ingress") {
+    await postInternalAdminSettingsAction("clearApiSecret", { key });
+  } else {
+    await performClearApiSecret(key);
+  }
+
   revalidatePath("/admin/settings");
 }
 
-async function getDatabaseStatus() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return "Подключена";
-  } catch {
-    return "Недоступна";
-  }
-}
-
 export default async function AdminSettingsPage() {
-  const storedSecrets = await prisma.apiSecret.findMany({
-    select: {
-      key: true,
-      valuePreview: true,
-      updatedAt: true,
-    },
-  });
+  const { dbStatus, storedSecrets } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminSettingsPageData()
+    : await loadAdminSettingsPageData();
   const storedSecretMap = new Map(
     storedSecrets.map((secret) => [secret.key, secret]),
   );
@@ -110,9 +93,13 @@ export default async function AdminSettingsPage() {
       : process.env[key]
         ? "Окружение"
         : "-",
-    status: storedSecretMap.has(key) || process.env[key] ? "Задано" : "Не задано",
+    status:
+      storedSecretMap.has(key) || process.env[key]
+        ? "Задано"
+        : "Не задано",
   }));
-  const databaseStatus = await getDatabaseStatus();
+  const databaseStatus =
+    dbStatus === "ok" ? "Подключена" : "Недоступна";
 
   return (
     <section className="space-y-5">

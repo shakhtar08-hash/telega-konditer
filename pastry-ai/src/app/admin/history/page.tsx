@@ -3,7 +3,8 @@ import {
   DataTable,
   formatDate,
 } from "@/components/admin/data-table";
-import { prisma } from "@/db/prisma";
+import { fetchInternalAdminHistoryPageData } from "@/features/admin/dashboard/internal-admin-client";
+import { loadAdminHistoryPageData } from "@/features/admin/dashboard/service";
 
 export const dynamic = "force-dynamic";
 
@@ -12,28 +13,9 @@ function preview(content: string) {
 }
 
 export default async function AdminHistoryPage() {
-  const conversations = await prisma.conversation.findMany({
-    include: {
-      messages: {
-        orderBy: { createdAt: "desc" },
-        select: {
-          content: true,
-          createdAt: true,
-          model: true,
-          role: true,
-        },
-        take: 1,
-      },
-      user: {
-        select: {
-          telegramId: true,
-          username: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const { conversations } = process.env.APP_ROLE === "ingress"
+    ? await fetchInternalAdminHistoryPageData()
+    : await loadAdminHistoryPageData();
 
   return (
     <section className="space-y-5">
