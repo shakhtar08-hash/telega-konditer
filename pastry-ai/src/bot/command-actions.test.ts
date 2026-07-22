@@ -242,10 +242,11 @@ describe("command action messages", () => {
       ok: true,
     });
 
-    await handleTariffPurchase(ctx, {
+    const url = await handleTariffPurchase(ctx, {
       tariffSlug: "basic",
     });
 
+    expect(url).toBe("https://pay.example/confirm");
     expect(fetchMock).toHaveBeenCalledWith(
       "https://pastry.example.com/api/payments/yookassa/create",
       expect.objectContaining({
@@ -259,14 +260,7 @@ describe("command action messages", () => {
       tariffSlug: "basic",
       userId: "user_123",
     });
-    expect(ctx.reply).toHaveBeenCalledWith(
-      "Оплатить тариф можно по кнопке ниже:",
-      {
-        reply_markup: {
-          inline_keyboard: [[{ text: "Оплатить тариф", url: "https://pay.example/confirm" }]],
-        },
-      },
-    );
+    expect(ctx.reply).not.toHaveBeenCalled();
   });
 
   it("sends a friendly Russian error when YooKassa link creation fails", async () => {
@@ -277,10 +271,11 @@ describe("command action messages", () => {
       ok: false,
     });
 
-    await handleTariffPurchase(ctx, {
+    const url = await handleTariffPurchase(ctx, {
       tariffSlug: "basic",
     });
 
+    expect(url).toBeNull();
     expect(ctx.reply).toHaveBeenCalledWith(
       "Не удалось создать ссылку на оплату. Попробуйте ещё раз чуть позже.",
     );

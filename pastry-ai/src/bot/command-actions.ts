@@ -132,12 +132,12 @@ export async function handleTariffPurchase(
   input: {
     tariffSlug: TariffPurchaseSlug;
   },
-): Promise<void> {
+): Promise<string | null> {
   const telegramId = ctx.from?.id ? String(ctx.from.id) : null;
 
   if (!telegramId) {
     await ctx.reply("Нажмите /start, чтобы продолжить оплату.");
-    return;
+    return null;
   }
 
   const user = await prisma.user.findFirst({
@@ -147,7 +147,7 @@ export async function handleTariffPurchase(
 
   if (!user) {
     await ctx.reply("Нажмите /start, чтобы продолжить оплату.");
-    return;
+    return null;
   }
 
   try {
@@ -171,13 +171,10 @@ export async function handleTariffPurchase(
       throw new Error("Failed to create YooKassa payment link");
     }
 
-    await ctx.reply("Оплатить тариф можно по кнопке ниже:", {
-      reply_markup: {
-        inline_keyboard: [[{ text: "Оплатить тариф", url: payload.confirmationUrl }]],
-      },
-    });
+    return payload.confirmationUrl;
   } catch {
     await ctx.reply("Не удалось создать ссылку на оплату. Попробуйте ещё раз чуть позже.");
+    return null;
   }
 }
 

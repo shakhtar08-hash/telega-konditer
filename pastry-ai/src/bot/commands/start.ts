@@ -289,18 +289,20 @@ export function registerStartCommand(
     await sendAccessAwareEntryPoint(ctx, userService);
   });
 
-  composer.callbackQuery(/^tariff:buy:(basic|master|chief|pastry-chef|head-chef)$/, async (ctx) => {
-    await ctx.answerCallbackQuery();
+composer.callbackQuery(/^tariff:buy:(basic|master|chief|pastry-chef|head-chef)$/, async (ctx) => {
     const tariffSlug = normalizeTariffPurchaseSlug(ctx.match[1]);
 
     if (!tariffSlug) {
-      await ctx.reply("Не удалось определить тариф для оплаты.");
+      await ctx.answerCallbackQuery({ text: "Не удалось определить тариф для оплаты." });
       return;
     }
 
-    await handleTariffPurchase(ctx, {
+    const url = await handleTariffPurchase(ctx, {
       tariffSlug: tariffSlug as TariffPurchaseSlug,
     });
+    if (url) {
+      await ctx.answerCallbackQuery({ url });
+    }
   });
 }
 

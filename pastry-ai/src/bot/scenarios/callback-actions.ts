@@ -62,12 +62,14 @@ export async function handleScenarioButtonCallback(
       await executeBotCommandAction(ctx, button.actionValue ?? "");
       return;
     case "TARIFF_PURCHASE":
-      await ctx.answerCallbackQuery();
       const tariffSlug = normalizeTariffPurchaseSlug(button.actionValue);
       if (tariffSlug) {
-        await handleTariffPurchase(ctx, {
+        const url = await handleTariffPurchase(ctx, {
           tariffSlug,
         });
+        if (url) {
+          await ctx.answerCallbackQuery({ url });
+        }
         return;
       }
       break;

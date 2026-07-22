@@ -399,6 +399,7 @@ describe("registerStartCommand", () => {
       answerCallbackQuery: vi.fn().mockResolvedValue(undefined),
       match: ["tariff:buy:pastry-chef", "pastry-chef"],
     };
+    handleTariffPurchaseMock.mockResolvedValue("https://pay.example/confirm");
 
     registerStartCommand(composer, userService);
 
@@ -408,9 +409,11 @@ describe("registerStartCommand", () => {
 
     await tariffHandler?.(ctx);
 
-    expect(ctx.answerCallbackQuery).toHaveBeenCalled();
     expect(handleTariffPurchaseMock).toHaveBeenCalledWith(ctx, {
       tariffSlug: "basic",
+    });
+    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith({
+      url: "https://pay.example/confirm",
     });
   });
 
