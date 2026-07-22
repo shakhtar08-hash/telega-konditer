@@ -124,7 +124,7 @@ describe("buildScenarioReplyMarkup", () => {
       {
         id: "button_tariff",
         stepId: "step_1",
-        text: "РћРїР»Р°С‚РёС‚СЊ",
+        text: "Оплатить",
         sortOrder: 0,
         actionType: "TARIFF_PURCHASE",
         actionValue: "pastry-chef",
@@ -134,7 +134,7 @@ describe("buildScenarioReplyMarkup", () => {
 
     expect(markup?.inline_keyboard[0]?.[0]).toEqual({
       callback_data: "flow:button_tariff",
-      text: "РћРїР»Р°С‚РёС‚СЊ",
+      text: "Оплатить",
     });
   });
 });

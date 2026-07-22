@@ -13,7 +13,7 @@ describe("parseBuyButtons", () => {
           sortOrder: 0,
         },
         {
-          text: "Р”Р°Р»РµРµ",
+          text: "Далее",
           actionType: "NEXT",
           actionValue: null,
           active: true,
@@ -29,7 +29,7 @@ describe("parseBuyButtons", () => {
         sortOrder: 0,
       },
       {
-        text: "Р”Р°Р»РµРµ",
+        text: "Далее",
         actionType: "NEXT",
         actionValue: null,
         active: true,
@@ -42,7 +42,7 @@ describe("parseBuyButtons", () => {
     expect(
       parseBuyButtons([
         {
-          text: "РћРїР»Р°С‚РёС‚СЊ",
+          text: "Оплатить",
           url: "https://example.com/pay",
           active: true,
           sortOrder: 0,
@@ -50,7 +50,7 @@ describe("parseBuyButtons", () => {
       ]),
     ).toEqual([
       {
-        text: "РћРїР»Р°С‚РёС‚СЊ",
+        text: "Оплатить",
         actionType: "URL",
         actionValue: "https://example.com/pay",
         active: true,
@@ -63,13 +63,13 @@ describe("parseBuyButtons", () => {
 describe("parseBuyButtonsFromFormData", () => {
   it("parses typed funnel buttons from posted form data", () => {
     const formData = new FormData();
-    formData.append("buyButtonText[]", "РљРѕРЅРґРёС‚РµСЂ");
+    formData.append("buyButtonText[]", "Кондитер");
     formData.append("buyButtonActionType[]", "TARIFF_PURCHASE");
     formData.append("buyButtonActionValue[]", "pastry-chef");
     formData.append("buyButtonActive[]", "1");
     formData.append("buyButtonSortOrder[]", "0");
 
-    formData.append("buyButtonText[]", "РњРѕРё С‚РµСЃС‚С‹");
+    formData.append("buyButtonText[]", "Мои тесты");
     formData.append("buyButtonActionType[]", "BOT_COMMAND");
     formData.append("buyButtonActionValue[]", "/recipe");
     formData.append("buyButtonActive[]", "0");
@@ -77,14 +77,14 @@ describe("parseBuyButtonsFromFormData", () => {
 
     expect(parseBuyButtonsFromFormData(formData)).toEqual([
       {
-        text: "РљРѕРЅРґРёС‚РµСЂ",
+        text: "Кондитер",
         actionType: "TARIFF_PURCHASE",
         actionValue: "pastry-chef",
         active: true,
         sortOrder: 0,
       },
       {
-        text: "РњРѕРё С‚РµСЃС‚С‹",
+        text: "Мои тесты",
         actionType: "BOT_COMMAND",
         actionValue: "/recipe",
         active: false,

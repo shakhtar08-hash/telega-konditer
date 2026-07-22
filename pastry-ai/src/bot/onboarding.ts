@@ -56,8 +56,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "welcome",
     imagePath: "/onboarding/1.jpg",
-    text: "РџСЂРёРІРµС‚! РЇ РїРѕРјРѕРіСѓ СЃРѕР·РґР°С‚СЊ РР-С„РѕС‚РѕСЃРµСЃСЃРёСЋ РІ Р»СЋР±РѕРј РѕР±СЂР°Р·Рµ.",
-    nextButtonText: "Р”Р°Р»РµРµ",
+    text: "Привет! Я помогу создать ИИ-фотосессию в любом образе.",
+    nextButtonText: "Далее",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -67,8 +67,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "maria",
     imagePath: "/onboarding/maria.png",
-    text: "РСЃС‚РѕСЂРёСЏ 1: РњР°СЂРёСЏ РїРѕР»СѓС‡РёР»Р° СЂРµР°Р»РёСЃС‚РёС‡РЅС‹Рµ СЃС‚СѓРґРёР№РЅС‹Рµ РѕР±СЂР°Р·С‹.",
-    nextButtonText: "Р”Р°Р»РµРµ",
+    text: "История 1: Мария получила реалистичные студийные образы.",
+    nextButtonText: "Далее",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -78,8 +78,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "polina",
     imagePath: "/onboarding/polina.png",
-    text: "РСЃС‚РѕСЂРёСЏ 2: РџРѕР»РёРЅР° РѕР±РЅРѕРІРёР»Р° РєРѕРЅС‚РµРЅС‚ РґР»СЏ СЃРѕС†СЃРµС‚РµР№.",
-    nextButtonText: "Р”Р°Р»РµРµ",
+    text: "История 2: Полина обновила контент для соцсетей.",
+    nextButtonText: "Далее",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -89,8 +89,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "ksusha",
     imagePath: "/onboarding/ksusha.png",
-    text: "РСЃС‚РѕСЂРёСЏ 3: РљСЃСЋС€Р° РїРѕРїСЂРѕР±РѕРІР°Р»Р° РЅРѕРІС‹Рµ СЃС‚РёР»Рё Рё РїРѕР»СѓС‡РёР»Р° РјРѕС‚РёРІРёСЂСѓСЋС‰РёРµ С„РѕС‚Рѕ.",
-    nextButtonText: "Р”Р°Р»РµРµ",
+    text: "История 3: Ксюша попробовала новые стили и получила мотивирующие фото.",
+    nextButtonText: "Далее",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -100,13 +100,13 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "offer",
     imagePath: "/onboarding/offer.png",
-    text: "РЎСѓРїРµСЂ-РїСЂРµРґР»РѕР¶РµРЅРёРµ: 899в‚Ѕ РІРјРµСЃС‚Рѕ 1800в‚Ѕ РІ РјРµСЃСЏС†.",
-    nextButtonText: "Р”Р°Р»РµРµ",
+    text: "Супер-предложение: 899₽ вместо 1800₽ в месяц.",
+    nextButtonText: "Далее",
     nextAction: "activate_promo_and_next",
     buyButtons: [],
     buyButtonText: "",
     buyButtonUrl: null,
-    offerButtonText: "1 РјРѕРґРµР»СЊ Рё 70 С„РѕС‚Рѕ | 899в‚Ѕ",
+    offerButtonText: "1 модель и 70 фото | 899₽",
   },
 ];
 
@@ -281,7 +281,7 @@ export async function loadOnboardingSteps(): Promise<OnboardingStep[]> {
 const expiredTariffFallback: OnboardingStep = {
   title: "expired-tariff",
   imagePath: "/onboarding/offer.png",
-  text: "РЎСЂРѕРє РґРµР№СЃС‚РІРёСЏ РІР°С€РµРіРѕ С‚Р°СЂРёС„Р° РёСЃС‚С‘Рє. Р§С‚РѕР±С‹ РїСЂРѕРґРѕР»Р¶РёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ Р±РѕС‚РѕРј, РѕРїР»Р°С‚РёС‚Рµ РЅРѕРІСѓСЋ РїРѕРґРїРёСЃРєСѓ.",
+  text: "Срок действия вашего тарифа истёк. Чтобы продолжить пользоваться ботом, оплатите новую подписку.",
   nextButtonText: "",
   nextAction: "next",
   buyButtons: [],
@@ -333,7 +333,7 @@ export function buildExpiredTariffKeyboard(
   const migrated = migrateLegacyStep(step);
   const rows: InlineKeyboardButton[][] = [];
 
-  rows.push([{ callback_data: "try_free", text: "РџРѕРїСЂРѕР±РѕРІР°С‚СЊ Р±РµСЃРїР»Р°С‚РЅРѕ" }]);
+  rows.push([{ callback_data: "try_free", text: "Попробовать бесплатно" }]);
 
   const activeButtons = normalizeBuyButtons(migrated.buyButtons)
     .filter((button) => button.active)
@@ -344,7 +344,7 @@ export function buildExpiredTariffKeyboard(
       rows.push([buildRuntimeBuyButton(button, paymentUrl, 0)]);
     }
   } else {
-    rows.push([{ text: migrated.buyButtonText || "РћРїР»Р°С‚РёС‚СЊ", url: paymentUrl }]);
+    rows.push([{ text: migrated.buyButtonText || "Оплатить", url: paymentUrl }]);
   }
 
   return { inline_keyboard: rows };

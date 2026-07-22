@@ -444,7 +444,7 @@ describe("scenario admin service", () => {
           buttons: [
             {
               id: "button_tariff",
-              text: "РљРѕРЅРґРёС‚РµСЂ",
+              text: "Кондитер",
               sortOrder: 0,
               actionType: "TARIFF_PURCHASE",
               actionValue: "pastry-chef",

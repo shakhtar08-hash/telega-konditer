@@ -47,6 +47,7 @@ Use `npm run verify` for the full local check. It runs lint, typecheck, tests, a
 - Keep Telegram bot behavior in `src/bot`, feature orchestration in `src/features`, AI calls in `src/ai`.
 - Admin pages are server components under `src/app/admin`.
 - User-facing bot/admin text should be Russian and valid UTF-8.
+- All source files must be UTF-8 without BOM. Run `npm run check:encoding` before committing to catch mojibake (corrupted UTF-8 strings).
 
 ## Current Local Testing Setup
 
