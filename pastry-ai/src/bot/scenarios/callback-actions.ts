@@ -62,13 +62,24 @@ export async function handleScenarioButtonCallback(
       await executeBotCommandAction(ctx, button.actionValue ?? "");
       return;
     case "TARIFF_PURCHASE":
+      await ctx.answerCallbackQuery({ text: "Создаём ссылку на оплату…" });
       const tariffSlug = normalizeTariffPurchaseSlug(button.actionValue);
       if (tariffSlug) {
         const url = await handleTariffPurchase(ctx, {
           tariffSlug,
         });
         if (url) {
-          await ctx.answerCallbackQuery({ url });
+          try {
+            await ctx.editMessageReplyMarkup({
+              inline_keyboard: [[{ text: "💳 Оплатить", url }]],
+            });
+          } catch {
+            await ctx.reply("💳 Оплатить", {
+              reply_markup: {
+                inline_keyboard: [[{ text: "💳 Оплатить", url }]],
+              },
+            });
+          }
         }
         return;
       }

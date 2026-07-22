@@ -297,11 +297,25 @@ composer.callbackQuery(/^tariff:buy:(basic|master|chief|pastry-chef|head-chef)$/
       return;
     }
 
+    await ctx.answerCallbackQuery({ text: "Создаём ссылку на оплату…" });
+
     const url = await handleTariffPurchase(ctx, {
       tariffSlug: tariffSlug as TariffPurchaseSlug,
     });
     if (url) {
-      await ctx.answerCallbackQuery({ url });
+      try {
+        await ctx.editMessageReplyMarkup({
+          inline_keyboard: [[{ text: "💳 Оплатить", url }]],
+        });
+      } catch {
+        await ctx.reply("💳 Оплатить", {
+          reply_markup: {
+            inline_keyboard: [[{ text: "💳 Оплатить", url }]],
+          },
+        });
+      }
+    } else {
+      await ctx.editMessageText("Не удалось создать ссылку на оплату. Попробуйте ещё раз.").catch(() => {});
     }
   });
 }

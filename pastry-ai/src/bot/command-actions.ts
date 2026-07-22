@@ -173,7 +173,7 @@ export async function handleTariffPurchase(
 
     return payload.confirmationUrl;
   } catch {
-    await ctx.reply("Не удалось создать ссылку на оплату. Попробуйте ещё раз чуть позже.");
+    await ctx.reply("Не удалось создать ссылку на оплату. Попробуйте ещё раз чуть позже.").catch(() => {});
     return null;
   }
 }

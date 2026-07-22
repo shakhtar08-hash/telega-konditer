@@ -397,6 +397,7 @@ describe("registerStartCommand", () => {
     const ctx = {
       ...createBaseContext(),
       answerCallbackQuery: vi.fn().mockResolvedValue(undefined),
+      editMessageReplyMarkup: vi.fn().mockResolvedValue(undefined),
       match: ["tariff:buy:pastry-chef", "pastry-chef"],
     };
     handleTariffPurchaseMock.mockResolvedValue("https://pay.example/confirm");
@@ -413,7 +414,10 @@ describe("registerStartCommand", () => {
       tariffSlug: "basic",
     });
     expect(ctx.answerCallbackQuery).toHaveBeenCalledWith({
-      url: "https://pay.example/confirm",
+      text: "Создаём ссылку на оплату…",
+    });
+    expect(ctx.editMessageReplyMarkup).toHaveBeenCalledWith({
+      inline_keyboard: [[{ text: "💳 Оплатить", url: "https://pay.example/confirm" }]],
     });
   });
 

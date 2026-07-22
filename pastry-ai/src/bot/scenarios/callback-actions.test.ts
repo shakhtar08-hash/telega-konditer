@@ -40,6 +40,7 @@ type TestContext = PastryBotContext & {
   deleteMessage: ReturnType<typeof vi.fn>;
   editMessageCaption: ReturnType<typeof vi.fn>;
   editMessageMedia: ReturnType<typeof vi.fn>;
+  editMessageReplyMarkup: ReturnType<typeof vi.fn>;
   editMessageText: ReturnType<typeof vi.fn>;
   reply: ReturnType<typeof vi.fn>;
   replyWithPhoto: ReturnType<typeof vi.fn>;
@@ -60,6 +61,7 @@ function ctxFor(
     deleteMessage: vi.fn().mockResolvedValue(undefined),
     editMessageCaption: vi.fn().mockResolvedValue(undefined),
     editMessageMedia: vi.fn().mockResolvedValue(undefined),
+    editMessageReplyMarkup: vi.fn().mockResolvedValue(undefined),
     editMessageText: vi.fn().mockResolvedValue(undefined),
     from: { id: 123 },
     reply: vi.fn().mockResolvedValue(undefined),
@@ -165,11 +167,14 @@ describe("handleScenarioButtonCallback", () => {
 
     await handleScenarioButtonCallback(ctx);
 
+    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith({
+      text: "Создаём ссылку на оплату…",
+    });
     expect(handleTariffPurchaseMock).toHaveBeenCalledWith(ctx, {
       tariffSlug: "basic",
     });
-    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith({
-      url: "https://pay.example/confirm",
+    expect(ctx.editMessageReplyMarkup).toHaveBeenCalledWith({
+      inline_keyboard: [[{ text: "💳 Оплатить", url: "https://pay.example/confirm" }]],
     });
   });
 
