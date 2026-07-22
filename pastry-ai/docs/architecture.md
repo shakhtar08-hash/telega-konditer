@@ -35,12 +35,12 @@ The same monorepo and app image are shared across roles, but routes must fail cl
 
 ## Current Production Edge
 
-As of July 21, 2026, the Coolify-managed Traefik proxy has been fully replaced:
+As of July 22, 2026, the Coolify-managed Traefik proxy has been fully replaced and all Coolify infrastructure services have been removed:
 
 - **Caddy** (`eu-edge-caddy`) terminates public `80/443` with automatic Let's Encrypt TLS and proxies all traffic to the EU gateway on `host.docker.internal:3001`.
 - The EU gateway container (`pastry-ai-eu-gateway`) listens on host port `3001` and handles Telegram webhook ingress + AI egress.
 - The old legacy Coolify application container has been retired (stopped and removed after the 72-hour observation window).
-- Remaining Coolify infrastructure services (core, db, redis, realtime, sentinel) are still present on the server but are no longer in the application request path and can be removed when convenient.
+- Remaining Coolify infrastructure services (core, db, redis, realtime, sentinel) were stopped, containers removed, volumes deleted, data directory cleaned, images removed, and the `coolify` Docker network removed on July 22, 2026.
 - The checked-in Caddy deployment is at `deploy/eu-caddy/` with a `Caddyfile` and `docker-compose.yml`.
 
 ## Telegram Flow

@@ -181,7 +181,7 @@ Admin data is stored in Supabase. If local and server use the same database, cha
 
 **Caddy edge is live:** As of July 21, 2026, `eu-edge-caddy` (Caddy) serves public `80/443` with automatic Let's Encrypt TLS, proxying to the EU gateway on `3001`. The old `coolify-proxy` (Traefik) and legacy Coolify application have been retired.
 
-**Phase G complete:** 72-hour observation window passed without rollback. Caddy cutover performed. Legacy app container removed. Remaining Coolify infrastructure services idle — removal deferred.
+**Phase G complete:** 72-hour observation window passed without rollback. Caddy cutover performed. Legacy app container removed. Remaining Coolify infrastructure services removed on July 22, 2026 — all containers stopped and removed, volumes deleted, data directory cleaned, images pruned, and the `coolify` Docker network deleted.
 
 **Admin navigation is cleaned up:**
 - Left sidebar has correct active-state based on pathname via `usePathname()`.
@@ -226,9 +226,7 @@ Admin data is stored in Supabase. If local and server use the same database, cha
   - `create_recipe_card` callback → card generated from saved context
   - `recipe_recalculate` callback → scenario switches to recalculation
   - `ask_chef_recipe` callback → scenario switches to ask-chef
-- Commit and push the current local changes when approved.
 - Rotate any exposed or transitional secrets from the migration.
-- Remove remaining idle Coolify infrastructure services from EU server.
 
 ## Possible Later Features
 
