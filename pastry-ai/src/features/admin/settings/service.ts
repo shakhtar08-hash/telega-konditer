@@ -6,6 +6,7 @@ import {
   maskSecretValue,
   type ManagedApiKey,
 } from "@/lib/api-secrets";
+import { adminSettingsEnvKeys } from "./runtime-env";
 
 function isManagedApiKey(key: string): key is ManagedApiKey {
   return managedApiKeys.includes(key as ManagedApiKey);
@@ -22,6 +23,20 @@ export async function loadAdminSettingsPageData() {
 
   return {
     dbStatus,
+    runtimeEnv: adminSettingsEnvKeys.flatMap((key) => {
+      const value = process.env[key];
+
+      if (!value) {
+        return [];
+      }
+
+      return [
+        {
+          key,
+          valuePreview: maskSecretValue(value),
+        },
+      ];
+    }),
     storedSecrets: await prisma.apiSecret.findMany({
       orderBy: { updatedAt: "desc" },
       select: {

@@ -1,6 +1,6 @@
 import { prisma } from "@/db/prisma";
 
-export type BotMenuActionType = "PROMPT" | "URL";
+export type BotMenuActionType = "PROMPT" | "URL" | "SCENARIO";
 
 export type BotMenuButtonMutationInput = {
   actionType: BotMenuActionType;
@@ -14,12 +14,13 @@ export type BotMenuButtonMutationInput = {
   processingText: string | null;
   promptFeature: string | null;
   promptSlug: string | null;
+  scenarioId: string | null;
   sortOrder: number;
   url: string | null;
 };
 
 export async function loadAdminChatBotPageData() {
-  const [buttons, prompts, menuIntro] = await Promise.all([
+  const [buttons, prompts, scenarios, menuIntro] = await Promise.all([
     prisma.botMenuButton.findMany({
       orderBy: { sortOrder: "asc" },
       select: {
@@ -35,6 +36,10 @@ export async function loadAdminChatBotPageData() {
         processingText: true,
         promptFeature: true,
         promptSlug: true,
+        scenarioId: true,
+        scenario: {
+          select: { name: true },
+        },
         sortOrder: true,
         url: true,
       },
@@ -50,13 +55,26 @@ export async function loadAdminChatBotPageData() {
         active: true,
       },
     }),
+    prisma.scenario.findMany({
+      orderBy: [{ name: "asc" }],
+      select: { id: true, name: true },
+      where: { startStepId: { not: null }, status: "active" },
+    }),
     prisma.botTextBlock.findUnique({
       where: { key: "prompt_menu_intro" },
       select: { text: true },
     }),
   ]);
 
-  return { buttons, menuIntro, prompts };
+  return {
+    buttons: buttons.map((button) => ({
+      ...button,
+      scenarioName: button.scenario?.name ?? null,
+    })),
+    menuIntro,
+    prompts,
+    scenarios,
+  };
 }
 
 export async function performCreateBotMenuButton(
@@ -79,6 +97,7 @@ export async function performCreateBotMenuButton(
       processingText: input.processingText,
       promptFeature: input.actionType === "PROMPT" ? input.promptFeature : null,
       promptSlug: input.actionType === "PROMPT" ? input.promptSlug : null,
+      scenarioId: input.actionType === "SCENARIO" ? input.scenarioId : null,
       sortOrder: input.sortOrder,
       url: input.actionType === "URL" ? input.url : null,
     },
@@ -94,6 +113,7 @@ export async function performUpdateBotMenuButton(
 
   let promptFeature = input.promptFeature;
   let promptSlug = input.promptSlug;
+  let scenarioId = input.scenarioId;
 
   if (!promptFeature && input.actionType === "PROMPT") {
     const existing = await prisma.botMenuButton.findUnique({
@@ -102,6 +122,14 @@ export async function performUpdateBotMenuButton(
     });
     promptFeature = existing?.promptFeature ?? null;
     promptSlug = existing?.promptSlug ?? null;
+  }
+
+  if (!scenarioId && input.actionType === "SCENARIO") {
+    const existing = await prisma.botMenuButton.findUnique({
+      where: { id: input.id },
+      select: { scenarioId: true },
+    });
+    scenarioId = existing?.scenarioId ?? null;
   }
 
   await prisma.botMenuButton.update({
@@ -117,6 +145,7 @@ export async function performUpdateBotMenuButton(
       processingText: input.processingText,
       promptFeature: input.actionType === "PROMPT" ? promptFeature : null,
       promptSlug: input.actionType === "PROMPT" ? promptSlug : null,
+      scenarioId: input.actionType === "SCENARIO" ? scenarioId : null,
       sortOrder: input.sortOrder,
       url: input.actionType === "URL" ? input.url : null,
     },

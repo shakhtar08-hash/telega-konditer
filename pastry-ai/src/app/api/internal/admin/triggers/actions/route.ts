@@ -1,11 +1,35 @@
 import {
   performCreateTriggerRule,
   performDeleteTriggerRule,
+  performRunTriggerNow,
   performSendTriggerTest,
   performUpdateTriggerRule,
 } from "@/features/admin/triggers/service";
 import { loadEnv } from "@/lib/env";
 import { isValidInternalServiceRequest } from "@/lib/internal-service-auth";
+
+async function readActionFormData(request: Request): Promise<FormData | null> {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    return request.formData();
+  }
+
+  if (contentType.includes("application/json")) {
+    const payload = (await request.json()) as Record<string, unknown>;
+    const formData = new FormData();
+
+    for (const [key, value] of Object.entries(payload)) {
+      if (typeof value === "string") {
+        formData.set(key, value);
+      }
+    }
+
+    return formData;
+  }
+
+  return null;
+}
 
 export async function POST(request: Request): Promise<Response> {
   const env = loadEnv();
@@ -17,13 +41,11 @@ export async function POST(request: Request): Promise<Response> {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const contentType = request.headers.get("content-type") ?? "";
+  const formData = await readActionFormData(request);
 
-  if (!contentType.includes("multipart/form-data")) {
+  if (!formData) {
     return new Response("Unsupported content type", { status: 400 });
   }
-
-  const formData = await request.formData();
   const action = String(formData.get("action") ?? "").trim();
 
   switch (action) {
@@ -36,6 +58,8 @@ export async function POST(request: Request): Promise<Response> {
     case "deleteTriggerRule":
       await performDeleteTriggerRule(String(formData.get("id") ?? "").trim());
       return Response.json({ ok: true });
+    case "runTriggerNow":
+      return Response.json(await performRunTriggerNow(formData));
     case "sendTriggerTest":
       return Response.json(await performSendTriggerTest(formData));
     default:

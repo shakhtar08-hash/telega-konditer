@@ -3,6 +3,7 @@ import {
   AdminPageHeader,
   DataTable,
   formatDate,
+  formatDateTimeLocalValue,
 } from "@/components/admin/data-table";
 import {
   AdminButton,
@@ -140,10 +141,6 @@ export default async function AdminUsersPage({
       />
     </section>
   );
-}
-
-function formatDateTimeLocalValue(date?: Date) {
-  return date ? date.toISOString().slice(0, 16) : "";
 }
 
 function getTariffStatusLabel(

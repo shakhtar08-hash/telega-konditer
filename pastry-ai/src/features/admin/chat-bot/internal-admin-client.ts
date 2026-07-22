@@ -18,7 +18,7 @@ type ChatBotAction =
 export async function fetchInternalAdminChatBotPageData() {
   return fetchInternalAdminJson<{
     buttons: Array<{
-      actionType: "PROMPT" | "URL";
+      actionType: "PROMPT" | "URL" | "SCENARIO";
       active: boolean;
       description: string;
       emoji: string;
@@ -30,6 +30,8 @@ export async function fetchInternalAdminChatBotPageData() {
       processingText: string | null;
       promptFeature: string | null;
       promptSlug: string | null;
+      scenarioId: string | null;
+      scenarioName: string | null;
       sortOrder: number;
       url: string | null;
     }>;
@@ -38,6 +40,10 @@ export async function fetchInternalAdminChatBotPageData() {
       feature: string;
       slug: string;
       title: string;
+    }>;
+    scenarios: Array<{
+      id: string;
+      name: string;
     }>;
   }>("/api/internal/admin/chat-bot");
 }

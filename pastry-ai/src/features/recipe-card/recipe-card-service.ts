@@ -7,6 +7,7 @@ import type { CardTemplate } from "@/components/recipe-card/templates";
 import { determineCardSize } from "@/components/recipe-card/templates/utils";
 import type { AIService } from "@/ai/provider/ai-service";
 import { chromium } from "playwright";
+import { getChromiumLaunchOptions } from "@/lib/playwright-launch";
 
 const MAX_CARD_HEIGHT = 1800;
 
@@ -149,7 +150,7 @@ function buildCardPages(data: RecipeCardOutput): CardPage[] {
 }
 
 async function renderCardToImage(html: string): Promise<string> {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(getChromiumLaunchOptions());
   const page = await browser.newPage({
     viewport: { width: 1080, height: 100 },
   });
@@ -204,7 +205,7 @@ export function createRecipeCardService(dependencies: {
       try {
         const firstHtml = renderRecipeCardHtml(cardData, templateName, imageUrl, size);
 
-        const probeBrowser = await chromium.launch();
+        const probeBrowser = await chromium.launch(getChromiumLaunchOptions());
         const probePage = await probeBrowser.newPage({ viewport: { width: 1080, height: 100 } });
         await probePage.setContent(firstHtml);
         const cardHeight = await probePage.evaluate(() => {

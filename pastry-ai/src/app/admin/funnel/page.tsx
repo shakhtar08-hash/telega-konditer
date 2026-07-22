@@ -6,9 +6,9 @@ import {
   AdminImageField,
   AdminInput,
   AdminPanel,
-  AdminTextarea,
   AdminToggle,
 } from "@/components/admin/form";
+import { AdminTelegramHtmlEditor } from "@/components/admin/telegram-html-editor";
 import { revalidatePath } from "next/cache";
 import {
   fetchInternalAdminFunnelPageData,
@@ -20,7 +20,12 @@ import {
   performUpdateFunnelStep,
   type FunnelMutationInput,
 } from "@/features/admin/funnel/service";
-import { parseBuyButtons, parseBuyButtonsFromFormData } from "./buy-buttons-form";
+import {
+  buildFunnelButtonsForEditor,
+  getPrimaryFunnelNavigationButton,
+  getPrimaryFunnelPaymentButton,
+  parseBuyButtonsFromFormData,
+} from "./buy-buttons-form";
 import { AdminBuyButtonsEditor } from "./buy-buttons-editor";
 import { AdminNextActionSelect } from "./next-action-select";
 import { saveAdminImage } from "../_lib/save-admin-image";
@@ -51,14 +56,19 @@ async function parseFunnelMutationInput(
   }
 
   const buyButtons = parseBuyButtonsFromFormData(formData);
+  const primaryNavigationButton = getPrimaryFunnelNavigationButton(buyButtons);
+  const primaryPaymentButton = getPrimaryFunnelPaymentButton(buyButtons);
 
   return {
     active,
     buyButtons,
-    firstBuyButton: buyButtons.find((button) => button.active),
+    firstBuyButton: primaryPaymentButton,
     imagePath,
-    nextAction,
-    nextButtonText,
+    nextAction:
+      primaryNavigationButton?.actionType === "ACTIVATE_PROMO_AND_NEXT"
+        ? "activate_promo_and_next"
+        : nextAction,
+    nextButtonText: primaryNavigationButton?.text ?? nextButtonText,
     offerButtonText,
     sortOrder,
     text,
@@ -167,7 +177,7 @@ export default async function AdminFunnelPage() {
           />
 
           <AdminField label="Текст сообщения">
-            <AdminTextarea className="min-h-32" name="text" />
+            <AdminTelegramHtmlEditor className="min-h-32" name="text" />
           </AdminField>
 
           <div className="grid gap-3 md:grid-cols-3">
@@ -195,7 +205,13 @@ export default async function AdminFunnelPage() {
       ) : (
         <div className="grid gap-4">
           {steps.map((step) => {
-            const buyButtons = parseBuyButtons(step.buyButtons);
+            const buyButtons = buildFunnelButtonsForEditor({
+              buyButtons: step.buyButtons,
+              buyButtonText: step.buyButtonText,
+              buyButtonUrl: step.buyButtonUrl,
+              nextButtonText: step.nextButtonText,
+              nextAction: step.nextAction,
+            });
 
             return (
               <form action={updateFunnelStep} key={step.id}>
@@ -236,7 +252,7 @@ export default async function AdminFunnelPage() {
                   />
 
                   <AdminField label="Текст сообщения">
-                    <AdminTextarea
+                    <AdminTelegramHtmlEditor
                       className="min-h-40"
                       defaultValue={step.text}
                       name="text"

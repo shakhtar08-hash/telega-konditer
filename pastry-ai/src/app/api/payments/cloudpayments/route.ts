@@ -3,7 +3,7 @@ import { createTriggerEventService } from "@/features/triggers/trigger-event-ser
 import { createTriggerService, TriggerMessageRecord, ScheduledMessageRecord } from "@/features/triggers/trigger-service";
 import { loadTriggerUserState } from "@/features/triggers/trigger-user-state";
 import { NextResponse } from "next/server";
-import { prisma } from "@/db/prisma";
+import { rejectForAppRole } from "@/lib/app-role";
 import {
   cloudPaymentsProduct,
   parseCloudPaymentsInvoiceId,
@@ -12,14 +12,23 @@ import {
 
 export const runtime = "nodejs";
 
-function toTriggerRuleRecord(rule: TriggerRule): TriggerMessageRecord {
-  return {
+type TriggerRuleWithScenario = TriggerRule & {
+  scenario?: { startStepId: string | null } | null;
+};
+
+function toTriggerRuleRecord(rule: TriggerRuleWithScenario): TriggerMessageRecord {
+  const record = {
     ...rule,
     buttons: rule.buttons,
+    deliveryType: rule.deliveryType as TriggerMessageRecord["deliveryType"],
+    scenarioId: rule.scenarioId,
+    startStepId: rule.scenario?.startStepId ?? null,
     conditions: rule.conditions as TriggerMessageRecord["conditions"],
     delayUnit: rule.delayUnit as TriggerMessageRecord["delayUnit"],
     status: rule.status as TriggerMessageRecord["status"],
-  };
+  } as TriggerMessageRecord & { startStepId: string | null };
+
+  return record;
 }
 
 function toScheduledMessageRecord(
@@ -46,6 +55,16 @@ function toPrismaJsonValue(
 }
 
 export async function POST(request: Request) {
+  const roleResponse = rejectForAppRole(
+    "/api/payments/cloudpayments",
+    process.env.APP_ROLE,
+    ["app"],
+  );
+
+  if (roleResponse) {
+    return roleResponse;
+  }
+
   const body = await request.text();
   const secret = process.env.CLOUDPAYMENTS_API_SECRET;
 
@@ -74,6 +93,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ code: 13 });
   }
 
+  const { prisma } = await import("@/db/prisma");
   const tariffPlan = await prisma.tariffPlan.findUnique({ where: { slug: "pastry-chef" } });
   if (!tariffPlan) {
     return NextResponse.json({ code: 13 });
@@ -123,6 +143,11 @@ export async function POST(request: Request) {
     const triggerService = createTriggerService({
       findActiveRulesByEvent: async (eventKey) => {
         const rules = await prisma.triggerRule.findMany({
+          include: {
+            scenario: {
+              select: { startStepId: true },
+            },
+          },
           where: { eventKey, status: "active" },
           orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
         });

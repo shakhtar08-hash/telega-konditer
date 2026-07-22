@@ -5,7 +5,7 @@ import {
 } from "./menu-buttons";
 
 export type PromptMenuItem = {
-  actionType?: "PROMPT" | "URL";
+  actionType?: "PROMPT" | "URL" | "SCENARIO";
   description?: string | null;
   feature: string;
   fullWidth?: boolean;
@@ -13,6 +13,7 @@ export type PromptMenuItem = {
   instructionText?: string | null;
   previewImageUrl?: string | null;
   processingText?: string | null;
+  scenarioId?: string | null;
   slug: string;
   title: string;
   url?: string | null;
@@ -149,20 +150,21 @@ export async function loadPromptMenuItems(): Promise<PromptMenuItem[]> {
   const buttons = await prisma.botMenuButton.findMany({
     orderBy: { sortOrder: "asc" },
     select: {
-actionType: true,
-        active: true,
-        description: true,
-        emoji: true,
-        fullWidth: true,
-        id: true,
-        instructionText: true,
-        label: true,
-        previewImageUrl: true,
-        processingText: true,
-        promptFeature: true,
-        promptSlug: true,
-        sortOrder: true,
-        url: true,
+      actionType: true,
+      active: true,
+      description: true,
+      emoji: true,
+      fullWidth: true,
+      id: true,
+      instructionText: true,
+      label: true,
+      previewImageUrl: true,
+      processingText: true,
+      promptFeature: true,
+      promptSlug: true,
+      scenarioId: true,
+      sortOrder: true,
+      url: true,
     },
     where: {
       active: true,
@@ -176,13 +178,20 @@ actionType: true,
       .map((button) => ({
         actionType: button.actionType,
         description: button.description,
-        feature: button.promptFeature ?? "url",
+        feature:
+          button.actionType === "SCENARIO"
+            ? "scenario"
+            : button.promptFeature ?? "url",
         fullWidth: button.fullWidth,
         id: button.id,
         instructionText: button.instructionText,
         previewImageUrl: button.previewImageUrl,
         processingText: button.processingText,
-        slug: button.promptSlug ?? button.id,
+        scenarioId: button.scenarioId ?? null,
+        slug:
+          button.actionType === "SCENARIO"
+            ? button.scenarioId ?? button.id
+            : button.promptSlug ?? button.id,
         title: [button.emoji, button.label].filter(Boolean).join(" "),
         url: resolveBotMenuUrl(button.url),
       }));
@@ -232,6 +241,7 @@ export async function findBotMenuItem(
       processingText: true,
       promptFeature: true,
       promptSlug: true,
+      scenarioId: true,
       url: true,
     },
     where: {
@@ -240,20 +250,27 @@ export async function findBotMenuItem(
     },
   });
 
-  if (!button || button.actionType !== "PROMPT") {
+  if (!button) {
     return null;
   }
 
   return {
     actionType: button.actionType,
     description: button.description,
-    feature: button.promptFeature ?? "",
+    feature:
+      button.actionType === "SCENARIO"
+        ? "scenario"
+        : button.promptFeature ?? "",
     fullWidth: button.fullWidth,
     id: button.id,
     instructionText: button.instructionText,
     previewImageUrl: button.previewImageUrl,
     processingText: button.processingText,
-    slug: button.promptSlug ?? "",
+    scenarioId: button.scenarioId ?? null,
+    slug:
+      button.actionType === "SCENARIO"
+        ? button.scenarioId ?? button.id
+        : button.promptSlug ?? "",
     title: [button.emoji, button.label].filter(Boolean).join(" "),
     url: resolveBotMenuUrl(button.url),
   };

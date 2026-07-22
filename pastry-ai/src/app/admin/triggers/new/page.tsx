@@ -82,11 +82,13 @@ function buildInitialValues(templateKey?: string): TriggerFormValues {
     conditions: template?.conditions ?? [],
     delayUnit: template?.delayUnit ?? "now",
     delayValue: template?.delayValue ?? 0,
+    deliveryType: "MESSAGE",
     eventKey: template?.eventKey ?? getLocalizedEventOptions()[0]?.key ?? "user.started",
     id: null,
     imageUrl: null,
     messageText: "",
     name: template ? (templateNameCopy[template.key] ?? template.name) : "",
+    scenarioId: null,
     status: "draft",
   };
 }
@@ -94,7 +96,7 @@ function buildInitialValues(templateKey?: string): TriggerFormValues {
 export default async function NewTriggerPage({ searchParams }: NewTriggerPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const initial = buildInitialValues(resolvedSearchParams.template);
-  const { dynamicGroups, userGroups } =
+  const { dynamicGroups, scenarios, userGroups } =
     process.env.APP_ROLE === "ingress"
       ? await fetchInternalAdminTriggerEditorData()
       : await loadAdminTriggerEditorData();
@@ -125,6 +127,7 @@ export default async function NewTriggerPage({ searchParams }: NewTriggerPagePro
         dynamicUserGroupOptions={dynamicUserGroupOptions}
         eventOptions={getLocalizedEventOptions()}
         initial={initial}
+        scenarioOptions={scenarios}
         submitLabel="Создать триггер"
         testSendAction={sendTriggerTestMessage}
         title="Новый триггер"

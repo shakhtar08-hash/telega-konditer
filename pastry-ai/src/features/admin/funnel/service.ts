@@ -1,4 +1,8 @@
 import type { FunnelBuyButton } from "@/app/admin/funnel/buy-buttons-form";
+import {
+  getPrimaryFunnelNavigationButton,
+  getPrimaryFunnelPaymentButton,
+} from "@/features/funnel/funnel-buttons";
 import { prisma } from "@/db/prisma";
 
 export type FunnelAdminStep = {
@@ -63,15 +67,24 @@ export async function performCreateFunnelStep(input: FunnelMutationInput): Promi
     return;
   }
 
+  const navigationButton = getPrimaryFunnelNavigationButton(input.buyButtons);
+  const paymentButton = getPrimaryFunnelPaymentButton(input.buyButtons);
+
   await prisma.funnelStep.create({
     data: {
-      active: true,
+      active: input.active,
       buyButtons: input.buyButtons,
-      buyButtonText: input.firstBuyButton?.text ?? "",
-      buyButtonUrl: input.firstBuyButton?.url || null,
+      buyButtonText: paymentButton?.text ?? "",
+      buyButtonUrl:
+        paymentButton?.actionType === "URL"
+          ? (paymentButton.actionValue ?? "")
+          : null,
       imagePath: input.imagePath,
-      nextButtonText: input.nextButtonText,
-      nextAction: input.nextAction,
+      nextButtonText: navigationButton?.text ?? input.nextButtonText,
+      nextAction:
+        navigationButton?.actionType === "ACTIVATE_PROMO_AND_NEXT"
+          ? "activate_promo_and_next"
+          : input.nextAction,
       offerButtonText: input.offerButtonText || null,
       slug,
       sortOrder: input.sortOrder,
@@ -88,16 +101,25 @@ export async function performUpdateFunnelStep(
     return;
   }
 
+  const navigationButton = getPrimaryFunnelNavigationButton(input.buyButtons);
+  const paymentButton = getPrimaryFunnelPaymentButton(input.buyButtons);
+
   await prisma.funnelStep.update({
     where: { id: input.id },
     data: {
       active: input.active,
       buyButtons: input.buyButtons,
-      buyButtonText: input.firstBuyButton?.text ?? "",
-      buyButtonUrl: input.firstBuyButton?.url || null,
+      buyButtonText: paymentButton?.text ?? "",
+      buyButtonUrl:
+        paymentButton?.actionType === "URL"
+          ? (paymentButton.actionValue ?? "")
+          : null,
       imagePath: input.imagePath,
-      nextButtonText: input.nextButtonText,
-      nextAction: input.nextAction,
+      nextButtonText: navigationButton?.text ?? input.nextButtonText,
+      nextAction:
+        navigationButton?.actionType === "ACTIVATE_PROMO_AND_NEXT"
+          ? "activate_promo_and_next"
+          : input.nextAction,
       offerButtonText: input.offerButtonText || null,
       sortOrder: input.sortOrder,
       text: input.text,

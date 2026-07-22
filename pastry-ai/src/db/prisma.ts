@@ -1,6 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { loadEnv } from "@/lib/env";
+import { loadEnv, requireDatabaseUrl } from "@/lib/env";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -8,13 +8,24 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient(): PrismaClient {
   const env = loadEnv();
-  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+  const adapter = new PrismaPg({
+    connectionString: requireDatabaseUrl(env, "Prisma client"),
+  });
 
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  return globalForPrisma.prisma;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property, receiver) {
+    const value = Reflect.get(getPrismaClient() as object, property, receiver);
+    return typeof value === "function" ? value.bind(getPrismaClient()) : value;
+  },
+});

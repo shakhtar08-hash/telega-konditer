@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { AdminPageHeader, formatDate } from "@/components/admin/data-table";
+import {
+  AdminPageHeader,
+  formatDate,
+  formatDateTimeLocalValue,
+} from "@/components/admin/data-table";
 import {
   AdminButton,
   AdminField,
@@ -59,10 +63,6 @@ type UserRecord = {
     userGroup: UserGroupRecord;
   }>;
 };
-
-function formatDateTimeLocalValue(date?: Date) {
-  return date ? date.toISOString().slice(0, 16) : "";
-}
 
 function getUserDisplayName(user: UserRecord) {
   return user.username || user.name || "Без имени";

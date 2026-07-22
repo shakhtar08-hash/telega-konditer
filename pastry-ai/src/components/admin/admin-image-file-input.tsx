@@ -82,10 +82,7 @@ async function compressImageForServerAction(file: File): Promise<File | null> {
       return compressedFile;
     }
 
-    if (
-      width <= MIN_IMAGE_DIMENSION ||
-      height <= MIN_IMAGE_DIMENSION
-    ) {
+    if (width <= MIN_IMAGE_DIMENSION || height <= MIN_IMAGE_DIMENSION) {
       continue;
     }
 
@@ -100,17 +97,20 @@ function formatKilobytes(bytes: number) {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+const DEFAULT_MESSAGE =
+  "Большие изображения будут автоматически уменьшены перед отправкой.";
+
 export function AdminImageFileInput({
   accept = "image/*",
   name,
+  onFileChange,
 }: {
   accept?: string;
   name: string;
+  onFileChange?: (file: File | null) => void;
 }) {
   const messageId = useId();
-  const [message, setMessage] = useState<string>(
-    "Большие изображения будут автоматически уменьшены перед отправкой.",
-  );
+  const [message, setMessage] = useState<string>(DEFAULT_MESSAGE);
 
   return (
     <div className="space-y-2">
@@ -124,16 +124,14 @@ export function AdminImageFileInput({
           const file = input.files?.[0];
 
           if (!file) {
-            setMessage(
-              "Большие изображения будут автоматически уменьшены перед отправкой.",
-            );
+            setMessage(DEFAULT_MESSAGE);
+            onFileChange?.(null);
             return;
           }
 
           if (file.size <= MAX_BROWSER_UPLOAD_BYTES) {
-            setMessage(
-              `Файл готов к отправке: ${formatKilobytes(file.size)}.`,
-            );
+            setMessage(`Файл готов к отправке: ${formatKilobytes(file.size)}.`);
+            onFileChange?.(file);
             return;
           }
 
@@ -145,6 +143,7 @@ export function AdminImageFileInput({
               setMessage(
                 "Не удалось безопасно уменьшить файл. Выберите изображение до 900 KB или сохраните его в JPG/WebP.",
               );
+              onFileChange?.(null);
               return;
             }
 
@@ -154,11 +153,13 @@ export function AdminImageFileInput({
             setMessage(
               `Изображение уменьшено: ${formatKilobytes(file.size)} -> ${formatKilobytes(compressedFile.size)}.`,
             );
+            onFileChange?.(compressedFile);
           } catch {
             input.value = "";
             setMessage(
               "Не удалось обработать изображение перед отправкой. Попробуйте другой файл.",
             );
+            onFileChange?.(null);
           }
         }}
         type="file"

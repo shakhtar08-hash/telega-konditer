@@ -1,7 +1,7 @@
 import type { InlineKeyboardMarkup } from "grammy/types";
 
 type BotMenuButtonRecord = {
-  actionType: "PROMPT" | "URL";
+  actionType: "PROMPT" | "URL" | "SCENARIO";
   active: boolean;
   emoji: string;
   fullWidth: boolean;

@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temp / debug artifacts
+tmp-*
+.tmp-*
+
+# superpowers AI agent working files
+.superpowers/
+docs/superpowers/
+
+# uploaded images (server-local)
+public/uploads/
+
+# archives
+*.tar
+*.tgz
+*.zip

@@ -13,6 +13,11 @@ const renderers: Record<CardTemplate, typeof renderMinimalHtml> = {
   dark: renderDarkHtml,
 };
 
+function isContinuationPage(pageLabel?: string): boolean {
+  if (!pageLabel) return false;
+  return !/1\/\d+\s*$/.test(pageLabel);
+}
+
 export function renderRecipeCardHtml(
   data: RecipeCardOutput,
   template: CardTemplate = "minimal",
@@ -23,5 +28,6 @@ export function renderRecipeCardHtml(
   const effectiveSize: CardSize = size ?? determineCardSize(
     [data.title, data.description, ...data.ingredients.map((i) => `${i.name} ${i.amount}`), ...data.steps, ...data.tips].join(" "),
   );
-  return renderers[template](data, imageUrl, effectiveSize, pageLabel);
+  const effectiveImageUrl = isContinuationPage(pageLabel) ? undefined : imageUrl;
+  return renderers[template](data, effectiveImageUrl, effectiveSize, pageLabel);
 }

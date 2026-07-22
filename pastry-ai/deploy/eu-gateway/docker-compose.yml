@@ -30,8 +30,11 @@ services:
         APP_ROLE: ${APP_ROLE}
     env_file:
       - .env
+    environment:
+      TZ: Europe/Moscow
     labels:
       traefik.enable: "true"
+      traefik.docker.network: "coolify"
       traefik.http.middlewares.gzip.compress: "true"
       traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: "https"
       traefik.http.routers.http-0-pastry-ai-eu-gateway.entryPoints: "http"

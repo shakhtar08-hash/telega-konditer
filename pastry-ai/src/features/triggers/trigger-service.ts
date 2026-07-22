@@ -9,6 +9,8 @@ export type ScheduledMessageRecord = {
   triggerRuleId: string;
   triggerEventKey: string;
   chatId: string;
+  scenarioId?: string | null;
+  scenarioStepId?: string | null;
   text: string;
   imageUrl: string | null;
   buttons?: unknown;
@@ -20,12 +22,18 @@ export type ScheduledMessageRecord = {
 
 export type TriggerMessageRecord = TriggerRuleRecord;
 
+type ScenarioTriggerRuleRecord = TriggerRuleRecord & {
+  startStepId?: string | null;
+};
+
 type Dependencies = {
   findActiveRulesByEvent(eventKey: string): Promise<TriggerRuleRecord[]>;
   createScheduled(data: {
     triggerRuleId: string;
     triggerEventKey: string;
     chatId: string;
+    scenarioId?: string | null;
+    scenarioStepId?: string | null;
     text: string;
     imageUrl?: string | null;
     buttons?: unknown;
@@ -54,6 +62,10 @@ export function createTriggerService(deps: Dependencies) {
       const rules = await deps.findActiveRulesByEvent(eventKey);
 
       for (const rule of rules) {
+        if (rule.delayUnit === "now") {
+          continue;
+        }
+
         if (!(await evaluateConditions(rule.conditions, state))) {
           continue;
         }
@@ -65,6 +77,32 @@ export function createTriggerService(deps: Dependencies) {
         );
 
         if (existing) {
+          continue;
+        }
+
+        if (rule.deliveryType === "SCENARIO") {
+          const scenarioRule = rule as ScenarioTriggerRuleRecord;
+
+          if (!scenarioRule.scenarioId || !scenarioRule.startStepId) {
+            throw new Error(`Scenario trigger ${rule.id} is missing a start step`);
+          }
+
+          await deps.createScheduled({
+            triggerRuleId: rule.id,
+            triggerEventKey: eventKey,
+            chatId,
+            scenarioId: scenarioRule.scenarioId,
+            scenarioStepId: scenarioRule.startStepId,
+            text: "",
+            imageUrl: null,
+            buttons: null,
+            triggeredAt: eventOccurredAt,
+            sendAt: computeSendAt(
+              eventOccurredAt,
+              rule.delayValue,
+              rule.delayUnit,
+            ),
+          });
           continue;
         }
 
@@ -91,16 +129,25 @@ export function createTriggerService(deps: Dependencies) {
         text: string,
         payload: { imageUrl: string | null; buttons: unknown },
       ) => Promise<void>,
+      sendScenarioStep?: (chatId: string, stepId: string) => Promise<void>,
     ): Promise<number> {
       const pending = await deps.findPendingScheduled(50);
       let sentCount = 0;
 
       for (const message of pending) {
         try {
-          await sendMessage(message.chatId, message.text, {
-            imageUrl: message.imageUrl ?? null,
-            buttons: message.buttons ?? null,
-          });
+          if (message.scenarioStepId) {
+            if (!sendScenarioStep) {
+              throw new Error("Scenario step sender is not configured");
+            }
+
+            await sendScenarioStep(message.chatId, message.scenarioStepId);
+          } else {
+            await sendMessage(message.chatId, message.text, {
+              imageUrl: message.imageUrl ?? null,
+              buttons: message.buttons ?? null,
+            });
+          }
           await deps.markSent(message.id);
           sentCount++;
         } catch (error) {

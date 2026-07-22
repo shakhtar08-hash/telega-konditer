@@ -11,6 +11,7 @@ vi.mock("@/db/prisma", () => ({
 }));
 
 import { createRecipeCardService } from "@/features/recipe-card/recipe-card-service";
+import type { AIService } from "@/ai/provider/ai-service";
 
 function createRecipeCardAgent() {
   return {
@@ -33,8 +34,10 @@ function createRecipeCardAgent() {
 
 function createAiService() {
   return {
+    generateObject: vi.fn(),
     generateImage: vi.fn(),
-  } as any;
+    generateText: vi.fn(),
+  } as AIService;
 }
 
 describe("recipe card service", () => {

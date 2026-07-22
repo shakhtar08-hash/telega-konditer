@@ -1,10 +1,13 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { Prisma } from "@prisma/client";
 import { saveAdminImage } from "@/app/admin/_lib/save-admin-image";
 import { loadDynamicUserGroupsOrEmpty } from "@/app/admin/_lib/dynamic-user-groups";
 import { loadUserGroupsOrEmpty } from "@/app/admin/_lib/user-groups";
 import { parseTriggerButtonsFromFormData } from "@/app/admin/triggers/trigger-buttons-form";
 import { prisma } from "@/db/prisma";
+import { evaluateConditions } from "@/features/triggers/trigger-condition";
+import { loadTriggerUserState } from "@/features/triggers/trigger-user-state";
 import { loadEnv } from "@/lib/env";
 import { assertAllowedImageUrl } from "@/lib/image-url-validator";
 import type { TriggerCondition, TriggerRuleRecord } from "@/features/triggers/trigger-rule-types";
@@ -54,11 +57,13 @@ export type AdminTriggerEditorRuleRecord = Pick<
   | "conditions"
   | "delayUnit"
   | "delayValue"
+  | "deliveryType"
   | "eventKey"
   | "id"
   | "imageUrl"
   | "messageText"
   | "name"
+  | "scenarioId"
   | "status"
 >;
 
@@ -71,6 +76,12 @@ export type AdminTriggerDynamicUserGroupRecord = {
   id: string;
   name: string;
   status: "active" | "disabled";
+};
+
+export type AdminTriggerScenarioOptionRecord = {
+  id: string;
+  name: string;
+  status: "active" | "draft" | "disabled";
 };
 
 function toBoolean(value: unknown) {
@@ -185,6 +196,12 @@ function parseDelay(formData: FormData) {
 function parseStatus(formData: FormData): TriggerStatus {
   const value = String(formData.get("status") ?? "draft").trim();
   return value === "active" || value === "disabled" ? value : "draft";
+}
+
+function parseDeliveryType(formData: FormData): TriggerRuleRecord["deliveryType"] {
+  return String(formData.get("deliveryType") ?? "MESSAGE").trim() === "SCENARIO"
+    ? "SCENARIO"
+    : "MESSAGE";
 }
 
 function validateTelegramHtmlSubset(text: string): string | null {
@@ -391,9 +408,10 @@ export async function loadAdminTriggerEditorData(
   dynamicGroups: AdminTriggerDynamicUserGroupRecord[];
   dynamicGroupsUnavailable: boolean;
   rule: AdminTriggerEditorRuleRecord | null;
+  scenarios: AdminTriggerScenarioOptionRecord[];
   userGroups: AdminTriggerUserGroupRecord[];
 }> {
-  const [rule, userGroups, dynamicGroupsResult] = await Promise.all([
+  const [rule, userGroups, dynamicGroupsResult, scenarios] = await Promise.all([
     triggerId
       ? (prisma.triggerRule.findUnique({
           where: { id: triggerId },
@@ -402,11 +420,13 @@ export async function loadAdminTriggerEditorData(
             conditions: true,
             delayUnit: true,
             delayValue: true,
+            deliveryType: true,
             eventKey: true,
             id: true,
             imageUrl: true,
             messageText: true,
             name: true,
+            scenarioId: true,
             status: true,
           },
         }) as Promise<AdminTriggerEditorRuleRecord | null>)
@@ -421,12 +441,18 @@ export async function loadAdminTriggerEditorData(
         select: { id: true, name: true, status: true },
       }) as Promise<AdminTriggerDynamicUserGroupRecord[]>,
     ),
+    prisma.scenario.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, status: true },
+      where: { status: { in: ["active", "draft"] } },
+    }) as Promise<AdminTriggerScenarioOptionRecord[]>,
   ]);
 
   return {
     dynamicGroups: dynamicGroupsResult.groups,
     dynamicGroupsUnavailable: dynamicGroupsResult.unavailable,
     rule,
+    scenarios,
     userGroups,
   };
 }
@@ -435,20 +461,37 @@ export async function performCreateTriggerRule(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const eventKey = String(formData.get("eventKey") ?? "").trim();
   const { delayValue, delayUnit } = parseDelay(formData);
+  const deliveryType = parseDeliveryType(formData);
+  const scenarioId =
+    deliveryType === "SCENARIO"
+      ? String(formData.get("scenarioId") ?? "").trim() || null
+      : null;
   const messageText = String(formData.get("messageText") ?? "").trim();
   const conditions = parseConditions(formData);
-  const buttons = parseTriggerButtonsFromFormData(formData);
+  const buttons =
+    deliveryType === "MESSAGE" ? parseTriggerButtonsFromFormData(formData) : [];
 
-  if (!name || !eventKey || !messageText) {
+  if (!name || !eventKey) {
     return;
   }
 
-  const imageUrl = await saveAdminImage({
-    entity: "triggers",
-    existingValue: null,
-    file: (formData.get("imageFile") as File | null) ?? null,
-    manualValue: String(formData.get("imageUrl") ?? ""),
-  });
+  if (deliveryType === "MESSAGE" && !messageText) {
+    return;
+  }
+
+  if (deliveryType === "SCENARIO" && !scenarioId) {
+    throw new Error("Scenario trigger requires a scenarioId");
+  }
+
+  const imageUrl =
+    deliveryType === "MESSAGE"
+      ? await saveAdminImage({
+          entity: "triggers",
+          existingValue: null,
+          file: (formData.get("imageFile") as File | null) ?? null,
+          manualValue: String(formData.get("imageUrl") ?? ""),
+        })
+      : null;
 
   await prisma.triggerRule.create({
     data: {
@@ -456,10 +499,12 @@ export async function performCreateTriggerRule(formData: FormData) {
       conditions,
       delayUnit,
       delayValue,
+      deliveryType,
       eventKey,
       imageUrl,
-      messageText,
+      messageText: deliveryType === "MESSAGE" ? messageText : "",
       name,
+      scenarioId,
       status: "draft",
     },
   });
@@ -471,20 +516,37 @@ export async function performUpdateTriggerRule(formData: FormData) {
   const eventKey = String(formData.get("eventKey") ?? "").trim();
   const { delayValue, delayUnit } = parseDelay(formData);
   const status = parseStatus(formData);
+  const deliveryType = parseDeliveryType(formData);
+  const scenarioId =
+    deliveryType === "SCENARIO"
+      ? String(formData.get("scenarioId") ?? "").trim() || null
+      : null;
   const messageText = String(formData.get("messageText") ?? "").trim();
   const conditions = parseConditions(formData);
-  const buttons = parseTriggerButtonsFromFormData(formData);
+  const buttons =
+    deliveryType === "MESSAGE" ? parseTriggerButtonsFromFormData(formData) : [];
 
-  if (!id || !name || !eventKey || !messageText) {
+  if (!id || !name || !eventKey) {
     return;
   }
 
-  const imageUrl = await saveAdminImage({
-    entity: "triggers",
-    existingValue: null,
-    file: (formData.get("imageFile") as File | null) ?? null,
-    manualValue: String(formData.get("imageUrl") ?? ""),
-  });
+  if (deliveryType === "MESSAGE" && !messageText) {
+    return;
+  }
+
+  if (deliveryType === "SCENARIO" && !scenarioId) {
+    throw new Error("Scenario trigger requires a scenarioId");
+  }
+
+  const imageUrl =
+    deliveryType === "MESSAGE"
+      ? await saveAdminImage({
+          entity: "triggers",
+          existingValue: null,
+          file: (formData.get("imageFile") as File | null) ?? null,
+          manualValue: String(formData.get("imageUrl") ?? ""),
+        })
+      : null;
 
   await prisma.triggerRule.update({
     data: {
@@ -492,10 +554,12 @@ export async function performUpdateTriggerRule(formData: FormData) {
       conditions,
       delayUnit,
       delayValue,
+      deliveryType,
       eventKey,
       imageUrl,
-      messageText,
+      messageText: deliveryType === "MESSAGE" ? messageText : "",
       name,
+      scenarioId,
       status,
     },
     where: { id },
@@ -510,6 +574,140 @@ export async function performDeleteTriggerRule(id: string) {
   await prisma.triggerRule.delete({
     where: { id },
   });
+}
+
+export async function performRunTriggerNow(
+  formData: FormData,
+): Promise<TriggerTestSendResult> {
+  const id = String(formData.get("id") ?? "").trim();
+
+  if (!id) {
+    return {
+      message: "Не удалось определить триггер для ручного запуска.",
+      ok: false,
+    };
+  }
+
+  const rule = await prisma.triggerRule.findUnique({
+    where: { id },
+    select: {
+      buttons: true,
+      conditions: true,
+      delayUnit: true,
+      delayValue: true,
+      deliveryType: true,
+      eventKey: true,
+      id: true,
+      imageUrl: true,
+      messageText: true,
+      name: true,
+      scenario: {
+        select: {
+          startStepId: true,
+        },
+      },
+      scenarioId: true,
+      status: true,
+    },
+  });
+
+  if (!rule) {
+    return {
+      message: "Триггер не найден.",
+      ok: false,
+    };
+  }
+
+  if (rule.delayUnit !== "now") {
+    return {
+      message: "Этот запуск доступен только для режима «Разослать сейчас».",
+      ok: false,
+    };
+  }
+
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      telegramId: true,
+    },
+  });
+  const conditions = Array.isArray(rule.conditions)
+    ? (rule.conditions as TriggerCondition[])
+    : [];
+  const triggeredAt = new Date();
+  let matchedCount = 0;
+
+  for (const user of users) {
+    const chatId = user.telegramId.trim();
+
+    if (!chatId) {
+      continue;
+    }
+
+    const state = await loadTriggerUserState(user.id);
+
+    if (!(await evaluateConditions(conditions, state))) {
+      continue;
+    }
+
+    const existingPending = await prisma.scheduledMessage.findFirst({
+      where: {
+        chatId,
+        sentAt: null,
+        triggerRuleId: rule.id,
+      },
+      select: { id: true },
+    });
+
+    if (existingPending) {
+      continue;
+    }
+
+    if (rule.deliveryType === "SCENARIO") {
+      if (!rule.scenarioId || !rule.scenario?.startStepId) {
+        return {
+          message: "Для сценарного триггера не найден стартовый шаг.",
+          ok: false,
+        };
+      }
+
+      await prisma.scheduledMessage.create({
+        data: {
+          buttons: Prisma.JsonNull,
+          chatId,
+          imageUrl: null,
+          scenarioId: rule.scenarioId,
+          scenarioStepId: rule.scenario.startStepId,
+          sendAt: triggeredAt,
+          text: "",
+          triggeredAt,
+          triggerEventKey: rule.eventKey,
+          triggerRuleId: rule.id,
+        },
+      });
+    } else {
+      await prisma.scheduledMessage.create({
+        data: {
+          buttons:
+            rule.buttons === null ? Prisma.JsonNull : (rule.buttons as Prisma.InputJsonValue),
+          chatId,
+          imageUrl: rule.imageUrl,
+          sendAt: triggeredAt,
+          text: rule.messageText,
+          triggeredAt,
+          triggerEventKey: rule.eventKey,
+          triggerRuleId: rule.id,
+        },
+      });
+    }
+
+    matchedCount++;
+  }
+
+  return {
+    message: `Разослано по текущей аудитории: ${matchedCount}`,
+    ok: true,
+  };
 }
 
 export async function performSendTriggerTest(

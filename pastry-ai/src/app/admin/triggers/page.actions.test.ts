@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   performCreateTriggerRuleMock,
   performDeleteTriggerRuleMock,
+  performRunTriggerNowMock,
   performSendTriggerTestMock,
   performUpdateTriggerRuleMock,
   postInternalAdminTriggerActionMock,
@@ -11,6 +12,7 @@ const {
 } = vi.hoisted(() => ({
   performCreateTriggerRuleMock: vi.fn(),
   performDeleteTriggerRuleMock: vi.fn(),
+  performRunTriggerNowMock: vi.fn(),
   performSendTriggerTestMock: vi.fn(),
   performUpdateTriggerRuleMock: vi.fn(),
   postInternalAdminTriggerActionMock: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/features/admin/triggers/service", () => ({
   performCreateTriggerRule: performCreateTriggerRuleMock,
   performDeleteTriggerRule: performDeleteTriggerRuleMock,
+  performRunTriggerNow: performRunTriggerNowMock,
   performSendTriggerTest: performSendTriggerTestMock,
   performUpdateTriggerRule: performUpdateTriggerRuleMock,
 }));
@@ -42,6 +45,7 @@ vi.mock("@/features/admin/triggers/internal-admin-client", () => ({
 import {
   createTriggerRule,
   deleteTriggerRule,
+  runTriggerNow,
   sendTriggerTestMessage,
   updateTriggerRule,
 } from "./actions";
@@ -54,6 +58,10 @@ describe("trigger rule actions", () => {
     delete process.env.INTERNAL_API_SHARED_SECRET;
     performCreateTriggerRuleMock.mockResolvedValue(undefined);
     performDeleteTriggerRuleMock.mockResolvedValue(undefined);
+    performRunTriggerNowMock.mockResolvedValue({
+      message: "Разослано по текущей аудитории: 3",
+      ok: true,
+    });
     performUpdateTriggerRuleMock.mockResolvedValue(undefined);
     performSendTriggerTestMock.mockResolvedValue({
       message: "ok",
@@ -186,5 +194,35 @@ describe("trigger rule actions", () => {
       formData,
     );
     expect(performSendTriggerTestMock).not.toHaveBeenCalled();
+  });
+
+  it("runs a now-trigger locally when not on ingress", async () => {
+    const formData = new FormData();
+    formData.set("id", "rule_1");
+
+    await expect(runTriggerNow(formData)).resolves.toEqual({
+      message: "Разослано по текущей аудитории: 3",
+      ok: true,
+    });
+
+    expect(performRunTriggerNowMock).toHaveBeenCalledWith(formData);
+    expect(postInternalAdminTriggerActionMock).not.toHaveBeenCalled();
+  });
+
+  it("routes manual now-trigger launch through RU on ingress", async () => {
+    process.env.APP_ROLE = "ingress";
+    process.env.INTERNAL_API_BASE_URL = "http://10.10.0.1:3000";
+    process.env.INTERNAL_API_SHARED_SECRET = "shared-secret";
+
+    const formData = new FormData();
+    formData.set("id", "rule_1");
+
+    await runTriggerNow(formData);
+
+    expect(postInternalAdminTriggerActionMock).toHaveBeenCalledWith(
+      "runTriggerNow",
+      formData,
+    );
+    expect(performRunTriggerNowMock).not.toHaveBeenCalled();
   });
 });

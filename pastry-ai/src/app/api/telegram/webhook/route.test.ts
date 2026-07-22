@@ -310,4 +310,30 @@ describe("isValidTelegramSecret", () => {
     expect(handleUpdateMock).not.toHaveBeenCalled();
     expect(claimCreateMock).not.toHaveBeenCalled();
   });
+
+  it("rejects webhook execution on the cron role", async () => {
+    loadEnvMock.mockReturnValue({
+      APP_ROLE: "cron",
+      INTERNAL_API_SHARED_SECRET: undefined,
+      INTERNAL_TELEGRAM_INGRESS_URL: undefined,
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_WEBHOOK_SECRET: "secret",
+    });
+
+    const response = await POST(
+      new Request("https://example.com/api/telegram/webhook", {
+        body: JSON.stringify({ message: { text: "hi" }, update_id: 44 }),
+        headers: {
+          "content-type": "application/json",
+          "x-telegram-bot-api-secret-token": "secret",
+        },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(handleUpdateMock).not.toHaveBeenCalled();
+  });
 });

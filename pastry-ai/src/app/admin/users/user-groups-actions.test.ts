@@ -121,7 +121,7 @@ describe("admin user actions", () => {
     expect(prismaMock.userTariff.update).toHaveBeenCalledWith({
       where: { userId: "user_1" },
       data: {
-        expiresAt: new Date("2026-08-01T13:00"),
+        expiresAt: new Date("2026-08-01T10:00:00.000Z"),
         remainingTokens: 24,
         tariffPlanId: "plan_1",
       },

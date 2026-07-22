@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const subNavItems = [
   { href: "/admin/chat-bot", label: "Меню" },
   { href: "/admin/triggers", label: "Триггеры" },
+  { href: "/admin/scenarios", label: "Сценарии" },
   { href: "/admin/funnel", label: "Воронка" },
 ] as const;
 

@@ -25,6 +25,8 @@ export type TriggerRuleRecord = {
   status: "draft" | "active" | "disabled";
   delayValue: number;
   delayUnit: "now" | "minutes" | "hours" | "days";
+  deliveryType: "MESSAGE" | "SCENARIO";
+  scenarioId: string | null;
   messageText: string;
   imageUrl: string | null;
   buttons: unknown;

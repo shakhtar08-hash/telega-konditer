@@ -66,7 +66,7 @@ describe("AdminDashboardPage", () => {
           metricCards: [
             {
               accent: "bg-[#7257ff]",
-              label: "РџРѕР»СЊР·РѕРІР°С‚РµР»Рё",
+              label: "Пользователи",
               value: "42",
             },
           ],

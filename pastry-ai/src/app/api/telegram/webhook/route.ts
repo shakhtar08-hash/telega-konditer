@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { createPastryBot } from "@/bot/create-bot";
+import { rejectForAppRole } from "@/lib/app-role";
 import { loadEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -71,6 +72,15 @@ export async function claimTelegramUpdate(
 
 export async function POST(request: Request): Promise<Response> {
   const env = loadEnv();
+  const roleResponse = rejectForAppRole(
+    "/api/telegram/webhook",
+    env.APP_ROLE,
+    ["ingress", "app"],
+  );
+
+  if (roleResponse) {
+    return roleResponse;
+  }
 
   if (!isValidTelegramSecret(request, env.TELEGRAM_WEBHOOK_SECRET)) {
     return new Response("Unauthorized", { status: 401 });

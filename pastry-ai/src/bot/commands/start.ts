@@ -1,8 +1,8 @@
 import type { Composer } from "grammy";
-import type { InlineKeyboardButton } from "grammy/types";
 import { Prisma, type ScheduledMessage, type TriggerRule } from "@prisma/client";
 import { userHasPromptAccess } from "../access";
 import { clearScenarioSession, setActivePrompt, type PastryBotContext } from "../context";
+import { handleScenarioButtonCallback } from "../scenarios/callback-actions";
 import { MENU_RETURN_CALLBACK } from "../menu-return";
 import {
   buildExpiredTariffKeyboard,
@@ -16,6 +16,20 @@ import {
   resolveBuyButtonUrl,
 } from "../onboarding";
 import {
+  buildPhotoStyleKeyboard,
+  executeBotCommandAction,
+  handleTariffPurchase,
+  openAskChefFlow,
+  openBestRecipeFlow,
+  openPhotoFlow,
+  openRecipeFlow,
+  openStylesFlow,
+} from "../command-actions";
+import {
+  normalizeTariffPurchaseSlug,
+  type TariffPurchaseSlug,
+} from "@/features/payments/tariff-purchase";
+import {
   buildPromptMenuKeyboard,
   buildPromptMenuMessage,
   findBotMenuItem,
@@ -23,8 +37,10 @@ import {
   getPromptSelectionText,
   loadPromptMenuItems,
 } from "../prompt-menu";
+import { resolveTelegramPhotoInput } from "../telegram-media";
 import { buildFeatureCookieBlock } from "@/features/tariffs/cookie-info";
 import { createTriggerEventService } from "@/features/triggers/trigger-event-service";
+import { sendScenarioStep } from "@/features/triggers/scenario-step-renderer";
 import {
   type ScheduledMessageRecord,
   type TriggerMessageRecord,
@@ -32,6 +48,8 @@ import {
 } from "@/features/triggers/trigger-service";
 import { loadTriggerUserState } from "@/features/triggers/trigger-user-state";
 import { prisma } from "@/db/prisma";
+
+export { buildPhotoStyleKeyboard } from "../command-actions";
 
 type UserService = {
   registerTelegramUser(input: {
@@ -42,14 +60,23 @@ type UserService = {
   assignPromoTariff(userId: string): Promise<unknown>;
 };
 
-function toTriggerRuleRecord(rule: TriggerRule): TriggerMessageRecord {
-  return {
+type TriggerRuleWithScenario = TriggerRule & {
+  scenario?: { startStepId: string | null } | null;
+};
+
+function toTriggerRuleRecord(rule: TriggerRuleWithScenario): TriggerMessageRecord {
+  const record = {
     ...rule,
     buttons: rule.buttons,
     conditions: rule.conditions as TriggerMessageRecord["conditions"],
     delayUnit: rule.delayUnit as TriggerMessageRecord["delayUnit"],
+    deliveryType: rule.deliveryType as TriggerMessageRecord["deliveryType"],
+    scenarioId: rule.scenarioId,
+    startStepId: rule.scenario?.startStepId ?? null,
     status: rule.status as TriggerMessageRecord["status"],
-  };
+  } as TriggerMessageRecord & { startStepId: string | null };
+
+  return record;
 }
 
 function toScheduledMessageRecord(
@@ -75,24 +102,6 @@ function toPrismaJsonValue(
   return value as Prisma.InputJsonValue;
 }
 
-export function buildPhotoStyleKeyboard(
-  styles: Array<{ id: string; name: string }>,
-  itemsPerRow = 2,
-): InlineKeyboardButton[][] {
-  const rows: InlineKeyboardButton[][] = [];
-
-  for (let index = 0; index < styles.length; index += itemsPerRow) {
-    rows.push(
-      styles.slice(index, index + itemsPerRow).map((style) => ({
-        callback_data: `photoshoot-style:${style.id}`,
-        text: style.name,
-      })),
-    );
-  }
-
-  return rows;
-}
-
 export function buildStartMessage(name: string): string {
   return `Привет, ${name}!`;
 }
@@ -112,28 +121,23 @@ export function registerStartCommand(
   });
 
   composer.command("recipe", async (ctx) => {
-    if (await isTariffExpired(ctx)) return;
-    await openScenarioBySlug(ctx, "recipes", "recipe-from-ingredients");
+    await openRecipeFlow(ctx);
   });
 
   composer.command("bestrecipe", async (ctx) => {
-    if (await isTariffExpired(ctx)) return;
-    await openScenarioBySlug(ctx, "best-recipe-search", "best-recipe-search");
+    await openBestRecipeFlow(ctx);
   });
 
   composer.command("ask", async (ctx) => {
-    if (await isTariffExpired(ctx)) return;
-    await openScenarioBySlug(ctx, "ask-chef", "ask-chef");
+    await openAskChefFlow(ctx);
   });
 
   composer.command("photo", async (ctx) => {
-    if (await isTariffExpired(ctx)) return;
-    await openScenarioBySlug(ctx, "photoshoot", "product-photo");
+    await openPhotoFlow(ctx);
   });
 
   composer.command("styles", async (ctx) => {
-    if (await isTariffExpired(ctx)) return;
-    await openScenarioBySlug(ctx, "photoshoot-pick-style", "pick-style");
+    await openStylesFlow(ctx);
   });
 
   composer.callbackQuery(/^onboarding:(\d+)$/, async (ctx) => {
@@ -195,6 +199,13 @@ export function registerStartCommand(
     }
   });
 
+  composer.callbackQuery(/^flow:(.+)$/, handleScenarioButtonCallback);
+
+  composer.callbackQuery(/^funnel:command:(.+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await executeBotCommandAction(ctx, ctx.match[1]);
+  });
+
   composer.callbackQuery(/^prompt:([^:]+):(.+)$/, async (ctx) => {
     if (await isTariffExpired(ctx)) return;
 
@@ -245,9 +256,9 @@ export function registerStartCommand(
 
     const userPreview = style.userPreview?.trim();
     if (userPreview) {
-      const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
-      const photoUrl = new URL(userPreview, baseUrl).toString();
-      await ctx.replyWithPhoto(photoUrl, { caption: styleMessage });
+      await ctx.replyWithPhoto(resolveTelegramPhotoInput(userPreview), {
+        caption: styleMessage,
+      });
     } else {
       await ctx.reply(styleMessage);
     }
@@ -277,12 +288,31 @@ export function registerStartCommand(
 
     await sendAccessAwareEntryPoint(ctx, userService);
   });
+
+  composer.callbackQuery(/^tariff:buy:(basic|master|chief|pastry-chef|head-chef)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+    const tariffSlug = normalizeTariffPurchaseSlug(ctx.match[1]);
+
+    if (!tariffSlug) {
+      await ctx.reply("Не удалось определить тариф для оплаты.");
+      return;
+    }
+
+    await handleTariffPurchase(ctx, {
+      tariffSlug: tariffSlug as TariffPurchaseSlug,
+    });
+  });
 }
 
 function createRuntimeTriggerEventService() {
   const triggerService = createTriggerService({
     findActiveRulesByEvent: async (eventKey) => {
       const rules = await prisma.triggerRule.findMany({
+        include: {
+          scenario: {
+            select: { startStepId: true },
+          },
+        },
         where: { eventKey, status: "active" },
         orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
       });
@@ -336,6 +366,35 @@ async function openScenarioFromItem(
 ) {
   if (!item) return;
 
+  if (item.actionType === "SCENARIO") {
+    if (!item.scenarioId) {
+      await ctx.reply(
+        "Этот сценарий сейчас недоступен. Откройте меню и выберите другой пункт.",
+      );
+      return;
+    }
+
+    const scenario = await prisma.scenario.findUnique({
+      select: { startStepId: true },
+      where: { id: item.scenarioId },
+    });
+
+    if (!scenario?.startStepId) {
+      await ctx.reply(
+        "Этот сценарий сейчас недоступен. Откройте меню и выберите другой пункт.",
+      );
+      return;
+    }
+
+    clearScenarioSession(ctx.session);
+    await sendScenarioStep(
+      ctx,
+      String(ctx.from?.id ?? ctx.chat?.id ?? ""),
+      scenario.startStepId,
+    );
+    return;
+  }
+
   setActivePrompt(
     ctx.session,
     (item.slug === "best-recipe-search" ? "best-recipe-search" : item.feature) as NonNullable<PastryBotContext["session"]["lastFeature"]>,
@@ -354,9 +413,9 @@ async function openScenarioFromItem(
 
   const previewUrl = item.previewImageUrl?.trim();
   if (previewUrl) {
-    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
-    const photoUrl = new URL(previewUrl, baseUrl).toString();
-    await ctx.replyWithPhoto(photoUrl, { caption: fullText });
+    await ctx.replyWithPhoto(resolveTelegramPhotoInput(previewUrl), {
+      caption: fullText,
+    });
   } else {
     await ctx.reply(fullText);
   }
@@ -455,17 +514,16 @@ async function sendExpiredTariffMessage(ctx: PastryBotContext, telegramId: strin
   const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
   const paymentUrl = buildPaymentUrl(baseUrl, telegramId);
   const buyButtonUrl = resolveBuyButtonUrl(step, paymentUrl, { baseUrl, telegramId });
+  const replyMarkup = buildExpiredTariffKeyboard(buyButtonUrl, step);
 
   if (isPublicAppBaseUrl(baseUrl)) {
-    const photoUrl = new URL(step.imagePath, baseUrl).toString();
-
-    await ctx.replyWithPhoto(photoUrl, {
+    await ctx.replyWithPhoto(resolveTelegramPhotoInput(step.imagePath), {
       caption: step.text,
-      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step),
+      reply_markup: replyMarkup,
     });
   } else {
     await ctx.reply(step.text, {
-      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step),
+      reply_markup: replyMarkup,
     });
   }
 }
@@ -513,9 +571,7 @@ async function sendOnboardingStep(
     return;
   }
 
-  const photoUrl = new URL(step.imagePath, baseUrl).toString();
-
-  await ctx.replyWithPhoto(photoUrl, {
+  await ctx.replyWithPhoto(resolveTelegramPhotoInput(step.imagePath), {
     caption: step.text,
     reply_markup: replyMarkup,
   });

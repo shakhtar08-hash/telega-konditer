@@ -78,7 +78,7 @@ const triggerTemplates = [
     name: "Inactive for 7 days",
     eventKey: "user.inactive_7d",
     delayValue: 0,
-    delayUnit: "now",
+    delayUnit: "minutes",
     conditions: [{ field: "hasActiveTariff", operator: "is", value: true }],
   },
 ] satisfies readonly TriggerTemplate[];

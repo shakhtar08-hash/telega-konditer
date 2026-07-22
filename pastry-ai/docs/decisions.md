@@ -108,7 +108,7 @@ Key rules:
 - New users receive the `promo` tariff on their first `/start` if they do not have a tariff yet.
 - Text AI scenarios require an active, non-expired tariff, but do not spend tokens by themselves.
 - Image scenarios require an active tariff and spend tokens according to the feature rules.
-- Expired tariff в†’ both text and image AI scenario access are blocked until a new tariff is assigned or purchased.
+- Expired tariff -> both text and image AI scenario access are blocked until a new tariff is assigned or purchased.
 
 ## KIE for Seeded Dessert Photo Styling
 
@@ -121,6 +121,17 @@ Reason: the feature takes an input dessert photo and returns styled variants, an
 Decision: recipe photo examples use KIE `flux-kontext-pro` for text-to-image generation.
 
 Reason: the current KIE integration accepts `flux-kontext-pro` for recipe photo generation, while the attempted OpenRouter image path was not working in this project setup.
+
+## Caddy Replaces Coolify/Traefik as Public Edge
+
+Decision: on July 21, 2026, after the 72-hour observation window, `coolify-proxy` (Traefik) was stopped and `eu-edge-caddy` (Caddy) was started on ports 80/443.
+
+Reason: the Coolify-managed Traefik proxy was the last Coolify dependency in the application request path. Caddy provides automatic Let's Encrypt TLS, simpler configuration, and can be deployed as a standalone Docker Compose stack without the Coolify orchestration layer. The cutover removes the operational dependency on Coolify for the public edge while keeping Coolify infrastructure services running on the server for rollback safety.
+
+Key rules:
+- Caddy proxies `eu-gateway.194.113.209.251.sslip.io` to `host.docker.internal:3001`
+- The EU gateway container on port 3001 is unchanged by the proxy cutover
+- Rollback: stop Caddy, restart `coolify-proxy`, and Traefik resumes routing from its existing Docker labels
 
 ## Structured Recipe Output
 

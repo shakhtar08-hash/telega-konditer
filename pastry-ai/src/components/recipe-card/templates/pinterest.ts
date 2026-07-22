@@ -1,6 +1,6 @@
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 import type { CardSize } from "./size-config";
-import { sizeCssVars, renderMetaHtml, renderIngredientRows, renderStepItems } from "./utils";
+import { renderIngredientRows, renderMetaHtml, renderStepItems, sizeCssVars } from "./utils";
 
 export function renderPinterestHtml(
   data: RecipeCardOutput,
@@ -15,6 +15,7 @@ export function renderPinterestHtml(
   const heroHtml = imageUrl
     ? `<div class="hero-area"><img src="${imageUrl}" alt="${data.title}" class="hero-img" /><div class="hero-overlay"></div></div>`
     : "";
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -29,21 +30,21 @@ body { display: flex; justify-content: center; align-items: center; font-family:
 .hero-img { width: 100%; height: 100%; object-fit: contain; }
 .hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(transparent, rgba(0,0,0,0.15)); }
 .card-content { padding: var(--card-padding); display: flex; flex-direction: column; gap: var(--gap); }
-h1 { font-size: var(--title-size); font-weight: 700; color: #1a1a2e; line-height: 1.15; }
-.description { font-size: var(--body-size); color: #8a8a9e; line-height: 1.5; }
+h1 { font-size: var(--title-size); font-weight: 700; color: #1A1A2E; line-height: 1.15; }
+.description { font-size: var(--body-size); color: #8A8A9E; line-height: 1.5; margin-top: 12px; }
 .meta-row { display: flex; gap: 24px; flex-wrap: wrap; }
-.meta-item { display: flex; align-items: center; gap: 8px; background: #F5F2ED; padding: 10px 18px; border-radius: 12px; font-size: 18px; color: #1a1a2e; font-weight: 500; }
+.meta-item { display: flex; align-items: center; gap: 8px; background: #F5F2ED; padding: 10px 18px; border-radius: 12px; font-size: 18px; color: #1A1A2E; font-weight: 500; }
 .meta-item span { font-size: 20px; }
 section { display: flex; flex-direction: column; gap: 16px; }
-h2 { font-size: 30px; font-weight: 600; color: #1a1a2e; }
+h2 { font-size: 30px; font-weight: 600; color: #1A1A2E; }
 ul, ol { padding-left: 24px; display: flex; flex-direction: column; gap: 8px; }
-li { font-size: 22px; color: #2d2d44; line-height: 1.5; }
+li { font-size: 22px; color: #2D2D44; line-height: 1.5; }
 .ingredient-row { display: flex; justify-content: space-between; font-size: 22px; padding: 6px 0; }
-.ingredient-name { color: #2d2d44; }
+.ingredient-name { color: #2D2D44; }
 .ingredient-amount { color: #8B7355; font-weight: 500; }
-.ingredient-section { font-size: 20px; font-weight: 700; color: #1a1a2e; padding: 10px 0 4px; border-bottom: 2px solid #C8A97E; margin-top: 6px; }
-.step-item { font-size: var(--step-size); color: #2d2d44; padding: 4px 0; border-bottom: 1px solid #F0EBE3; }
-.step-section-label { font-weight: 700; color: #1a1a2e; }
+.ingredient-section { font-size: 20px; font-weight: 700; color: #1A1A2E; padding: 10px 0 4px; border-bottom: 2px solid #C8A97E; margin-top: 6px; }
+.step-item { font-size: var(--step-size); color: #2D2D44; padding: 4px 0; border-bottom: 1px solid #F0EBE3; }
+.step-section-label { font-weight: 700; color: #1A1A2E; }
 .footer { text-align: center; font-size: 16px; color: #A09DB0; margin-top: auto; padding-top: 16px; }
 </style>
 </head>

@@ -19,3 +19,4 @@ This directory contains a minimal RU deployment path for the app container used 
 - The current startup contract still requires `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` together because the app boot path still validates full Supabase config in Phase D.
 - `INTERNAL_API_BASE_URL`, `INTERNAL_TELEGRAM_INGRESS_URL`, and `INTERNAL_AI_GATEWAY_URL` can point to the same app during the transition because this task does not cut over runtime behavior.
 - This is a transition deployment: the runtime view has moved to RU/EU-oriented keys, but the checked-in RU sample env must still satisfy the present boot requirements until a later cutover removes that dependency.
+- Trigger scheduling should move to `deploy/cron` rather than staying on the RU app runtime.

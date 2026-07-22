@@ -44,6 +44,7 @@ describe("TriggerForm", () => {
     );
 
     expect(html).toContain("Новый триггер");
+    expect(html).toContain('method="post"');
     expect(html).toContain('name="name"');
     expect(html).toContain("Условия");
     expect(html).toContain("Добавить условие");
@@ -135,6 +136,101 @@ describe("TriggerForm", () => {
     expect(html).toContain("Группа пользователей");
     expect(html).toContain("Динамическая группа");
     expect(html).toContain("Без активного тарифа");
+  });
+
+  it("renders scenario delivery controls without requiring legacy message text", () => {
+    const html = renderToStaticMarkup(
+      <TriggerForm
+        action="/api/admin/triggers/save"
+        cancelHref="/admin/triggers"
+        dynamicUserGroupOptions={dynamicUserGroupOptions}
+        eventOptions={eventOptions}
+        initial={{
+          buttons: [],
+          conditions: [],
+          delayUnit: "now",
+          delayValue: 0,
+          deliveryType: "SCENARIO",
+          eventKey: template.eventKey,
+          id: null,
+          imageUrl: null,
+          messageText: "",
+          name: "Сценарный триггер",
+          scenarioId: "scenario_1",
+          status: "draft",
+        }}
+        scenarioOptions={[{ id: "scenario_1", name: "Promo flow", status: "active" }]}
+        submitLabel="Создать триггер"
+        title="Новый триггер"
+        userGroupOptions={userGroupOptions}
+      />,
+    );
+
+    expect(html).toContain('name="deliveryType"');
+    expect(html).toContain('value="SCENARIO" selected');
+    expect(html).toContain('type="hidden" name="delayValue" value="0"');
+    expect(html).toContain('name="scenarioId"');
+    expect(html).toContain("Promo flow");
+    expect(html).not.toContain('name="messageText"');
+    expect(html).not.toContain('name="imageUrl"');
+    expect(html).not.toContain('name="buttons"');
+  });
+
+  it("hides the numeric delay input when the trigger should send immediately", () => {
+    const html = renderToStaticMarkup(
+      <TriggerForm
+        action="/api/admin/triggers/save"
+        cancelHref="/admin/triggers"
+        dynamicUserGroupOptions={dynamicUserGroupOptions}
+        eventOptions={eventOptions}
+        initial={{
+          buttons: [],
+          conditions: [],
+          delayUnit: "now",
+          delayValue: 12,
+          eventKey: template.eventKey,
+          id: null,
+          imageUrl: null,
+          messageText: "",
+          name: "Immediate trigger",
+          status: "draft",
+        }}
+        submitLabel="Create"
+        title="Immediate trigger"
+        userGroupOptions={userGroupOptions}
+      />,
+    );
+
+    expect(html).toContain('type="hidden" name="delayValue" value="0"');
+    expect(html).not.toContain('type="number" name="delayValue"');
+  });
+
+  it("shows the manual run button for an existing now-trigger", () => {
+    const html = renderToStaticMarkup(
+      <TriggerForm
+        action="/api/admin/triggers/save"
+        cancelHref="/admin/triggers"
+        deleteAction="/api/admin/triggers/delete"
+        eventOptions={eventOptions}
+        initial={{
+          buttons: [],
+          conditions: [],
+          delayUnit: "now",
+          delayValue: 0,
+          eventKey: template.eventKey,
+          id: "rule_now",
+          imageUrl: null,
+          messageText: "Promo now",
+          name: "Now trigger",
+          status: "active",
+        }}
+        submitLabel="Save"
+        title="Now trigger"
+        userGroupOptions={userGroupOptions}
+      />,
+    );
+
+    expect(html).toContain("Разослать сейчас");
   });
 
   it("initializes user and dynamic group drafts with the structured condition shape", () => {

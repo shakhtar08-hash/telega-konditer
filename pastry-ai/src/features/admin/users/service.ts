@@ -4,6 +4,7 @@ import {
   listDynamicUserGroupOptions,
   listMatchingDynamicUserGroupsForUser,
 } from "@/features/dynamic-user-groups/service";
+import { parseMoscowDateTimeLocalValue } from "@/lib/moscow-time";
 
 export type AdminUserTariffRecord = {
   expiresAt: Date;
@@ -254,11 +255,12 @@ export async function performUpdateUserTariff(input: {
   const expiresAt =
     expiresAtValue === ""
       ? getDefaultTariffExpiryDate(tariffPlan.durationDays)
-      : new Date(expiresAtValue);
+      : parseMoscowDateTimeLocalValue(expiresAtValue);
 
   if (
     !Number.isFinite(remainingTokens) ||
     remainingTokens < 0 ||
+    expiresAt === null ||
     Number.isNaN(expiresAt.getTime())
   ) {
     return;

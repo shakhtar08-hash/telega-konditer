@@ -21,7 +21,7 @@ function sanitizeStem(name: string) {
 }
 
 export async function saveAdminImage(input: {
-  entity: "chat-bot" | "funnel" | "photo-styles" | "triggers";
+  entity: "chat-bot" | "funnel" | "photo-styles" | "scenarios" | "triggers";
   file: File | null;
   existingValue?: string | null;
   manualValue?: string | null;

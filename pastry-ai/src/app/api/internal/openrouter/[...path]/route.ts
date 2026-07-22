@@ -1,3 +1,4 @@
+import { rejectForAppRole } from "@/lib/app-role";
 import { loadEnv } from "@/lib/env";
 import { resolveManagedApiKey } from "@/lib/api-secrets";
 import { isValidInternalServiceRequest } from "@/lib/internal-service-auth";
@@ -9,6 +10,15 @@ export async function POST(
   context: { params: Promise<{ path: string[] }> },
 ): Promise<Response> {
   const env = loadEnv();
+  const roleResponse = rejectForAppRole(
+    "/api/internal/openrouter",
+    env.APP_ROLE,
+    ["ingress"],
+  );
+
+  if (roleResponse) {
+    return roleResponse;
+  }
 
   if (
     !env.INTERNAL_API_SHARED_SECRET ||

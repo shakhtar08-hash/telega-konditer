@@ -26,7 +26,9 @@ It is meant to run alongside the current EU production application, not replace 
 
 - `APP_REGION=eu` and `APP_ROLE=ingress` identify this as the EU gateway role.
 - `GATEWAY_PUBLIC_HOST` should be a public hostname that resolves to the EU server and can receive a TLS certificate through the existing reverse proxy.
-- The current startup contract still requires the full Supabase triple, so those values remain in the template.
+- The ingress runtime can now start without `DATABASE_URL` and `DIRECT_URL`, but the checked-in template may still carry transitional values until the EU deployment env is cleaned up.
 - `INTERNAL_API_BASE_URL`, `INTERNAL_TELEGRAM_INGRESS_URL`, and `INTERNAL_AI_GATEWAY_URL` are transition values and should point to the current internal endpoints until a later phase changes traffic.
 - This deployment coexists with the current EU production app; it does not disable, delete, or cut over the existing live deployment.
 - In ingress mode, the public `/api/telegram/webhook` route forwards the raw Telegram update to RU over WireGuard instead of processing the bot update locally on EU.
+- On 2026-07-21, the Coolify/Traefik proxy was replaced by `deploy/eu-caddy/` (Caddy) on ports 80/443. The Caddy stack is the live public edge. Traefik (`coolify-proxy`) is stopped.
+- The old legacy Coolify application container has been retired after the 72-hour observation window.

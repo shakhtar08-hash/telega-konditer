@@ -203,7 +203,7 @@ describe("UserService", () => {
             ? {
                 id: "tariff_promo",
                 slug: "promo",
-                name: "РџСЂРѕРјРѕ",
+                name: " _! U X U",
                 tokenAmount: 15,
                 durationDays: 3,
                 active: true,
@@ -219,7 +219,7 @@ describe("UserService", () => {
           remainingTokens: 0,
           startedAt: new Date("2026-07-01T00:00:00.000Z"),
           expiresAt: new Date("2026-07-02T00:00:00.000Z"),
-          tariffPlan: { name: "РЎС‚Р°СЂС‹Р№", slug: "old" },
+          tariffPlan: { name: "Старый", slug: "old" },
         }),
         upsert: async (userId, data) => {
           upsertCalls += 1;
@@ -230,7 +230,7 @@ describe("UserService", () => {
             remainingTokens: data.remainingTokens,
             startedAt: new Date("2026-07-05T00:00:00.000Z"),
             expiresAt: data.expiresAt,
-            tariffPlan: { name: "РџСЂРѕРјРѕ", slug: "promo" },
+            tariffPlan: { name: "Промо", slug: "promo" },
           };
         },
       },

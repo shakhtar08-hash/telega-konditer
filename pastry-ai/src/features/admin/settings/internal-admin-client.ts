@@ -3,6 +3,7 @@ import {
   shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 import type { loadAdminSettingsPageData } from "./service";
+import type { AdminSettingsEnvKey } from "./runtime-env";
 
 export {
   fetchInternalAdminJson,
@@ -16,6 +17,10 @@ type AdminSettingsPageData = Awaited<
 export async function fetchInternalAdminSettingsPageData(): Promise<AdminSettingsPageData> {
   const data = await fetchInternalAdminJson<{
     dbStatus: "ok" | "error";
+    runtimeEnv: Array<{
+      key: AdminSettingsEnvKey;
+      valuePreview: string;
+    }>;
     storedSecrets: Array<{
       key: string;
       updatedAt: string;
@@ -25,6 +30,7 @@ export async function fetchInternalAdminSettingsPageData(): Promise<AdminSetting
 
   return {
     dbStatus: data.dbStatus,
+    runtimeEnv: data.runtimeEnv,
     storedSecrets: data.storedSecrets.map((secret) => ({
       ...secret,
       updatedAt: new Date(secret.updatedAt),

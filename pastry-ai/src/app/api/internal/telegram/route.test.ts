@@ -5,6 +5,7 @@ const handleTelegramWebhookMock = vi.hoisted(() =>
 );
 const loadEnvMock = vi.hoisted(() =>
   vi.fn(() => ({
+    APP_ROLE: "app",
     INTERNAL_API_SHARED_SECRET: "internal-secret",
     TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
   })),
@@ -32,6 +33,7 @@ describe("POST /api/internal/telegram", () => {
       new Response("forwarded", { status: 202 }),
     );
     loadEnvMock.mockReturnValue({
+      APP_ROLE: "app",
       INTERNAL_API_SHARED_SECRET: "internal-secret",
       TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
     });
@@ -55,6 +57,7 @@ describe("POST /api/internal/telegram", () => {
 
   it("rejects requests when the internal shared secret is not configured", async () => {
     loadEnvMock.mockReturnValue({
+      APP_ROLE: "app",
       INTERNAL_API_SHARED_SECRET: "",
       TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
     });
@@ -101,5 +104,27 @@ describe("POST /api/internal/telegram", () => {
     await expect(forwardedRequest.text()).resolves.toBe(
       JSON.stringify({ message: { text: "hi" }, update_id: 42 }),
     );
+  });
+
+  it("rejects internal telegram requests on the ingress role", async () => {
+    loadEnvMock.mockReturnValue({
+      APP_ROLE: "ingress",
+      INTERNAL_API_SHARED_SECRET: "internal-secret",
+      TELEGRAM_WEBHOOK_SECRET: "telegram-secret",
+    });
+
+    const response = await POST(
+      new Request("https://example.com/api/internal/telegram", {
+        body: JSON.stringify({ update_id: 42 }),
+        headers: {
+          "content-type": "application/json",
+          "x-internal-shared-secret": "internal-secret",
+        },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(handleTelegramWebhookMock).not.toHaveBeenCalled();
   });
 });

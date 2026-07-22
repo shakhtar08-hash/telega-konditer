@@ -3,3 +3,14 @@ node_modules
 .env
 
 /generated/prisma
+
+# temp / debug artifacts
+tmp-*
+.tmp-*
+*.tar
+*.tgz
+*.zip
+
+# superpowers AI agent working files
+.superpowers/
+docs/superpowers/

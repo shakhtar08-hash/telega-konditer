@@ -84,4 +84,37 @@ describe("AdminUserDetailPage", () => {
     expect(html).toContain("Динамические группы");
     expect(html).toContain("Без активного тарифа");
   });
+  it("renders the tariff expiry input in Moscow time", async () => {
+    prismaMock.user.findUniqueOrThrow.mockResolvedValue({
+      id: "user_1",
+      telegramId: "12345",
+      username: "roof09",
+      name: "Roof",
+      promoClaimed: false,
+      createdAt: new Date("2026-07-22T01:17:16.074Z"),
+      userTariff: {
+        expiresAt: new Date("2026-07-25T01:17:18.277Z"),
+        remainingTokens: 15,
+        tariffPlan: {
+          id: "plan_1",
+          name: "Промо",
+          slug: "promo",
+        },
+      },
+      groupMemberships: [],
+    });
+    prismaMock.userGroup.findMany.mockResolvedValue([]);
+    prismaMock.tariffPlan.findMany.mockResolvedValue([
+      { id: "plan_1", name: "Промо", slug: "promo" },
+    ]);
+
+    const html = renderToStaticMarkup(
+      await AdminUserDetailPage({
+        params: Promise.resolve({ userId: "user_1" }),
+      }),
+    );
+
+    expect(html).toContain('value="2026-07-25T04:17"');
+    expect(html).not.toContain('value="2026-07-25T01:17"');
+  });
 });

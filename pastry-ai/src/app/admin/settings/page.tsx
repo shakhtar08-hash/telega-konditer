@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { AdminPageHeader, DataTable } from "@/components/admin/data-table";
 import {
   AdminButton,
@@ -15,29 +16,10 @@ import {
   performClearApiSecret,
   performSaveApiSecret,
 } from "@/features/admin/settings/service";
+import { adminSettingsEnvKeys } from "@/features/admin/settings/runtime-env";
 import { managedApiKeys, maskSecretValue } from "@/lib/api-secrets";
-import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
-
-const envKeys = [
-  "OPENAI_API_KEY",
-  "OPENROUTER_API_KEY",
-  "DATABASE_URL",
-  "DIRECT_URL",
-  "TELEGRAM_BOT_TOKEN",
-  "TELEGRAM_WEBHOOK_SECRET",
-  "CRON_SECRET",
-  "INTERNAL_API_BASE_URL",
-  "INTERNAL_API_SHARED_SECRET",
-  "INTERNAL_TELEGRAM_INGRESS_URL",
-  "INTERNAL_AI_GATEWAY_URL",
-  "APP_REGION",
-  "APP_ROLE",
-  "ADMIN_USERNAME",
-  "ADMIN_PASSWORD",
-  "ADMIN_SESSION_SECRET",
-] as const;
 
 export async function saveApiSecret(formData: FormData) {
   "use server";
@@ -78,64 +60,71 @@ export async function clearApiSecret(formData: FormData) {
 
 export default async function AdminSettingsPage() {
   const isIngress = process.env.APP_ROLE === "ingress";
-  const { dbStatus, storedSecrets } = isIngress
+  const { dbStatus, runtimeEnv, storedSecrets } = isIngress
     ? await fetchInternalAdminSettingsPageData()
     : await loadAdminSettingsPageData();
+
   const storedSecretMap = new Map(
     storedSecrets.map((secret) => [secret.key, secret]),
   );
-  const rows = envKeys.map((key) => {
-    const envValue = isIngress ? undefined : process.env[key];
+  const runtimeEnvMap = new Map(runtimeEnv.map((entry) => [entry.key, entry]));
+
+  const rows = adminSettingsEnvKeys.map((key) => {
+    const localEnvValue = !isIngress ? process.env[key] : undefined;
+    const runtimeEnvValuePreview = runtimeEnvMap.get(key)?.valuePreview;
 
     return {
       key,
       preview:
         storedSecretMap.get(key)?.valuePreview ??
-        (envValue ? maskSecretValue(envValue) : "-"),
+        runtimeEnvValuePreview ??
+        (localEnvValue ? maskSecretValue(localEnvValue) : "-"),
       source: storedSecretMap.has(key)
-        ? "РђРґРјРёРЅРєР°"
-        : envValue
-          ? "РћРєСЂСѓР¶РµРЅРёРµ"
+        ? "Админка"
+        : runtimeEnvValuePreview || localEnvValue
+          ? "Окружение"
           : "-",
       status:
-        storedSecretMap.has(key) || envValue
-          ? "Р—Р°РґР°РЅРѕ"
-          : "РќРµ Р·Р°РґР°РЅРѕ",
+        storedSecretMap.has(key) || Boolean(runtimeEnvValuePreview || localEnvValue)
+          ? "Задано"
+          : "Не задано",
     };
   });
-  const databaseStatus =
-    dbStatus === "ok" ? "РџРѕРґРєР»СЋС‡РµРЅР°" : "РќРµРґРѕСЃС‚СѓРїРЅР°";
+
+  const databaseStatus = dbStatus === "ok" ? "Подключена" : "Недоступна";
 
   return (
     <section className="space-y-5">
       <AdminPageHeader
-        description="Runtime-РЅР°СЃС‚СЂРѕР№РєРё РїСЂРёР»РѕР¶РµРЅРёСЏ. Р—РЅР°С‡РµРЅРёСЏ СЃРµРєСЂРµС‚РѕРІ РЅРёРєРѕРіРґР° РЅРµ РїРѕРєР°Р·С‹РІР°СЋС‚СЃСЏ РїРѕР»РЅРѕСЃС‚СЊСЋ."
-        title="РќР°СЃС‚СЂРѕР№РєРё"
+        description="Runtime-настройки приложения. Значения секретов никогда не показываются полностью."
+        title="Настройки"
       />
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <AdminPanel>
-          <p className="text-sm text-[#97a4b8]">Р‘Р°Р·Р° РґР°РЅРЅС‹С…</p>
+          <p className="text-sm text-[#97a4b8]">База данных</p>
           <p className="mt-2 text-2xl font-semibold text-[#f4f7fb]">
             {databaseStatus}
           </p>
           <p className="mt-2 text-xs text-[#7f8da3]">
-            РџСЂРѕРІРµСЂСЏРµС‚СЃСЏ РєРѕСЂРѕС‚РєРёРј Р·Р°РїСЂРѕСЃРѕРј Рє PostgreSQL.
+            Проверяется коротким запросом к PostgreSQL.
           </p>
         </AdminPanel>
 
         <AdminPanel className="space-y-4">
           <AdminSectionTitle
-            description="Р—РґРµСЃСЊ РјРѕР¶РЅРѕ РїРµСЂРµРѕРїСЂРµРґРµР»РёС‚СЊ РєР»СЋС‡Рё OpenAI, OpenRouter Рё Fal AI Р±РµР· РїРѕРєР°Р·Р° РїРѕР»РЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ."
-            title="API-РєР»СЋС‡Рё"
+            description="Здесь можно переопределить ключи OpenAI, OpenRouter, KIE и Telegram без показа полного значения."
+            title="API-ключи"
           />
           <div className="grid gap-4 lg:grid-cols-2">
             {managedApiKeys.map((key) => {
               const storedSecret = storedSecretMap.get(key);
-              const envValue = isIngress ? undefined : process.env[key];
+              const runtimeEnvValuePreview = runtimeEnvMap.get(key)?.valuePreview;
+              const localEnvValue = !isIngress ? process.env[key] : undefined;
               const preview =
                 storedSecret?.valuePreview ??
-                (envValue ? maskSecretValue(envValue) : "РќРµ Р·Р°РґР°РЅРѕ");
+                runtimeEnvValuePreview ??
+                (localEnvValue ? maskSecretValue(localEnvValue) : "Не задано");
 
               return (
                 <form action={saveApiSecret} className="space-y-3" key={key}>
@@ -152,19 +141,19 @@ export default async function AdminSettingsPage() {
                       type="submit"
                       variant="secondary"
                     >
-                      РћС‡РёСЃС‚РёС‚СЊ
+                      Очистить
                     </AdminButton>
                   </div>
                   <div className="flex gap-2">
-                    <AdminField label="РќРѕРІС‹Р№ РєР»СЋС‡">
+                    <AdminField label="Новый ключ">
                       <AdminInput
                         name="value"
-                        placeholder="Р’СЃС‚Р°РІСЊС‚Рµ РЅРѕРІС‹Р№ РєР»СЋС‡"
+                        placeholder="Вставьте новый ключ"
                         type="password"
                       />
                     </AdminField>
                     <div className="flex items-end">
-                      <AdminButton type="submit">РЎРѕС…СЂР°РЅРёС‚СЊ</AdminButton>
+                      <AdminButton type="submit">Сохранить</AdminButton>
                     </div>
                   </div>
                 </form>
@@ -176,12 +165,12 @@ export default async function AdminSettingsPage() {
 
       <DataTable
         columns={[
-          { header: "РџРµСЂРµРјРµРЅРЅР°СЏ", cell: (row) => row.key },
-          { header: "РЎС‚Р°С‚СѓСЃ", cell: (row) => row.status },
-          { header: "РСЃС‚РѕС‡РЅРёРє", cell: (row) => row.source },
-          { header: "РџСЂРµРІСЊСЋ", cell: (row) => row.preview },
+          { header: "Переменная", cell: (row) => row.key },
+          { header: "Статус", cell: (row) => row.status },
+          { header: "Источник", cell: (row) => row.source },
+          { header: "Превью", cell: (row) => row.preview },
         ]}
-        empty="РџРµСЂРµРјРµРЅРЅС‹Рµ РєРѕРЅС„РёРіСѓСЂР°С†РёРё РЅРµ Р·Р°РґР°РЅС‹."
+        empty="Переменные конфигурации не заданы."
         getKey={(row) => row.key}
         rows={rows}
       />

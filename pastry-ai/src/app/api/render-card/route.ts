@@ -3,6 +3,7 @@ import { chromium } from "playwright";
 import { recipeCardOutputSchema } from "@/ai/schemas/recipe-card";
 import { renderRecipeCardHtml } from "@/components/recipe-card/RecipeCard";
 import { loadEnv } from "@/lib/env";
+import { getChromiumLaunchOptions } from "@/lib/playwright-launch";
 import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
 
     const html = renderRecipeCardHtml(parsed.data);
 
-    const browser = await chromium.launch();
+    const browser = await chromium.launch(getChromiumLaunchOptions());
     const page = await browser.newPage({
       viewport: { width: 1080, height: 1620 },
     });

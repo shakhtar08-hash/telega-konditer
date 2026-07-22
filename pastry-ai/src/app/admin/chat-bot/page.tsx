@@ -29,7 +29,7 @@ import { saveAdminImage } from "../_lib/save-admin-image";
 
 export const dynamic = "force-dynamic";
 
-type ActionType = "PROMPT" | "URL";
+type ActionType = "PROMPT" | "URL" | "SCENARIO";
 
 function parsePromptTarget(value: string) {
   const [feature, slug] = value.split("::");
@@ -64,8 +64,17 @@ function buildPromptOptions(
   });
 }
 
+function buildScenarioOptions(
+  scenarios: Array<{ id: string; name: string }>,
+) {
+  return scenarios.map((scenario) => ({
+    label: scenario.name,
+    value: scenario.id,
+  }));
+}
+
 function isActionType(value: string): value is ActionType {
-  return value === "PROMPT" || value === "URL";
+  return value === "PROMPT" || value === "URL" || value === "SCENARIO";
 }
 
 async function parseBotMenuButtonMutationInput(
@@ -84,6 +93,7 @@ async function parseBotMenuButtonMutationInput(
   const fullWidth = formData.get("fullWidth") === "on";
   const actionTypeRaw = String(formData.get("actionType") ?? "");
   const promptTarget = String(formData.get("promptTarget") ?? "");
+  const scenarioId = String(formData.get("scenarioId") ?? "").trim();
   const url = String(formData.get("url") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder"));
 
@@ -105,6 +115,7 @@ async function parseBotMenuButtonMutationInput(
     processingText: processingText || null,
     promptFeature: actionTypeRaw === "PROMPT" ? target.feature || null : null,
     promptSlug: actionTypeRaw === "PROMPT" ? target.slug || null : null,
+    scenarioId: actionTypeRaw === "SCENARIO" ? scenarioId || null : null,
     sortOrder,
     url: actionTypeRaw === "URL" ? url || null : null,
   };
@@ -183,12 +194,13 @@ export async function updateMenuIntro(formData: FormData) {
 }
 
 export default async function AdminChatBotPage() {
-  const { buttons, prompts, menuIntro } =
+  const { buttons, prompts, scenarios, menuIntro } =
     process.env.APP_ROLE === "ingress"
       ? await fetchInternalAdminChatBotPageData()
       : await loadAdminChatBotPageData();
 
   const promptOptions = buildPromptOptions(prompts);
+  const scenarioOptions = buildScenarioOptions(scenarios);
   const activeButtons = buttons.filter((button) => button.active);
 
   return (
@@ -236,9 +248,11 @@ export default async function AdminChatBotPage() {
                     <p className="truncate text-xs text-[#97a4b8]">
                       {button.actionType === "URL"
                         ? button.url || "Ссылка не задана"
-                        : `${button.promptFeature ?? "prompt"} / ${
-                            button.promptSlug ?? "slug"
-                          }`}
+                        : button.actionType === "SCENARIO"
+                          ? button.scenarioName || "Сценарий не выбран"
+                          : `${button.promptFeature ?? "prompt"} / ${
+                              button.promptSlug ?? "slug"
+                            }`}
                     </p>
                   </div>
                   <span className="text-right text-[#7f8da3]">›</span>
@@ -302,6 +316,7 @@ export default async function AdminChatBotPage() {
                 <AdminField label="Действие">
                   <AdminSelect defaultValue="PROMPT" name="actionType">
                     <option value="PROMPT">Открыть промт</option>
+                    <option value="SCENARIO">Запустить сценарий</option>
                     <option value="URL">Открыть ссылку</option>
                   </AdminSelect>
                 </AdminField>
@@ -316,6 +331,16 @@ export default async function AdminChatBotPage() {
                   </AdminSelect>
                 </AdminField>
               </div>
+              <AdminField label="Сценарий">
+                <AdminSelect name="scenarioId">
+                  <option value="">Выберите сценарий</option>
+                  {scenarioOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </AdminSelect>
+              </AdminField>
               <AdminField label="URL для ссылки">
                 <AdminInput name="url" placeholder="https://example.com" />
               </AdminField>
@@ -406,6 +431,7 @@ export default async function AdminChatBotPage() {
                         name="actionType"
                       >
                         <option value="PROMPT">Открыть промт</option>
+                        <option value="SCENARIO">Запустить сценарий</option>
                         <option value="URL">Открыть ссылку</option>
                       </AdminSelect>
                     </AdminField>
@@ -426,6 +452,20 @@ export default async function AdminChatBotPage() {
                       </AdminSelect>
                     </AdminField>
                   </div>
+
+                  <AdminField label="Сценарий">
+                    <AdminSelect
+                      defaultValue={button.scenarioId ?? ""}
+                      name="scenarioId"
+                    >
+                      <option value="">Не выбран</option>
+                      {scenarioOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                  </AdminField>
 
                   <AdminField label="URL для действия «Открыть ссылку»">
                     <AdminInput

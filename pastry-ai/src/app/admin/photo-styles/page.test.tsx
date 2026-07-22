@@ -18,7 +18,7 @@ vi.mock("@/db/prisma", () => ({
 }));
 
 function expectNoMojibake(text: string) {
-  for (const marker of ["Р Сџ", "Р Сњ", "Р РЋ", "РІР‚"]) {
+  for (const marker of ["\u0420\u0421\u045f", "\u0420\u0421\u045a", "\u0420\u0420\u040e", "\u0420\u0406\u0420\u201a"]) {
     expect(text).not.toContain(marker);
   }
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const loadEnvMock = vi.hoisted(() =>
   vi.fn(() => ({
+    APP_ROLE: "ingress",
     INTERNAL_API_SHARED_SECRET: "internal-secret",
   })),
 );
@@ -28,6 +29,7 @@ describe("POST /api/internal/openrouter/[...path]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     loadEnvMock.mockReturnValue({
+      APP_ROLE: "ingress",
       INTERNAL_API_SHARED_SECRET: "internal-secret",
     });
     isValidInternalServiceRequestMock.mockReturnValue(true);
@@ -92,5 +94,27 @@ describe("POST /api/internal/openrouter/[...path]", () => {
     );
 
     vi.unstubAllGlobals();
+  });
+
+  it("rejects OpenRouter proxy execution on the app role", async () => {
+    loadEnvMock.mockReturnValue({
+      APP_ROLE: "app",
+      INTERNAL_API_SHARED_SECRET: "internal-secret",
+    });
+
+    const response = await POST(
+      new Request("https://example.com/api/internal/openrouter/responses", {
+        body: JSON.stringify({ model: "openai/gpt-4o-mini", input: "ok" }),
+        headers: {
+          "content-type": "application/json",
+          "x-internal-shared-secret": "internal-secret",
+        },
+        method: "POST",
+      }),
+      { params: Promise.resolve({ path: ["responses"] }) },
+    );
+
+    expect(response.status).toBe(409);
+    expect(resolveManagedApiKeyMock).not.toHaveBeenCalled();
   });
 });

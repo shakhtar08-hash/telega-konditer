@@ -6,6 +6,7 @@ import { botMenuButtons, seedBotMenuButtons } from "./seed-bot-menu-buttons.mjs"
 import { botTextBlocks, seedBotTextBlocks } from "./seed-bot-text-blocks.mjs";
 import { seedEditableCollection } from "./seed-editable-collection.mjs";
 import { photoStyles, seedPhotoStyles } from "./seed-photo-styles.mjs";
+import { syncFunnelSteps } from "./sync-funnel-steps.mjs";
 import { seedTariffPlans, tariffPlans } from "./seed-tariffs.mjs";
 
 const adapter = new PrismaPg({
@@ -502,7 +503,7 @@ const funnelSteps = [
   {
     slug: "welcome",
     title: "Приветствие",
-    imagePath: "/onboarding/welcome.png",
+    imagePath: "/onboarding/1.jpg",
     sortOrder: 0,
     text:
       "Привет! Я помогу с рецептами, анализом десертов по фото и контентом для кондитера.\n\nПосле оплаты у вас откроется меню со всеми сценариями.",
@@ -619,6 +620,7 @@ await seedBotTextBlocks(prisma, botTextBlocks);
 console.log(`Seeded ${botTextBlocks.length} bot text blocks.`);
 
 await seedEditableCollection(prisma.funnelStep, funnelSteps);
+await syncFunnelSteps(prisma.funnelStep, funnelSteps);
 
 console.log(`Seeded ${funnelSteps.length} funnel steps.`);
 

@@ -22,7 +22,7 @@ function parsePromptTarget(value: string) {
 }
 
 function isActionType(value: string): value is BotMenuActionType {
-  return value === "PROMPT" || value === "URL";
+  return value === "PROMPT" || value === "URL" || value === "SCENARIO";
 }
 
 async function parseBotMenuButtonMutationInput(
@@ -41,6 +41,7 @@ async function parseBotMenuButtonMutationInput(
   const fullWidth = formData.get("fullWidth") === "on";
   const actionTypeRaw = String(formData.get("actionType") ?? "");
   const promptTarget = String(formData.get("promptTarget") ?? "");
+  const scenarioId = String(formData.get("scenarioId") ?? "").trim();
   const url = String(formData.get("url") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder"));
 
@@ -62,6 +63,7 @@ async function parseBotMenuButtonMutationInput(
     processingText: processingText || null,
     promptFeature: actionTypeRaw === "PROMPT" ? target.feature || null : null,
     promptSlug: actionTypeRaw === "PROMPT" ? target.slug || null : null,
+    scenarioId: actionTypeRaw === "SCENARIO" ? scenarioId || null : null,
     sortOrder,
     url: actionTypeRaw === "URL" ? url || null : null,
   };

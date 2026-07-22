@@ -50,6 +50,7 @@ describe("AdminSettingsPage", () => {
       vi.fn().mockResolvedValue({
         json: async () => ({
           dbStatus: "ok",
+          runtimeEnv: [],
           storedSecrets: [
             {
               key: "OPENAI_API_KEY",
@@ -79,6 +80,7 @@ describe("AdminSettingsPage", () => {
       vi.fn().mockResolvedValue({
         json: async () => ({
           dbStatus: "ok",
+          runtimeEnv: [],
           storedSecrets: [],
         }),
         ok: true,

@@ -26,6 +26,7 @@
 - Telegram bot foundation with grammY.
 - Onboarding/funnel messages with images and buy buttons.
 - CloudPayments webhook foundation.
+- YooKassa redirect payment foundation for Telegram tariff purchases.
 - Manual user plan management in admin.
 - Russian admin navigation and redesigned dashboard.
 - Prompt editor with provider/model/system/user template fields.
@@ -58,6 +59,12 @@
 - Recipe flows generate 0-4 photo examples via OpenRouter/FLUX, charged 1 token per successful send.
 - Photoshoot and single-style photoshoot: pre-generation token check, post-send charge.
 - CloudPayments webhook assigns `pastry-chef` tariff plan instead of legacy plan/credits.
+- YooKassa rollout for Telegram payments:
+  - `POST /api/payments/yookassa/create` creates redirect payments for `pastry-chef`, `master`, and `head-chef`, then stores a pending internal `Payment` row.
+  - `POST /api/payments/yookassa/webhook` verifies `payment.succeeded` with YooKassa before activating access, updates `Payment`, renews `UserTariff`, and upserts `Subscription`.
+  - Telegram bot purchase actions now request the YooKassa payment link and send the returned `confirmationUrl` back to the user inside Telegram.
+  - Current rollout prices: `Кондитер` - 990 RUB, `Мастер` - 1490 RUB, `Шеф-кондитер` - env-configured amount via `YOOKASSA_HEAD_CHEF_AMOUNT_RUB`.
+  - Subscription/payment records now store reusable provider fields (`providerPaymentId`, `paymentMethodId`, `lastPaidAt`, `nextChargeAt`, failure timestamps) so recurring billing can be added later without another schema redesign.
 - `userHasTokenAccess()` function added to `access.ts`.
 - Expanded `recipe-from-ingredients` system prompt: detailed role, task, output format (8 sections per variant), selection rules, edge cases, and image description requirements.
 - Admin photo-styles page: full CRUD — create, edit, delete styles with provider/model fields directly from admin panel.
@@ -96,6 +103,14 @@
   - Admin `/admin/funnel` UI: `AdminBuyButtonsEditor` — add/remove/edit/reorder/toggle pay buttons, `nextAction` selector.
   - `prisma/seed.mjs` updated with new fields.
   - New tests: `onboarding.test.ts` 15 tests (migration, keyboard, multiple buttons, promo), updated `funnel/page.test.tsx`.
+- **Typed button actions for scenarios and funnel**:
+  - Scenario buttons now support explicit action types for URL, scenario step transition, bot command, tariff purchase, and main menu.
+  - Funnel buttons in `/admin/funnel` now use the same typed model with `Далее`, `Активировать промо + переход`, `Оплата тарифа`, and `Команда бота`, while still normalizing legacy URL-only buttons.
+  - Onboarding and expired-tariff Telegram keyboards now render tariff-purchase and bot-command buttons from explicit button metadata instead of inferring them from raw links or text.
+  - Added shared funnel button normalization helpers and refreshed admin/onboarding tests around the new button model.
+- **Admin settings ingress runtime visibility**:
+  - `/admin/settings` on `APP_ROLE=ingress` now reads masked runtime env previews from the RU internal admin bridge instead of showing most runtime variables as empty.
+  - Added YooKassa runtime keys to the shared settings env list and `.env.example`.
 - **"Return to menu" button in bot replies**:
   - `src/bot/menu-return.ts` — shared helper `addMenuKeyboard()`, `replyChunks()` for adding "📋 В меню" inline button.
   - Single callback `menu:return` registered in `start.ts` — clears session context, shows main menu.
@@ -164,6 +179,10 @@ Admin data is stored in Supabase. If local and server use the same database, cha
 
 **Tariff/token system is implemented.** Key facts:
 
+**Caddy edge is live:** As of July 21, 2026, `eu-edge-caddy` (Caddy) serves public `80/443` with automatic Let's Encrypt TLS, proxying to the EU gateway on `3001`. The old `coolify-proxy` (Traefik) and legacy Coolify application have been retired.
+
+**Phase G complete:** 72-hour observation window passed without rollback. Caddy cutover performed. Legacy app container removed. Remaining Coolify infrastructure services idle — removal deferred.
+
 **Admin navigation is cleaned up:**
 - Left sidebar has correct active-state based on pathname via `usePathname()`.
 - `Чат-бот` section groups `/admin/chat-bot`, `/admin/triggers`, `/admin/funnel` with shared subnav.
@@ -180,6 +199,14 @@ Admin data is stored in Supabase. If local and server use the same database, cha
 - `Usage` model extended with provider, model, status, errorMessage, conversationId.
 
 **Known fix applied:** KIE API rejects `aspectRatio: "2:3"` (code 422). The `recipe-card` agent now passes `"3:4"` which KIE supports.
+
+- **Phase G — Migration completion**:
+  - 72-hour observation window (2026-07-16T20:45:40Z → 2026-07-19T20:45:40Z) completed successfully — no rollback triggered.
+  - **Caddy cutover**: `coolify-proxy` (Traefik) stopped, `eu-edge-caddy` started on ports 80/443 with automatic Let's Encrypt TLS for `eu-gateway.194.113.209.251.sslip.io`.
+  - **Legacy app retired**: old Coolify-managed production container stopped and removed.
+  - **Verification**: public HTTPS health check (200 OK), HTTP→HTTPS redirect (308), synthetic webhook test (200 OK) all confirmed.
+  - **Secret rotation**: planned as separate follow-up.
+  - Remaining Coolify infrastructure services (core, db, redis, realtime, sentinel) are still on the EU server but idle — removal deferred to separate cleanup.
 - Tariff plans (Промо, Кондитер, Мастер, Шеф-кондитер) are editable at `/admin/tariffs`.
 - TokenGuardService handles all token checking and charging.
 - Text AI scenarios require an active, non-expired tariff, but do not spend tokens themselves.
@@ -187,18 +214,21 @@ Admin data is stored in Supabase. If local and server use the same database, cha
 - Photos use OpenRouter/FLUX for text-to-image, charged at 1 token per successful send.
 - Photoshoot (multi-image) uses ALL active styles (no limit); checks all tokens before any generation; if insufficient, none are sent.
 - CloudPayments webhook assigns `pastry-chef` tariff on successful payment.
+- YooKassa now covers the RU Telegram tariff purchase flow end to end: bot -> create route -> YooKassa redirect -> verified webhook activation.
 - Existing user `credits` are migrated to `UserTariff` tokens via `prisma/migrate-legacy-users.mjs`.
 
 ## Near-Term Next Steps
 
+- Configure and test recurring charges with YooKassa using the stored payment method data if the production account supports recurring payments on the chosen flow.
 - End-to-end test of the new per-recipe delivery flow:
   - recipe prompt → multiple recipes delivered individually
   - each recipe with inline buttons
   - `create_recipe_card` callback → card generated from saved context
   - `recipe_recalculate` callback → scenario switches to recalculation
   - `ask_chef_recipe` callback → scenario switches to ask-chef
-- Add a deployment checklist for Coolify/Beget.
 - Commit and push the current local changes when approved.
+- Rotate any exposed or transitional secrets from the migration.
+- Remove remaining idle Coolify infrastructure services from EU server.
 
 ## Possible Later Features
 

@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { Bot } from "grammy";
 import { InlineKeyboard } from "grammy";
 import { Prisma, type ScheduledMessage, type TriggerRule } from "@prisma/client";
-import { prisma } from "@/db/prisma";
+import { rejectForAppRole } from "@/lib/app-role";
 import { loadEnv } from "@/lib/env";
 import {
   type ScheduledMessageRecord,
   type TriggerMessageRecord,
   createTriggerService,
 } from "@/features/triggers/trigger-service";
+import { sendScenarioStep } from "@/features/triggers/scenario-step-renderer";
+import { resolveTelegramPhotoInput } from "@/bot/telegram-media";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,14 +21,23 @@ type TriggerButton = {
   value?: string;
 };
 
-function toTriggerRuleRecord(rule: TriggerRule): TriggerMessageRecord {
-  return {
+type TriggerRuleWithScenario = TriggerRule & {
+  scenario?: { startStepId: string | null } | null;
+};
+
+function toTriggerRuleRecord(rule: TriggerRuleWithScenario): TriggerMessageRecord {
+  const record = {
     ...rule,
     buttons: rule.buttons,
+    deliveryType: rule.deliveryType as TriggerMessageRecord["deliveryType"],
+    scenarioId: rule.scenarioId,
+    startStepId: rule.scenario?.startStepId ?? null,
     conditions: rule.conditions as TriggerMessageRecord["conditions"],
     delayUnit: rule.delayUnit as TriggerMessageRecord["delayUnit"],
     status: rule.status as TriggerMessageRecord["status"],
-  };
+  } as TriggerMessageRecord & { startStepId: string | null };
+
+  return record;
 }
 
 function toScheduledMessageRecord(
@@ -77,6 +88,16 @@ function buildReplyMarkup(buttons: unknown) {
 
 export async function POST(request: Request) {
   const env = loadEnv();
+  const roleResponse = rejectForAppRole(
+    "/api/cron/process-triggers",
+    env.APP_ROLE,
+    ["cron"],
+  );
+
+  if (roleResponse) {
+    return roleResponse;
+  }
+
   const authHeader = request.headers.get("authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -89,9 +110,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { prisma } = await import("@/db/prisma");
   const triggerService = createTriggerService({
     findActiveRulesByEvent: async (eventKey) => {
       const rules = await prisma.triggerRule.findMany({
+        include: {
+          scenario: {
+            select: { startStepId: true },
+          },
+        },
         where: { eventKey, status: "active" },
         orderBy: [{ delayValue: "asc" }, { createdAt: "asc" }],
       });
@@ -143,7 +170,7 @@ export async function POST(request: Request) {
       const replyMarkup = buildReplyMarkup(payload.buttons);
 
       if (payload.imageUrl) {
-        await bot.api.sendPhoto(chatId, payload.imageUrl, {
+        await bot.api.sendPhoto(chatId, resolveTelegramPhotoInput(payload.imageUrl), {
           caption: text,
           reply_markup: replyMarkup,
         });
@@ -154,6 +181,7 @@ export async function POST(request: Request) {
         reply_markup: replyMarkup,
       });
     },
+    async (chatId, stepId) => sendScenarioStep(bot, chatId, stepId),
   );
 
   return NextResponse.json({ ok: true, sent });

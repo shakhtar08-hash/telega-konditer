@@ -32,6 +32,8 @@ const baseRule: TriggerRuleRecord = {
   status: "active",
   delayValue: 15,
   delayUnit: "minutes",
+  deliveryType: "MESSAGE",
+  scenarioId: null,
   messageText: "Hello!",
   imageUrl: null,
   buttons: null,
@@ -146,6 +148,21 @@ describe("createTriggerService", () => {
           { field: "promoClaimed", operator: "is", value: false },
           { field: "hasActiveTariff", operator: "is", value: true },
         ],
+      },
+    ]);
+
+    await service.scheduleTrigger("user.started", "12345", baseState);
+
+    expect(findExistingScheduledMock).not.toHaveBeenCalled();
+    expect(createScheduledMock).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-schedule rules that are configured for manual now delivery", async () => {
+    findActiveRulesByEventMock.mockResolvedValue([
+      {
+        ...baseRule,
+        delayUnit: "now",
+        delayValue: 0,
       },
     ]);
 

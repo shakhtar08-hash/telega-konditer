@@ -1,0 +1,10 @@
+{$GATEWAY_PUBLIC_HOST} {
+  encode zstd gzip
+
+  @yookassa_webhook path /api/payments/yookassa/webhook
+  handle @yookassa_webhook {
+    reverse_proxy 159.194.206.106:3000
+  }
+
+  reverse_proxy host.docker.internal:3001
+}

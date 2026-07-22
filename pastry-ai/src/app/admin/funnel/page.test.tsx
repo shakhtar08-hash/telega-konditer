@@ -55,8 +55,14 @@ describe("AdminFunnelPage", () => {
     expect(html).toContain("Приветствие");
     expect(html).toContain("/onboarding/1.jpg");
     expect(html).toContain("Текст шага");
-    expect(html).toContain("Оплатные кнопки");
+    expect(html).toContain("Кнопки шага");
     expect(html).toContain("Создать новый шаг");
+    expect(html).toContain("HTML-форматирование");
+    expect(html).toContain("Telegram HTML");
+    expect(html).toContain("Оплата тарифа");
+    expect(html).toContain("Активировать промо + переход");
+    expect(html).toContain("Команда бота");
+    expect(html).toContain('data-format="bold"');
     expect(html).toContain("Действие при нажатии");
     expect(html).toContain('name="nextAction" value="activate_promo_and_next"');
     expect(html).toContain('option value="activate_promo_and_next" selected=""');
@@ -78,8 +84,8 @@ describe("AdminFunnelPage", () => {
           {
             id: "step_1",
             slug: "welcome",
-            title: "РџСЂРёРІРµС‚СЃС‚РІРёРµ",
-            text: "РўРµРєСЃС‚ С€Р°РіР°",
+            title: "Приветствие",
+            text: "Текст шага",
             imagePath: "/onboarding/1.jpg",
             sortOrder: 0,
             active: true,
@@ -98,7 +104,7 @@ describe("AdminFunnelPage", () => {
     const html = renderToStaticMarkup(await AdminFunnelPage());
 
     expect(loadAdminFunnelPageDataMock).not.toHaveBeenCalled();
-    expect(html).toContain("РџСЂРёРІРµС‚СЃС‚РІРёРµ");
+    expect(html).toContain("Приветствие");
     expect(fetchMock).toHaveBeenCalled();
   });
 

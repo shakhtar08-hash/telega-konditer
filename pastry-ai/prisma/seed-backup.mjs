@@ -536,7 +536,7 @@ const funnelSteps = [
   {
     slug: "welcome",
     title: "�����������",
-    imagePath: "/onboarding/welcome.png",
+    imagePath: "/onboarding/1.jpg",
     sortOrder: 0,
     text:
       "������! � ������ ����������� � ���������, ��������� � ��������� ��� ���������.\n\n" +
@@ -727,4 +727,3 @@ if (existingTriggers === 0) {
 console.log(`Seeded trigger messages.`);
 
 await prisma.$disconnect();
-

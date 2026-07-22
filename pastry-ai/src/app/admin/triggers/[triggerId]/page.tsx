@@ -5,7 +5,7 @@ import { fetchInternalAdminTriggerEditorData } from "@/features/admin/triggers/i
 import { loadAdminTriggerEditorData } from "@/features/admin/triggers/service";
 import { getTriggerEventOptions } from "@/features/triggers/trigger-template";
 import type { TriggerCondition } from "@/features/triggers/trigger-rule-types";
-import { sendTriggerTestMessage } from "../actions";
+import { runTriggerNow, sendTriggerTestMessage } from "../actions";
 import { parseTriggerButtons } from "../trigger-buttons-form";
 import {
   TriggerForm,
@@ -63,7 +63,7 @@ function getLocalizedEventOptions() {
 
 export default async function TriggerRulePage({ params }: TriggerRulePageProps) {
   const resolvedParams = await params;
-  const { dynamicGroups, rule, userGroups } =
+  const { dynamicGroups, rule, scenarios, userGroups } =
     process.env.APP_ROLE === "ingress"
       ? await fetchInternalAdminTriggerEditorData(resolvedParams.triggerId)
       : await loadAdminTriggerEditorData(resolvedParams.triggerId);
@@ -106,13 +106,17 @@ export default async function TriggerRulePage({ params }: TriggerRulePageProps) 
             : [],
           delayUnit: rule.delayUnit as "now" | "minutes" | "hours" | "days",
           delayValue: rule.delayValue,
+          deliveryType: rule.deliveryType,
           eventKey: rule.eventKey,
           id: rule.id,
           imageUrl: rule.imageUrl,
           messageText: rule.messageText,
           name: rule.name,
+          scenarioId: rule.scenarioId,
           status: rule.status as "draft" | "active" | "disabled",
         }}
+        runNowAction={runTriggerNow}
+        scenarioOptions={scenarios}
         submitLabel="Сохранить изменения"
         testSendAction={sendTriggerTestMessage}
         title="Редактирование триггера"

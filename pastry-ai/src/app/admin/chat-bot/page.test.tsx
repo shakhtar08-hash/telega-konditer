@@ -10,6 +10,9 @@ const { prismaMock } = vi.hoisted(() => ({
     prompt: {
       findMany: vi.fn(),
     },
+    scenario: {
+      findMany: vi.fn(),
+    },
     botTextBlock: {
       findUnique: vi.fn(),
     },
@@ -21,7 +24,7 @@ vi.mock("@/db/prisma", () => ({
 }));
 
 function expectNoMojibake(text: string) {
-  for (const marker of ["Рџ", "Рќ", "РЎ", "вЂ"]) {
+  for (const marker of ["\u0420\u045f", "\u0420\u045c", "\u0420\u040e", "\u0420\u2019"]) {
     expect(text).not.toContain(marker);
   }
 }
@@ -35,7 +38,7 @@ describe("AdminChatBotPage", () => {
     delete process.env.INTERNAL_API_SHARED_SECRET;
   });
 
-  it("renders editable menu buttons and a Telegram preview", async () => {
+  it("renders editable menu buttons, scenarios, and a Telegram preview", async () => {
     prismaMock.botMenuButton.findMany.mockResolvedValue([
       {
         actionType: "PROMPT",
@@ -50,7 +53,27 @@ describe("AdminChatBotPage", () => {
         processingText: null,
         promptFeature: "recipes",
         promptSlug: "recipe-from-ingredients",
+        scenarioId: null,
+        scenario: null,
         sortOrder: 1,
+        url: null,
+      },
+      {
+        actionType: "SCENARIO",
+        active: true,
+        description: "Welcome flow",
+        emoji: "🎬",
+        fullWidth: false,
+        id: "button_scenario",
+        instructionText: null,
+        label: "Сценарий приветствия",
+        previewImageUrl: null,
+        processingText: null,
+        promptFeature: null,
+        promptSlug: null,
+        scenarioId: "scenario_1",
+        scenario: { name: "Welcome flow" },
+        sortOrder: 2,
         url: null,
       },
       {
@@ -66,7 +89,9 @@ describe("AdminChatBotPage", () => {
         processingText: null,
         promptFeature: null,
         promptSlug: null,
-        sortOrder: 2,
+        scenarioId: null,
+        scenario: null,
+        sortOrder: 3,
         url: "https://example.com/bonus",
       },
     ]);
@@ -78,18 +103,25 @@ describe("AdminChatBotPage", () => {
         title: "Рецепт по ингредиентам",
       },
     ]);
+    prismaMock.scenario.findMany.mockResolvedValue([
+      { id: "scenario_1", name: "Welcome flow" },
+    ]);
 
     const text = renderToStaticMarkup(await AdminChatBotPage());
 
     expect(chatBotDynamic).toBe("force-dynamic");
     expect(prismaMock.botMenuButton.findMany).toHaveBeenCalled();
     expect(prismaMock.prompt.findMany).toHaveBeenCalled();
+    expect(prismaMock.scenario.findMany).toHaveBeenCalled();
     expect(text).toContain("Чат-бот");
     expect(text).toContain("Меню бота");
     expect(text).toContain("Создать рецепт");
+    expect(text).toContain("Сценарий приветствия");
+    expect(text).toContain("Welcome flow");
     expect(text).toContain("Бонусы и акции");
     expect(text).toContain("Предпросмотр меню");
     expect(text).toContain("Рецепт по ингредиентам");
+    expect(text).toContain("Запустить сценарий");
     expectNoMojibake(text);
   });
 
@@ -108,6 +140,7 @@ describe("AdminChatBotPage", () => {
         title: "Карточка рецепта v2",
       },
     ]);
+    prismaMock.scenario.findMany.mockResolvedValue([]);
 
     const text = renderToStaticMarkup(await AdminChatBotPage());
 
@@ -137,6 +170,8 @@ describe("AdminChatBotPage", () => {
               processingText: null,
               promptFeature: "recipes",
               promptSlug: "recipe-from-ingredients",
+              scenarioId: null,
+              scenarioName: null,
               sortOrder: 1,
               url: null,
             },
@@ -146,6 +181,12 @@ describe("AdminChatBotPage", () => {
               feature: "recipes",
               slug: "recipe-from-ingredients",
               title: "Recipe",
+            },
+          ],
+          scenarios: [
+            {
+              id: "scenario_1",
+              name: "Welcome flow",
             },
           ],
           menuIntro: {
@@ -160,6 +201,7 @@ describe("AdminChatBotPage", () => {
     expect(html).toContain("RU Button");
     expect(prismaMock.botMenuButton.findMany).not.toHaveBeenCalled();
     expect(prismaMock.prompt.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.scenario.findMany).not.toHaveBeenCalled();
     expect(prismaMock.botTextBlock.findUnique).not.toHaveBeenCalled();
   });
 });

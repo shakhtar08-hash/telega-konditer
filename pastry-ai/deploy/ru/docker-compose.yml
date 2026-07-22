@@ -30,6 +30,8 @@ services:
         APP_ROLE: ${APP_ROLE}
     env_file:
       - .env
+    environment:
+      TZ: Europe/Moscow
     ports:
       - "3000:3000"
     restart: unless-stopped

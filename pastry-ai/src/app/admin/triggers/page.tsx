@@ -1,6 +1,6 @@
 import type { TriggerRule } from "@prisma/client";
 import Link from "next/link";
-import { AdminPageHeader } from "@/components/admin/data-table";
+import { AdminPageHeader, formatDate } from "@/components/admin/data-table";
 import ChatBotSubNav from "@/components/admin/chat-bot-subnav";
 import { AdminInput, AdminPanel, AdminSelect } from "@/components/admin/form";
 import { fetchInternalAdminTriggersPageData } from "@/features/admin/triggers/internal-admin-client";
@@ -480,7 +480,7 @@ export default async function AdminTriggersPage({
                           <p className="font-medium text-[#f4f7fb]">{rule.name}</p>
                           <p className="mt-1 text-xs text-[#97a4b8]">
                             Обновлен{" "}
-                            {rule.updatedAt.toLocaleDateString("ru-RU")}
+                            {formatDate(rule.updatedAt)}
                           </p>
                         </div>
                       </td>

@@ -42,14 +42,15 @@ describe("funnel step actions", () => {
     formData.set("id", "step_1");
     formData.set("sortOrder", "0");
     formData.set("active", "on");
-    formData.set("title", "РџСЂРёРІРµС‚СЃС‚РІРёРµ");
+    formData.set("title", "Приветствие");
     formData.set("imagePath", "/onboarding/1.jpg");
-    formData.set("text", "РўРµРєСЃС‚ С€Р°РіР°");
-    formData.set("nextButtonText", "Р”Р°Р»РµРµ");
+    formData.set("text", "Текст шага");
+    formData.set("nextButtonText", "Далее");
     formData.set("nextAction", "next");
     formData.set("offerButtonText", "");
-    formData.set("buyButtonText[]", "РљСѓРїРёС‚СЊ");
-    formData.set("buyButtonUrl[]", "{{baseUrl}}/pay");
+    formData.set("buyButtonText[]", "Купить");
+    formData.set("buyButtonActionType[]", "TARIFF_PURCHASE");
+    formData.set("buyButtonActionValue[]", "pastry-chef");
     formData.set("buyButtonActive[]", "0");
     formData.set("buyButtonSortOrder[]", "0");
 
@@ -61,19 +62,20 @@ describe("funnel step actions", () => {
         {
           active: false,
           sortOrder: 0,
-          text: "РљСѓРїРёС‚СЊ",
-          url: "{{baseUrl}}/pay",
+          text: "Купить",
+          actionType: "TARIFF_PURCHASE",
+          actionValue: "pastry-chef",
         },
       ],
       firstBuyButton: undefined,
       id: "step_1",
       imagePath: "/saved/by-eu.jpg",
       nextAction: "next",
-      nextButtonText: "Р”Р°Р»РµРµ",
+      nextButtonText: "Далее",
       offerButtonText: "",
       sortOrder: 0,
-      text: "РўРµРєСЃС‚ С€Р°РіР°",
-      title: "РџСЂРёРІРµС‚СЃС‚РІРёРµ",
+      text: "Текст шага",
+      title: "Приветствие",
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/funnel");
   });
@@ -83,10 +85,10 @@ describe("funnel step actions", () => {
     formData.set("id", "step_1");
     formData.set("sortOrder", "0");
     formData.set("active", "on");
-    formData.set("title", "РџСЂРёРІРµС‚СЃС‚РІРёРµ");
+    formData.set("title", "Приветствие");
     formData.set("imagePath", "/onboarding/1.jpg");
-    formData.set("text", "РўРµРєСЃС‚ С€Р°РіР°");
-    formData.set("nextButtonText", "Р”Р°Р»РµРµ");
+    formData.set("text", "Текст шага");
+    formData.set("nextButtonText", "Далее");
     formData.set("nextAction", "activate_promo_and_next");
     formData.set("offerButtonText", "");
 
@@ -104,10 +106,10 @@ describe("funnel step actions", () => {
     const formData = new FormData();
     formData.set("slug", "welcome");
     formData.set("sortOrder", "0");
-    formData.set("title", "РџСЂРёРІРµС‚СЃС‚РІРёРµ");
+    formData.set("title", "Приветствие");
     formData.set("imagePath", "/onboarding/1.jpg");
-    formData.set("text", "РўРµРєСЃС‚ С€Р°РіР°");
-    formData.set("nextButtonText", "Р”Р°Р»РµРµ");
+    formData.set("text", "Текст шага");
+    formData.set("nextButtonText", "Далее");
     formData.set("nextAction", "activate_promo_and_next");
     formData.set("offerButtonText", "");
 
@@ -118,6 +120,39 @@ describe("funnel step actions", () => {
         imagePath: "/saved/by-eu.jpg",
         nextAction: "activate_promo_and_next",
         slug: "welcome",
+      }),
+    );
+  });
+
+  it("saves typed funnel button actions when creating a new step", async () => {
+    const formData = new FormData();
+    formData.set("slug", "welcome");
+    formData.set("sortOrder", "0");
+    formData.set("title", "Приветствие");
+    formData.set("imagePath", "/onboarding/1.jpg");
+    formData.set("text", "Текст шага");
+    formData.set("nextButtonText", "");
+    formData.set("nextAction", "next");
+    formData.set("offerButtonText", "");
+    formData.append("buyButtonText[]", "Далее");
+    formData.append("buyButtonActionType[]", "NEXT");
+    formData.append("buyButtonActionValue[]", "");
+    formData.append("buyButtonActive[]", "1");
+    formData.append("buyButtonSortOrder[]", "0");
+
+    await createFunnelStep(formData);
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        buyButtons: [
+          {
+            text: "Далее",
+            actionType: "NEXT",
+            actionValue: null,
+            active: true,
+            sortOrder: 0,
+          },
+        ],
       }),
     );
   });
@@ -136,10 +171,10 @@ describe("funnel step actions", () => {
     const formData = new FormData();
     formData.set("id", "step_1");
     formData.set("sortOrder", "0");
-    formData.set("title", "РџСЂРёРІРµС‚СЃС‚РІРёРµ");
+    formData.set("title", "Приветствие");
     formData.set("imagePath", "/onboarding/1.jpg");
-    formData.set("text", "РўРµРєСЃС‚ С€Р°РіР°");
-    formData.set("nextButtonText", "Р”Р°Р»РµРµ");
+    formData.set("text", "Текст шага");
+    formData.set("nextButtonText", "Далее");
     formData.set("nextAction", "next");
 
     await updateFunnelStep(formData);
@@ -158,10 +193,10 @@ describe("funnel step actions", () => {
     const formData = new FormData();
     formData.set("id", "step_1");
     formData.set("sortOrder", "0");
-    formData.set("title", "РџСЂРёРІРµС‚СЃС‚РІРёРµ");
+    formData.set("title", "Приветствие");
     formData.set("imagePath", "/onboarding/1.jpg");
-    formData.set("text", "РўРµРєСЃС‚ С€Р°РіР°");
-    formData.set("nextButtonText", "Р”Р°Р»РµРµ");
+    formData.set("text", "Текст шага");
+    formData.set("nextButtonText", "Далее");
     formData.set("nextAction", "next");
 
     await expect(updateFunnelStep(formData)).rejects.toThrow(
@@ -186,11 +221,11 @@ describe("funnel step actions", () => {
     const formData = new FormData();
     formData.set("id", "step_1");
     formData.set("sortOrder", "0");
-    formData.set("title", "РџСЂРёРІРµС‚СЃС‚РІРёРµ");
+    formData.set("title", "Приветствие");
     formData.set("imagePath", "");
     formData.set("imageFile", file);
-    formData.set("text", "РўРµРєСЃС‚ С€Р°РіР°");
-    formData.set("nextButtonText", "Р”Р°Р»РµРµ");
+    formData.set("text", "Текст шага");
+    formData.set("nextButtonText", "Далее");
     formData.set("nextAction", "next");
 
     await updateFunnelStep(formData);

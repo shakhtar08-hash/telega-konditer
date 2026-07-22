@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const loadEnvMock = vi.hoisted(() =>
   vi.fn(() => ({
+    APP_ROLE: "ingress",
     INTERNAL_API_SHARED_SECRET: "internal-secret",
   })),
 );
@@ -28,6 +29,7 @@ describe("POST /api/internal/ai", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     loadEnvMock.mockReturnValue({
+      APP_ROLE: "ingress",
       INTERNAL_API_SHARED_SECRET: "internal-secret",
     });
     isValidInternalServiceRequestMock.mockReturnValue(true);
@@ -57,6 +59,7 @@ describe("POST /api/internal/ai", () => {
 
   it("rejects requests when the internal shared secret is not configured", async () => {
     loadEnvMock.mockReturnValue({
+      APP_ROLE: "ingress",
       INTERNAL_API_SHARED_SECRET: "",
     });
 
@@ -106,6 +109,31 @@ describe("POST /api/internal/ai", () => {
       prompt: "premium dessert",
       provider: "kie",
     });
+  });
+
+  it("rejects AI gateway execution on the app role", async () => {
+    loadEnvMock.mockReturnValue({
+      APP_ROLE: "app",
+      INTERNAL_API_SHARED_SECRET: "internal-secret",
+    });
+
+    const response = await POST(
+      new Request("https://example.com/api/internal/ai", {
+        body: JSON.stringify({
+          model: "gpt-image-1",
+          prompt: "premium dessert",
+          provider: "openai",
+        }),
+        headers: {
+          "content-type": "application/json",
+          "x-internal-shared-secret": "internal-secret",
+        },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(generateImageDirectMock).not.toHaveBeenCalled();
   });
 
   it("returns a sanitized provider failure without rethrowing prompt-bearing details", async () => {

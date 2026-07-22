@@ -2,7 +2,7 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl tzdata
 
 ARG OPENAI_API_KEY
 ARG OPENROUTER_API_KEY
@@ -71,7 +71,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl tzdata chromium nss freetype harfbuzz ca-certificates ttf-freefont
 
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json

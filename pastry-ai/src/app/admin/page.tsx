@@ -8,6 +8,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { fetchInternalAdminDashboardPageData } from "@/features/admin/dashboard/internal-admin-client";
 import { loadAdminDashboardPageData } from "@/features/admin/dashboard/service";
@@ -16,21 +17,11 @@ import { getPlanLabel } from "@/features/subscriptions/plans";
 export const dynamic = "force-dynamic";
 
 const numberFormat = new Intl.NumberFormat("ru-RU");
-const currencyFormat = new Intl.NumberFormat("ru-RU", {
-  currency: "RUB",
-  maximumFractionDigits: 0,
-  style: "currency",
-});
-
 const activity = [210, 270, 215, 295, 235, 205, 325];
 const revenueBars = [42, 52, 59, 64, 67, 74, 86];
 
 function formatNumber(value: number) {
   return numberFormat.format(value);
-}
-
-function formatCurrency(value: number) {
-  return currencyFormat.format(value);
 }
 
 function formatFeature(feature: string) {
@@ -324,9 +315,9 @@ export default async function AdminDashboardPage() {
               </div>
             ))}
           </div>
-          <a className="mt-4 inline-block text-sm text-[#9c86ff]" href="/admin/users">
+          <Link className="mt-4 inline-block text-sm text-[#9c86ff]" href="/admin/users">
             Показать всех пользователей →
-          </a>
+          </Link>
         </Card>
 
         <Card>

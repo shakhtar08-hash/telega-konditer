@@ -6,6 +6,7 @@ import type {
   AdminTriggerDynamicUserGroupRecord,
   AdminTriggerEditorRuleRecord,
   AdminTriggerListRuleRecord,
+  AdminTriggerScenarioOptionRecord,
   AdminTriggerUserGroupRecord,
   TriggerTestSendResult,
 } from "./service";
@@ -57,6 +58,7 @@ export async function fetchInternalAdminTriggerEditorData(
   dynamicGroups: AdminTriggerDynamicUserGroupRecord[];
   dynamicGroupsUnavailable: boolean;
   rule: AdminTriggerEditorRuleRecord | null;
+  scenarios: AdminTriggerScenarioOptionRecord[];
   userGroups: AdminTriggerUserGroupRecord[];
 }> {
   const path = triggerId
@@ -67,11 +69,13 @@ export async function fetchInternalAdminTriggerEditorData(
     dynamicGroups: AdminTriggerDynamicUserGroupRecord[];
     dynamicGroupsUnavailable?: boolean;
     rule: AdminTriggerEditorRuleRecord | null;
+    scenarios?: AdminTriggerScenarioOptionRecord[];
     userGroups: AdminTriggerUserGroupRecord[];
   }>(path).then((data) => ({
     dynamicGroups: data.dynamicGroups,
     dynamicGroupsUnavailable: data.dynamicGroupsUnavailable ?? false,
     rule: data.rule,
+    scenarios: data.scenarios ?? [],
     userGroups: data.userGroups,
   }));
 }
@@ -80,15 +84,26 @@ export async function postInternalAdminTriggerAction(
   action:
     | "createTriggerRule"
     | "deleteTriggerRule"
+    | "runTriggerNow"
     | "sendTriggerTest"
     | "updateTriggerRule",
   payload: FormData,
 ): Promise<TriggerTestSendResult | void> {
-  const requestBody = new FormData();
-  for (const [key, value] of payload.entries()) {
-    requestBody.append(key, value);
-  }
-  requestBody.set("action", action);
+  const supportsFiles =
+    action === "createTriggerRule" || action === "updateTriggerRule";
+  const requestBody = supportsFiles
+    ? (() => {
+        const body = new FormData();
+        for (const [key, value] of payload.entries()) {
+          body.append(key, value);
+        }
+        body.set("action", action);
+        return body;
+      })()
+    : JSON.stringify({
+        action,
+        ...Object.fromEntries(payload.entries()),
+      });
 
   return fetchInternalAdminJson<TriggerTestSendResult | { ok: true }>(
     "/api/internal/admin/triggers/actions",

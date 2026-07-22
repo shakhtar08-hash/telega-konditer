@@ -1,0 +1,20 @@
+services:
+  eu-edge-caddy:
+    image: caddy:2.10-alpine
+    container_name: eu-edge-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      GATEWAY_PUBLIC_HOST: ${GATEWAY_PUBLIC_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  caddy_data:
+  caddy_config:

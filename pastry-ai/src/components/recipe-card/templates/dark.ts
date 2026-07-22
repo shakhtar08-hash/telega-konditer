@@ -1,6 +1,6 @@
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 import type { CardSize } from "./size-config";
-import { sizeCssVars, renderMetaHtml, renderIngredientRows, renderStepItems } from "./utils";
+import { renderIngredientRows, renderMetaHtml, renderStepItems, sizeCssVars } from "./utils";
 
 export function renderDarkHtml(
   data: RecipeCardOutput,

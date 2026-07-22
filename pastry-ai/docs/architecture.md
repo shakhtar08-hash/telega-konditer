@@ -10,7 +10,7 @@ AI Pastry Assistant is a Next.js App Router application with a Telegram bot, adm
 - Vercel AI SDK for text/object/image calls.
 - OpenRouter for strong multimodal/text models.
 - OpenAI image generation/editing for photo style generation.
-- CloudPayments webhook route for payment access.
+- CloudPayments legacy payment page plus YooKassa redirect payment routes for tariff access.
 - Vitest for tests.
 
 ## Main Directories
@@ -25,10 +25,29 @@ AI Pastry Assistant is a Next.js App Router application with a Telegram bot, adm
 - `prisma` - schema, migrations, seed data.
 - `docs` - durable project context for agents and humans.
 
+## Runtime Roles
+
+- `APP_ROLE=ingress`, `APP_REGION=eu` - public EU edge runtime for Telegram ingress forwarding, RU admin bridging, and AI egress-only internal routes.
+- `APP_ROLE=app`, `APP_REGION=ru` - RU business runtime for bot logic, payments, admin state, uploads, logs, and the main application database.
+- `APP_ROLE=cron`, `APP_REGION=ru` - RU background runtime for scheduled trigger processing. It should be the only active scheduler.
+
+The same monorepo and app image are shared across roles, but routes must fail closed when called from the wrong role.
+
+## Current Production Edge
+
+As of July 21, 2026, the Coolify-managed Traefik proxy has been fully replaced:
+
+- **Caddy** (`eu-edge-caddy`) terminates public `80/443` with automatic Let's Encrypt TLS and proxies all traffic to the EU gateway on `host.docker.internal:3001`.
+- The EU gateway container (`pastry-ai-eu-gateway`) listens on host port `3001` and handles Telegram webhook ingress + AI egress.
+- The old legacy Coolify application container has been retired (stopped and removed after the 72-hour observation window).
+- Remaining Coolify infrastructure services (core, db, redis, realtime, sentinel) are still present on the server but are no longer in the application request path and can be removed when convenient.
+- The checked-in Caddy deployment is at `deploy/eu-caddy/` with a `Caddyfile` and `docker-compose.yml`.
+
 ## Telegram Flow
 
 1. Telegram sends updates to `/api/telegram/webhook`.
 2. The route validates `x-telegram-bot-api-secret-token`.
+3. In `APP_ROLE=ingress`, the route forwards the raw Telegram update to RU over the internal ingress path and does not execute bot business logic locally on EU.
 3. The route claims the Telegram `update_id` in `TelegramSession` before handling it. Duplicate retry deliveries return `200 OK` without running handlers again.
 4. The route creates Prisma repositories, prompt loader, AI service, feature services, and the grammY bot.
 5. Bot middleware sets auth/subscription context and uses persistent grammY session storage backed by `TelegramSession`.
@@ -41,8 +60,34 @@ AI Pastry Assistant is a Next.js App Router application with a Telegram bot, adm
 12. Recipe results are now delivered per-recipe: each generated recipe is saved as a durable `GeneratedRecipeContext` record, sent as its own text block, followed by its photo (if tokens allow), with inline buttons for `✨ Создать карточку рецепта`, `📏 Пересчитать рецепт`, and `👨‍🍳 Задать вопрос`. Each button is bound to the specific `recipeId` and loads saved context on click.
 13. Callback handlers for `create_recipe_card:<recipeId>`, `recipe_recalculate:<recipeId>`, and `ask_chef_recipe:<recipeId>` load the saved `GeneratedRecipeContext` by `recipeId` with user ownership check. The recipe-card callback reuses the saved `recipeJson`/`recipeText`/`imageUrl` without regenerating the recipe. The recalculation and ask-chef callbacks store the selected recipe context in session fields (`selectedGeneratedRecipeId`, `selectedGeneratedRecipeText`) and switch the scenario. If an editable prompt template omits `{{recipeContext}}`, the corresponding agent appends the selected recipe context automatically at runtime.
 14. Trigger scheduling (`scheduleTrigger`) loads all active trigger messages by slug, filters by user plan, and creates one pending `ScheduledMessage` per eligible message. Each scheduled row is linked to the originating trigger message via `triggerMessageId` and stores the original event timestamp (`triggeredAt`).
+15. Tariff purchase callbacks call the internal YooKassa create route, receive a redirect `confirmationUrl`, and send that payment link back to the user inside Telegram.
 
 Telegram retries webhook updates if the request times out or returns a non-2xx response. The `update_id` claim prevents duplicate AI generations when a slow AI request causes Telegram to retry the same update.
+
+## Payments
+
+The codebase currently has two payment paths:
+
+- `src/app/pay/page.tsx` keeps the older CloudPayments web page flow.
+- YooKassa is the active Telegram subscription rollout for RU app runtime.
+
+### YooKassa Redirect Flow
+
+1. A Telegram tariff purchase action calls `POST /api/payments/yookassa/create` from bot code.
+2. The create route is allowed only on `APP_ROLE=app`, `APP_REGION=ru`.
+3. The route loads the requested `TariffPlan`, maps it to the rollout price, creates a YooKassa redirect payment, and stores a pending `Payment` row with provider metadata.
+4. The bot sends the returned `confirmationUrl` to the user as an inline button in Telegram.
+5. YooKassa sends `payment.succeeded` to `POST /api/payments/yookassa/webhook`.
+6. The webhook route re-fetches the payment from YooKassa before trusting it, verifies status/amount/metadata, marks the internal payment as paid, activates or renews `UserTariff`, and upserts a `Subscription` row.
+7. The webhook stores `paymentMethodId`, `lastPaidAt`, `nextChargeAt`, and related payment metadata so future recurring billing can be added on top of the same records.
+
+### Current YooKassa Tariffs
+
+- `pastry-chef` (`Кондитер`) - 990 RUB, 120 tokens, 30 days.
+- `master` (`Мастер`) - 1490 RUB, 220 tokens, 30 days.
+- `head-chef` (`Шеф-кондитер`) - 30 days, 400 tokens, amount comes from `YOOKASSA_HEAD_CHEF_AMOUNT_RUB`.
+
+The webhook and create routes fail closed outside the RU app runtime, so EU ingress and cron roles cannot create or confirm YooKassa payments.
 
 ### Trigger Scheduling and Multi-Message Support
 

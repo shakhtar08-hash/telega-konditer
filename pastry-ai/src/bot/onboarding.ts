@@ -1,11 +1,22 @@
 import type { InlineKeyboardButton, InlineKeyboardMarkup } from "grammy/types";
+import {
+  buildTariffPurchaseCallbackData,
+  normalizeTariffPurchaseSlug,
+} from "@/features/payments/tariff-purchase";
+import {
+  buildFunnelButtonsForEditor,
+  parseStoredFunnelBuyButtons,
+  type FunnelBuyButton,
+} from "@/features/funnel/funnel-buttons";
 
-export type BuyButton = {
+type LegacyBuyButton = {
   text: string;
   url: string;
   active: boolean;
   sortOrder: number;
 };
+
+export type BuyButton = FunnelBuyButton | LegacyBuyButton;
 
 export type OnboardingStep = {
   imagePath: string;
@@ -19,35 +30,34 @@ export type OnboardingStep = {
   title: string;
 };
 
-export function migrateLegacyStep(step: OnboardingStep): OnboardingStep {
-  if (step.buyButtons.length > 0) {
-    return step;
-  }
+function normalizeBuyButtons(buttons: BuyButton[]): FunnelBuyButton[] {
+  return parseStoredFunnelBuyButtons(buttons);
+}
 
-  const legacyText = step.buyButtonText?.trim();
-  if (!legacyText) {
-    return { ...step, buyButtons: [] };
-  }
+export function migrateLegacyStep(step: OnboardingStep): OnboardingStep {
+  const normalizedBuyButtons =
+    step.buyButtons.length > 0
+      ? normalizeBuyButtons(step.buyButtons)
+      : step.buyButtonText.trim()
+        ? buildFunnelButtonsForEditor({
+            buyButtons: step.buyButtons,
+            buyButtonText: step.buyButtonText,
+            buyButtonUrl: step.buyButtonUrl,
+          })
+        : [];
 
   return {
     ...step,
-    buyButtons: [
-      {
-        text: legacyText,
-        url: step.buyButtonUrl?.trim() ?? "",
-        active: true,
-        sortOrder: 0,
-      },
-    ],
+    buyButtons: normalizedBuyButtons,
   };
 }
 
 export const onboardingSteps: OnboardingStep[] = [
   {
     title: "welcome",
-    imagePath: "/onboarding/welcome.png",
-    text: "Привет! Я помогу создать ИИ-фотосессию в любом образе.",
-    nextButtonText: "Далее",
+    imagePath: "/onboarding/1.jpg",
+    text: "РџСЂРёРІРµС‚! РЇ РїРѕРјРѕРіСѓ СЃРѕР·РґР°С‚СЊ РР-С„РѕС‚РѕСЃРµСЃСЃРёСЋ РІ Р»СЋР±РѕРј РѕР±СЂР°Р·Рµ.",
+    nextButtonText: "Р”Р°Р»РµРµ",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -57,8 +67,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "maria",
     imagePath: "/onboarding/maria.png",
-    text: "История 1: Мария получила реалистичные студийные образы.",
-    nextButtonText: "Далее",
+    text: "РСЃС‚РѕСЂРёСЏ 1: РњР°СЂРёСЏ РїРѕР»СѓС‡РёР»Р° СЂРµР°Р»РёСЃС‚РёС‡РЅС‹Рµ СЃС‚СѓРґРёР№РЅС‹Рµ РѕР±СЂР°Р·С‹.",
+    nextButtonText: "Р”Р°Р»РµРµ",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -68,8 +78,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "polina",
     imagePath: "/onboarding/polina.png",
-    text: "История 2: Полина обновила контент для соцсетей.",
-    nextButtonText: "Далее",
+    text: "РСЃС‚РѕСЂРёСЏ 2: РџРѕР»РёРЅР° РѕР±РЅРѕРІРёР»Р° РєРѕРЅС‚РµРЅС‚ РґР»СЏ СЃРѕС†СЃРµС‚РµР№.",
+    nextButtonText: "Р”Р°Р»РµРµ",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -79,8 +89,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "ksusha",
     imagePath: "/onboarding/ksusha.png",
-    text: "История 3: Ксюша попробовала новые стили и получила мотивирующие фото.",
-    nextButtonText: "Далее",
+    text: "РСЃС‚РѕСЂРёСЏ 3: РљСЃСЋС€Р° РїРѕРїСЂРѕР±РѕРІР°Р»Р° РЅРѕРІС‹Рµ СЃС‚РёР»Рё Рё РїРѕР»СѓС‡РёР»Р° РјРѕС‚РёРІРёСЂСѓСЋС‰РёРµ С„РѕС‚Рѕ.",
+    nextButtonText: "Р”Р°Р»РµРµ",
     nextAction: "next",
     buyButtons: [],
     buyButtonText: "",
@@ -90,20 +100,18 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     title: "offer",
     imagePath: "/onboarding/offer.png",
-    text: "Супер-предложение: 899₽ вместо 1800₽ в месяц.",
-    nextButtonText: "Далее",
+    text: "РЎСѓРїРµСЂ-РїСЂРµРґР»РѕР¶РµРЅРёРµ: 899в‚Ѕ РІРјРµСЃС‚Рѕ 1800в‚Ѕ РІ РјРµСЃСЏС†.",
+    nextButtonText: "Р”Р°Р»РµРµ",
     nextAction: "activate_promo_and_next",
     buyButtons: [],
     buyButtonText: "",
     buyButtonUrl: null,
-    offerButtonText: "1 модель и 70 фото | 899₽",
+    offerButtonText: "1 РјРѕРґРµР»СЊ Рё 70 С„РѕС‚Рѕ | 899в‚Ѕ",
   },
 ];
 
 export function getOnboardingStep(index: number, steps = onboardingSteps) {
-  return (
-    steps[Math.min(Math.max(index, 0), steps.length - 1)] ?? onboardingSteps[0]
-  );
+  return steps[Math.min(Math.max(index, 0), steps.length - 1)] ?? onboardingSteps[0];
 }
 
 export function buildOnboardingKeyboard(
@@ -115,34 +123,48 @@ export function buildOnboardingKeyboard(
   const migrated = migrateLegacyStep(step);
   const rows: InlineKeyboardButton[][] = [];
 
-  const activeBuyButtons = migrated.buyButtons
-    .filter((b) => b.active)
+  const activeBuyButtons = normalizeBuyButtons(migrated.buyButtons)
+    .filter((button) => button.active)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   if (activeBuyButtons.length > 0) {
-    const isLastOnLast = index >= steps.length - 1 && !migrated.nextButtonText?.trim();
+    const navigationButtons = activeBuyButtons.filter(
+      (button) =>
+        button.actionType === "NEXT" || button.actionType === "ACTIVATE_PROMO_AND_NEXT",
+    );
+    const actionButtons = activeBuyButtons.filter(
+      (button) =>
+        button.actionType !== "NEXT" &&
+        button.actionType !== "ACTIVATE_PROMO_AND_NEXT",
+    );
+    const isLastOnLast =
+      index >= steps.length - 1 &&
+      navigationButtons.length === 0 &&
+      !migrated.nextButtonText?.trim();
 
     if (isLastOnLast) {
-      const fallback =
-        migrated.offerButtonText?.trim() || activeBuyButtons[0].text;
+      const fallbackText = migrated.offerButtonText?.trim() || activeBuyButtons[0].text;
       rows.push([
-        { text: fallback, url: activeBuyButtons[0].url || paymentUrl },
+        buildRuntimeBuyButton(
+          actionButtons[0] ?? activeBuyButtons[0],
+          paymentUrl,
+          index,
+          fallbackText,
+        ),
       ]);
       return { inline_keyboard: rows };
     }
 
     const nextRow: InlineKeyboardButton[] = [];
 
-    if (migrated.nextButtonText?.trim()) {
-      nextRow.push({
-        callback_data: `onboarding:${index + 1}`,
-        text: migrated.nextButtonText.trim(),
-      });
+    if (navigationButtons[0]) {
+      nextRow.push(buildRuntimeBuyButton(navigationButtons[0], paymentUrl, index));
+    } else if (migrated.nextButtonText?.trim()) {
+      nextRow.push(buildRuntimeNavigationButton(migrated.nextButtonText.trim(), index));
     }
 
-    for (const btn of activeBuyButtons) {
-      const url = btn.url || paymentUrl;
-      nextRow.push({ text: btn.text, url });
+    for (const button of actionButtons) {
+      nextRow.push(buildRuntimeBuyButton(button, paymentUrl, index));
     }
 
     rows.push(nextRow);
@@ -151,12 +173,7 @@ export function buildOnboardingKeyboard(
     if (offerText && index >= steps.length - 1) {
       rows.push([{ text: offerText, url: paymentUrl }]);
     } else if (migrated.nextButtonText?.trim()) {
-      rows.push([
-        {
-          callback_data: `onboarding:${index + 1}`,
-          text: migrated.nextButtonText.trim(),
-        },
-      ]);
+      rows.push([buildRuntimeNavigationButton(migrated.nextButtonText.trim(), index)]);
     }
   }
 
@@ -174,11 +191,7 @@ export function isPublicAppBaseUrl(baseUrl: string) {
   try {
     const hostname = new URL(baseUrl).hostname.toLowerCase();
 
-    return (
-      hostname !== "localhost" &&
-      hostname !== "127.0.0.1" &&
-      hostname !== "::1"
-    );
+    return hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "::1";
   } catch {
     return false;
   }
@@ -202,11 +215,35 @@ export function resolveBuyButtonUrl(
     .replaceAll("{{telegramId}}", context.telegramId);
 }
 
+function resolveRuntimeBuyButtonUrl(rawUrl: string, fallbackUrl: string) {
+  const trimmedUrl = rawUrl.trim();
+
+  if (!trimmedUrl) {
+    return fallbackUrl;
+  }
+
+  try {
+    const parsedFallback = new URL(fallbackUrl);
+    const baseUrl = parsedFallback.origin;
+    const telegramId = parsedFallback.searchParams.get("telegramId") ?? "";
+    const templatedUrl = trimmedUrl
+      .replaceAll("{{baseUrl}}", baseUrl)
+      .replaceAll("{{telegramId}}", telegramId);
+
+    return new URL(templatedUrl, `${baseUrl}/`).toString();
+  } catch {
+    return trimmedUrl;
+  }
+}
+
 export async function loadOnboardingSteps(): Promise<OnboardingStep[]> {
   try {
     const { prisma } = await import("@/db/prisma");
     const rows = await prisma.funnelStep.findMany({
-      where: { active: true },
+      where: {
+        active: true,
+        slug: { not: "expired-tariff" },
+      },
       orderBy: { sortOrder: "asc" },
       select: {
         buyButtons: true,
@@ -228,7 +265,7 @@ export async function loadOnboardingSteps(): Promise<OnboardingStep[]> {
         imagePath: row.imagePath,
         nextButtonText: row.nextButtonText,
         nextAction: (row.nextAction ?? "next") as "next" | "activate_promo_and_next",
-        buyButtons: Array.isArray(row.buyButtons) ? (row.buyButtons as BuyButton[]) : [],
+        buyButtons: parseStoredFunnelBuyButtons(row.buyButtons),
         buyButtonText: row.buyButtonText ?? "",
         buyButtonUrl: row.buyButtonUrl,
         offerButtonText: row.offerButtonText,
@@ -244,7 +281,7 @@ export async function loadOnboardingSteps(): Promise<OnboardingStep[]> {
 const expiredTariffFallback: OnboardingStep = {
   title: "expired-tariff",
   imagePath: "/onboarding/offer.png",
-  text: "Срок действия вашего тарифа истёк. Чтобы продолжить пользоваться ботом, оплатите новую подписку.",
+  text: "РЎСЂРѕРє РґРµР№СЃС‚РІРёСЏ РІР°С€РµРіРѕ С‚Р°СЂРёС„Р° РёСЃС‚С‘Рє. Р§С‚РѕР±С‹ РїСЂРѕРґРѕР»Р¶РёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ Р±РѕС‚РѕРј, РѕРїР»Р°С‚РёС‚Рµ РЅРѕРІСѓСЋ РїРѕРґРїРёСЃРєСѓ.",
   nextButtonText: "",
   nextAction: "next",
   buyButtons: [],
@@ -277,7 +314,7 @@ export async function loadExpiredTariffStep(): Promise<OnboardingStep> {
       imagePath: step.imagePath,
       nextButtonText: step.nextButtonText,
       nextAction: (step.nextAction ?? "next") as "next" | "activate_promo_and_next",
-      buyButtons: Array.isArray(step.buyButtons) ? (step.buyButtons as BuyButton[]) : [],
+      buyButtons: parseStoredFunnelBuyButtons(step.buyButtons),
       buyButtonText: step.buyButtonText ?? "",
       buyButtonUrl: step.buyButtonUrl,
       offerButtonText: step.offerButtonText,
@@ -296,19 +333,71 @@ export function buildExpiredTariffKeyboard(
   const migrated = migrateLegacyStep(step);
   const rows: InlineKeyboardButton[][] = [];
 
-  rows.push([{ callback_data: "try_free", text: "Попробовать бесплатно" }]);
+  rows.push([{ callback_data: "try_free", text: "РџРѕРїСЂРѕР±РѕРІР°С‚СЊ Р±РµСЃРїР»Р°С‚РЅРѕ" }]);
 
-  const activeButtons = migrated.buyButtons
-    .filter((b) => b.active)
+  const activeButtons = normalizeBuyButtons(migrated.buyButtons)
+    .filter((button) => button.active)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   if (activeButtons.length > 0) {
-    for (const btn of activeButtons) {
-      rows.push([{ text: btn.text, url: btn.url || paymentUrl }]);
+    for (const button of activeButtons) {
+      rows.push([buildRuntimeBuyButton(button, paymentUrl, 0)]);
     }
   } else {
-    rows.push([{ text: migrated.buyButtonText || "Оплатить", url: paymentUrl }]);
+    rows.push([{ text: migrated.buyButtonText || "РћРїР»Р°С‚РёС‚СЊ", url: paymentUrl }]);
   }
 
   return { inline_keyboard: rows };
+}
+
+function buildRuntimeNavigationButton(
+  text: string,
+  index: number,
+): InlineKeyboardButton {
+  return {
+    callback_data: `onboarding:${index + 1}`,
+    text,
+  };
+}
+
+function buildRuntimeBuyButton(
+  button: BuyButton,
+  paymentUrl: string,
+  index: number,
+  textOverride?: string,
+): InlineKeyboardButton {
+  const normalizedButton = parseStoredFunnelBuyButtons([button])[0];
+  const text = textOverride ?? normalizedButton?.text ?? button.text;
+
+  if (!normalizedButton) {
+    return {
+      text,
+      url: paymentUrl,
+    };
+  }
+
+  switch (normalizedButton.actionType) {
+    case "NEXT":
+    case "ACTIVATE_PROMO_AND_NEXT":
+      return buildRuntimeNavigationButton(text, index);
+    case "TARIFF_PURCHASE":
+      const tariffSlug = normalizedButton.actionValue;
+      return {
+        callback_data: buildTariffPurchaseCallbackData(
+          normalizeTariffPurchaseSlug(tariffSlug) ?? "basic",
+        ),
+        text,
+      };
+    case "BOT_COMMAND":
+      return {
+        callback_data: `funnel:command:${normalizedButton.actionValue ?? "/menu"}`,
+        text,
+      };
+    case "URL":
+    default:
+      return {
+        text,
+        url: resolveRuntimeBuyButtonUrl(normalizedButton.actionValue ?? "", paymentUrl),
+      };
+  }
 }

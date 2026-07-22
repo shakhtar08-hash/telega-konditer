@@ -6,6 +6,7 @@ import { postInternalAdminTriggerAction } from "@/features/admin/triggers/intern
 import {
   performCreateTriggerRule,
   performDeleteTriggerRule,
+  performRunTriggerNow,
   performSendTriggerTest,
   performUpdateTriggerRule,
   type TriggerTestSendResult,
@@ -76,4 +77,30 @@ export async function sendTriggerTestMessage(
   }
 
   return performSendTriggerTest(formData);
+}
+
+export async function runTriggerNow(
+  stateOrFormData: TriggerTestSendResult | FormData,
+  maybeFormData?: FormData,
+): Promise<TriggerTestSendResult> {
+  const formData =
+    stateOrFormData instanceof FormData ? stateOrFormData : maybeFormData;
+
+  if (!formData) {
+    return {
+      message: "Не удалось прочитать данные формы для ручной рассылки.",
+      ok: false,
+    };
+  }
+
+  if (process.env.APP_ROLE === "ingress") {
+    return (
+      (await postInternalAdminTriggerAction("runTriggerNow", formData)) ?? {
+        message: "Ручная рассылка не удалась.",
+        ok: false,
+      }
+    );
+  }
+
+  return performRunTriggerNow(formData);
 }

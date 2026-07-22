@@ -88,6 +88,20 @@ const moscowDate = new Intl.DateTimeFormat("ru-RU", {
   day: "2-digit",
 });
 
+const moscowDateTimeParts = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Europe/Moscow",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
 export function formatDate(date: Date) {
   return moscowDate.format(date);
+}
+
+export function formatDateTimeLocalValue(date?: Date) {
+  return date ? moscowDateTimeParts.format(date).replace(" ", "T") : "";
 }

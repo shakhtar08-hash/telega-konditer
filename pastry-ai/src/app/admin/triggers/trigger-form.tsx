@@ -1,21 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   AdminButton,
   AdminField,
   AdminInput,
   AdminPanel,
   AdminSelect,
-  AdminTextarea,
 } from "@/components/admin/form";
+import { AdminTelegramHtmlEditor } from "@/components/admin/telegram-html-editor";
 import type { TriggerEventOption } from "@/features/triggers/trigger-template";
 import type { TriggerCondition, TriggerRuleRecord } from "@/features/triggers/trigger-rule-types";
-import {
-  applyTelegramHtmlFormat,
-  type TriggerMessageFormat,
-} from "./trigger-message-format";
 import { TriggerButtonsEditor, type TriggerButtonDraft } from "./trigger-buttons-editor";
 
 export type TriggerFormValues = {
@@ -25,10 +21,12 @@ export type TriggerFormValues = {
   status: TriggerRuleRecord["status"];
   delayValue: number;
   delayUnit: TriggerRuleRecord["delayUnit"];
+  deliveryType?: TriggerRuleRecord["deliveryType"];
   messageText: string;
   imageUrl: string | null;
   buttons: TriggerButtonDraft[];
   conditions: TriggerCondition[];
+  scenarioId?: string | null;
 };
 
 export type TriggerUserGroupOption = {
@@ -41,12 +39,23 @@ export type TriggerDynamicUserGroupOption = {
   label: string;
 };
 
+export type TriggerScenarioOption = {
+  id: string;
+  name: string;
+  status: "active" | "draft" | "disabled";
+};
+
 type TriggerFormProps = {
   action: string | ((formData: FormData) => Promise<void>);
   cancelHref: string;
   deleteAction?: string | ((formData: FormData) => Promise<void>);
   eventOptions: readonly TriggerEventOption[];
   initial: TriggerFormValues;
+  runNowAction?: (
+    state: TriggerTestSendState,
+    formData: FormData,
+  ) => Promise<TriggerTestSendState>;
+  scenarioOptions?: readonly TriggerScenarioOption[];
   submitLabel: string;
   testSendAction?: (
     state: TriggerTestSendState,
@@ -81,19 +90,6 @@ const delayUnitOptions = [
   { value: "hours", label: "Часы" },
   { value: "days", label: "Дни" },
 ] as const;
-
-const triggerMessageFormatOptions: Array<{
-  format: TriggerMessageFormat;
-  label: string;
-}> = [
-  { format: "bold", label: "B" },
-  { format: "italic", label: "I" },
-  { format: "strikethrough", label: "S" },
-  { format: "code", label: "</>" },
-  { format: "pre", label: "{ }" },
-  { format: "blockquote", label: "❝" },
-  { format: "link", label: "Link" },
-];
 
 const initialTestSendState: TriggerTestSendState = {
   message: "",
@@ -443,16 +439,21 @@ export function TriggerForm({
   deleteAction,
   eventOptions,
   initial,
+  runNowAction,
+  scenarioOptions = [],
   submitLabel,
   testSendAction,
   title,
   userGroupOptions = [],
   dynamicUserGroupOptions = [],
 }: TriggerFormProps) {
-  const messageTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [eventKey, setEventKey] = useState(initial.eventKey);
   const [delayValue, setDelayValue] = useState(String(initial.delayValue));
   const [delayUnit, setDelayUnit] = useState<TriggerRuleRecord["delayUnit"]>(initial.delayUnit);
+  const [deliveryType, setDeliveryType] = useState<TriggerRuleRecord["deliveryType"]>(
+    initial.deliveryType ?? "MESSAGE",
+  );
+  const [scenarioId, setScenarioId] = useState(initial.scenarioId ?? "");
   const [messageText, setMessageText] = useState(initial.messageText);
   const [imageUrl, setImageUrl] = useState(initial.imageUrl ?? "");
   const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
@@ -463,6 +464,13 @@ export function TriggerForm({
   );
   const [testSendState, testSendFormAction, testSendPending] = useActionState(
     testSendAction ??
+      (async () => {
+        return initialTestSendState;
+      }),
+    initialTestSendState,
+  );
+  const [runNowState, runNowFormAction, runNowPending] = useActionState(
+    runNowAction ??
       (async () => {
         return initialTestSendState;
       }),
@@ -492,6 +500,7 @@ export function TriggerForm({
     messageText.trim() || "Здесь появится предпросмотр сообщения Telegram.";
   const previewImageUrl = uploadedPreviewUrl ?? imageUrl.trim();
   const fieldOptions = getConditionFieldOptions(userGroupOptions, dynamicUserGroupOptions);
+  const selectedScenario = scenarioOptions.find((scenario) => scenario.id === scenarioId);
 
   function updateCondition(index: number, patch: Partial<TriggerConditionDraft>) {
     setConditions((current) =>
@@ -513,33 +522,8 @@ export function TriggerForm({
     );
   }
 
-  function applyMessageFormat(format: TriggerMessageFormat) {
-    const textarea = messageTextareaRef.current;
-
-    if (!textarea) {
-      return;
-    }
-
-    const result = applyTelegramHtmlFormat({
-      format,
-      selectionEnd: textarea.selectionEnd ?? messageText.length,
-      selectionStart: textarea.selectionStart ?? messageText.length,
-      text: messageText,
-    });
-
-    setMessageText(result.nextText);
-
-    queueMicrotask(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        result.nextSelectionStart,
-        result.nextSelectionEnd,
-      );
-    });
-  }
-
   return (
-    <form action={action}>
+    <form action={action} method="post">
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
         <AdminPanel className="space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -594,15 +578,19 @@ export function TriggerForm({
           </div>
 
           <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-            <AdminField label="Задержка">
-              <AdminInput
-                min={0}
-                name="delayValue"
-                onChange={(event) => setDelayValue(event.target.value)}
-                type="number"
-                value={delayValue}
-              />
-            </AdminField>
+            {delayUnit === "now" ? (
+              <input name="delayValue" type="hidden" value="0" />
+            ) : (
+              <AdminField label="Задержка">
+                <AdminInput
+                  min={0}
+                  name="delayValue"
+                  onChange={(event) => setDelayValue(event.target.value)}
+                  type="number"
+                  value={delayValue}
+                />
+              </AdminField>
+            )}
             <AdminField label="Единица задержки">
               <AdminSelect
                 name="delayUnit"
@@ -617,6 +605,19 @@ export function TriggerForm({
               </AdminSelect>
             </AdminField>
           </div>
+
+          <AdminField label="Доставка триггера">
+            <AdminSelect
+              name="deliveryType"
+              onChange={(event) =>
+                setDeliveryType(event.target.value as TriggerRuleRecord["deliveryType"])
+              }
+              value={deliveryType}
+            >
+              <option value="MESSAGE">Обычное сообщение</option>
+              <option value="SCENARIO">Запустить сценарий</option>
+            </AdminSelect>
+          </AdminField>
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -716,78 +717,83 @@ export function TriggerForm({
               </div>
             )}
           </div>
-
-          <AdminField label="Текст сообщения">
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#7f8da3]">
-                  HTML-форматирование
-                </p>
-                <p className="text-xs text-[#7f8da3]">Telegram HTML</p>
-                <div className="flex flex-wrap gap-2">
-                  {triggerMessageFormatOptions.map((option) => (
-                    <AdminButton
-                      data-format={option.format}
-                      key={option.format}
-                      onClick={() => applyMessageFormat(option.format)}
-                      type="button"
-                      variant="secondary"
-                    >
-                      {option.label}
-                    </AdminButton>
-                  ))}
-                </div>
-              </div>
-              <AdminTextarea
-              className="min-h-40"
-              name="messageText"
-              onChange={(event) => setMessageText(event.target.value)}
-              ref={messageTextareaRef}
-              required
-              value={messageText}
-            />
-            </div>
-          </AdminField>
-
-          <TriggerButtonsEditor initialButtons={initial.buttons} />
-
-          <AdminField label="Ссылка на изображение или загрузка">
-            <div className="space-y-3">
-              <AdminInput
-                name="imageUrl"
-                onChange={(event) => setImageUrl(event.target.value)}
-                placeholder="/uploads/admin/triggers/reminder.png"
-                value={imageUrl}
+          {deliveryType === "MESSAGE" ? (
+            <AdminField label="Текст сообщения">
+              <AdminTelegramHtmlEditor
+                className="min-h-40"
+                name="messageText"
+                onValueChange={setMessageText}
+                required
+                value={messageText}
               />
-              <div className="space-y-2">
-                <span className="block text-xs text-[#7f8da3]">Или выберите файл изображения</span>
-                <AdminInput
-                  accept="image/*"
-                  name="imageFile"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-
-                    setUploadedPreviewUrl((current) => {
-                      if (current) {
-                        URL.revokeObjectURL(current);
-                      }
-
-                      return file ? URL.createObjectURL(file) : null;
-                    });
-                  }}
-                  type="file"
-                />
-              </div>
-              {previewImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt=""
-                  className="h-24 w-24 rounded-md border border-[#2a3a55] object-cover"
-                  src={previewImageUrl}
-                />
-              ) : null}
+            </AdminField>
+          ) : (
+            <div className="rounded-lg border border-dashed border-[#2a3a55] bg-[#0d1522] px-4 py-4 text-sm text-[#97a4b8]">
+              Текст, изображение и кнопки придут из выбранного сценария. Первым отправится его стартовый шаг.
             </div>
-          </AdminField>
+          )}
+
+          {deliveryType === "MESSAGE" ? (
+            <TriggerButtonsEditor initialButtons={initial.buttons} />
+          ) : null}
+          {deliveryType === "MESSAGE" ? (
+            <AdminField label="Ссылка на изображение или загрузка">
+              <div className="space-y-3">
+                <AdminInput
+                  name="imageUrl"
+                  onChange={(event) => setImageUrl(event.target.value)}
+                  placeholder="/uploads/admin/triggers/reminder.png"
+                  value={imageUrl}
+                />
+                <div className="space-y-2">
+                  <span className="block text-xs text-[#7f8da3]">Или выберите файл изображения</span>
+                  <AdminInput
+                    accept="image/*"
+                    name="imageFile"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+
+                      setUploadedPreviewUrl((current) => {
+                        if (current) {
+                          URL.revokeObjectURL(current);
+                        }
+
+                        return file ? URL.createObjectURL(file) : null;
+                      });
+                    }}
+                    type="file"
+                  />
+                </div>
+                {previewImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt=""
+                    className="h-24 w-24 rounded-md border border-[#2a3a55] object-cover"
+                    src={previewImageUrl}
+                  />
+                ) : null}
+              </div>
+            </AdminField>
+          ) : null}
+
+          {deliveryType === "SCENARIO" ? (
+            <AdminField label="Сценарий">
+              <AdminSelect
+                name="scenarioId"
+                onChange={(event) => setScenarioId(event.target.value)}
+                required
+                value={scenarioId}
+              >
+                <option value="">Выберите сценарий</option>
+                {scenarioOptions.map((scenario) => (
+                  <option key={scenario.id} value={scenario.id}>
+                    {scenario.name}
+                    {scenario.status === "active" ? "" : " (draft)"}
+                  </option>
+                ))}
+              </AdminSelect>
+            </AdminField>
+          ) : null}
 
           {deleteAction && initial.id ? (
             <div className="rounded-xl border border-[#6b2430] bg-[#1b1116] p-4">
@@ -865,12 +871,36 @@ export function TriggerForm({
                 />
               ) : null}
               <div className="max-w-[240px] rounded-xl bg-white px-3 py-3 text-sm leading-5 shadow-sm">
-                {previewText}
+                {deliveryType === "SCENARIO"
+                  ? selectedScenario?.name ?? "Сценарий не выбран"
+                  : previewText}
               </div>
             </div>
           </div>
         </div>
+        {deliveryType === "MESSAGE" ? (
         <div className="space-y-3">
+          {initial.id && delayUnit === "now" ? (
+            <>
+              <AdminButton
+                formAction={runNowFormAction}
+                type="submit"
+              >
+                {runNowPending ? "Готовим рассылку..." : "Разослать сейчас"}
+              </AdminButton>
+              {runNowState.message ? (
+                <div
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    runNowState.ok
+                      ? "border-[#1f6f43] bg-[#12261a] text-[#9ae6b4]"
+                      : "border-[#6b2430] bg-[#2a1218] text-[#fecaca]"
+                  }`}
+                >
+                  {runNowState.message}
+                </div>
+              ) : null}
+            </>
+          ) : null}
           <AdminButton
             formAction={testSendFormAction}
             type="submit"
@@ -892,6 +922,7 @@ export function TriggerForm({
             </div>
           ) : null}
         </div>
+        ) : null}
         </AdminPanel>
       </div>
     </form>
