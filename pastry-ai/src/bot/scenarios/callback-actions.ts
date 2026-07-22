@@ -71,7 +71,7 @@ export async function handleScenarioButtonCallback(
         if (url) {
           try {
             await ctx.editMessageReplyMarkup({
-              inline_keyboard: [[{ text: "💳 Оплатить", url }]],
+              reply_markup: { inline_keyboard: [[{ text: "💳 Оплатить", url }]] },
             });
           } catch {
             await ctx.reply("💳 Оплатить", {

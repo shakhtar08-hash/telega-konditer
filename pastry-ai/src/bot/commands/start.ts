@@ -305,7 +305,7 @@ composer.callbackQuery(/^tariff:buy:(basic|master|chief|pastry-chef|head-chef)$/
     if (url) {
       try {
         await ctx.editMessageReplyMarkup({
-          inline_keyboard: [[{ text: "💳 Оплатить", url }]],
+          reply_markup: { inline_keyboard: [[{ text: "💳 Оплатить", url }]] },
         });
       } catch {
         await ctx.reply("💳 Оплатить", {

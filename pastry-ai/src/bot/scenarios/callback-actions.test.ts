@@ -174,7 +174,7 @@ describe("handleScenarioButtonCallback", () => {
       tariffSlug: "basic",
     });
     expect(ctx.editMessageReplyMarkup).toHaveBeenCalledWith({
-      inline_keyboard: [[{ text: "💳 Оплатить", url: "https://pay.example/confirm" }]],
+      reply_markup: { inline_keyboard: [[{ text: "💳 Оплатить", url: "https://pay.example/confirm" }]] },
     });
   });
 
