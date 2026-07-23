@@ -98,6 +98,8 @@ Trigger rules now support multiple messages under one immutable `slug`:
 - New scheduled rows use `sendAt = triggeredAt + delayMinutes`.
 - Editing a trigger message updates only unsent scheduled rows and recalculates `sendAt` from the original `triggeredAt`.
 - Deleting a trigger message removes only unsent scheduled rows; sent rows remain untouched.
+- Rules with `delayUnit = "now"` are designed for manual "Разослать сейчас" dispatch only; they are silently skipped during event-based triggering. Use `delayUnit = "minutes"` with `delayValue = 0` for immediate event-triggered delivery.
+- Pending `ScheduledMessage` records are processed by a system cron job (`/etc/cron.d/pastry-ai-triggers`) that calls `POST /api/cron/process-triggers` every minute on the RU server.
 
 ## Admin Image Upload
 
