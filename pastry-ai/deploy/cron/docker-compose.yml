@@ -33,6 +33,8 @@ services:
     ports:
       - "127.0.0.1:3002:3000"
     restart: unless-stopped
+    volumes:
+      - /srv/pastry-ai/uploads:/app/public/uploads
     networks:
       - ru_app
 
