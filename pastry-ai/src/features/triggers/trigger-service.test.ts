@@ -157,7 +157,8 @@ describe("createTriggerService", () => {
     expect(createScheduledMock).not.toHaveBeenCalled();
   });
 
-  it("does not auto-schedule rules that are configured for manual now delivery", async () => {
+  it("auto-schedules now delivery rules with triggeredAt as sendAt", async () => {
+    const eventOccurredAt = new Date("2026-07-13T08:00:00.000Z");
     findActiveRulesByEventMock.mockResolvedValue([
       {
         ...baseRule,
@@ -166,10 +167,14 @@ describe("createTriggerService", () => {
       },
     ]);
 
-    await service.scheduleTrigger("user.started", "12345", baseState);
+    await service.scheduleTrigger("user.started", "12345", baseState, eventOccurredAt);
 
-    expect(findExistingScheduledMock).not.toHaveBeenCalled();
-    expect(createScheduledMock).not.toHaveBeenCalled();
+    expect(findExistingScheduledMock).toHaveBeenCalled();
+    expect(createScheduledMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sendAt: eventOccurredAt,
+      }),
+    );
   });
 
   it("deduplicates by rule, chat, and event occurrence", async () => {

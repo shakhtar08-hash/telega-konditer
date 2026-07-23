@@ -62,10 +62,6 @@ export function createTriggerService(deps: Dependencies) {
       const rules = await deps.findActiveRulesByEvent(eventKey);
 
       for (const rule of rules) {
-        if (rule.delayUnit === "now") {
-          continue;
-        }
-
         if (!(await evaluateConditions(rule.conditions, state))) {
           continue;
         }
