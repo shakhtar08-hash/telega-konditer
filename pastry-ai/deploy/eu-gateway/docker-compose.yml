@@ -32,30 +32,6 @@ services:
       - .env
     environment:
       TZ: Europe/Moscow
-    labels:
-      traefik.enable: "true"
-      traefik.docker.network: "coolify"
-      traefik.http.middlewares.gzip.compress: "true"
-      traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: "https"
-      traefik.http.routers.http-0-pastry-ai-eu-gateway.entryPoints: "http"
-      traefik.http.routers.http-0-pastry-ai-eu-gateway.middlewares: "redirect-to-https"
-      traefik.http.routers.http-0-pastry-ai-eu-gateway.rule: "Host(`${GATEWAY_PUBLIC_HOST}`) && PathPrefix(`/`)"
-      traefik.http.routers.http-0-pastry-ai-eu-gateway.service: "http-0-pastry-ai-eu-gateway"
-      traefik.http.routers.https-0-pastry-ai-eu-gateway.entryPoints: "https"
-      traefik.http.routers.https-0-pastry-ai-eu-gateway.middlewares: "gzip"
-      traefik.http.routers.https-0-pastry-ai-eu-gateway.rule: "Host(`${GATEWAY_PUBLIC_HOST}`) && PathPrefix(`/`)"
-      traefik.http.routers.https-0-pastry-ai-eu-gateway.service: "https-0-pastry-ai-eu-gateway"
-      traefik.http.routers.https-0-pastry-ai-eu-gateway.tls: "true"
-      traefik.http.routers.https-0-pastry-ai-eu-gateway.tls.certresolver: "letsencrypt"
-      traefik.http.services.http-0-pastry-ai-eu-gateway.loadbalancer.server.port: "3000"
-      traefik.http.services.https-0-pastry-ai-eu-gateway.loadbalancer.server.port: "3000"
     ports:
       - "3001:3000"
     restart: unless-stopped
-    networks:
-      - default
-      - coolify
-
-networks:
-  coolify:
-    external: true
