@@ -93,9 +93,11 @@ export function sizeCssVars(size: CardSize): string {
   --card-padding: ${s.padding}px;
   --card-height: ${s.height}px;
   --title-size: ${s.titleFontSize}px;
+  --cont-title-size: ${s.continuationTitleFontSize}px;
   --body-size: ${s.bodyFontSize}px;
   --step-size: ${s.stepFontSize}px;
   --gap: ${s.gap}px;
   --hero-height: ${s.heroHeight}px;
+  --footer-height: ${s.footerHeight}px;
 }`;
 }
