@@ -339,6 +339,12 @@ export function registerRecipeContextCallbacks(
         prompt: imagePrompt,
       });
 
+      // Save the generated image URL to the recipe context for card reuse
+      await prisma.generatedRecipeContext.update({
+        where: { id: recipeId },
+        data: { imageUrl: image.url },
+      });
+
       await ctx.replyWithPhoto(
         toTelegramPhotoInput(image.url, "recipe-photo.png"),
       );
