@@ -195,7 +195,18 @@ export function createRecipeCardService(dependencies: {
           });
           imageUrl = result.url;
         } catch (error) {
-          console.warn("Recipe card image generation failed, using placeholder", error);
+          console.warn("KIE image gen failed, trying OpenRouter FLUX", error);
+          try {
+            const result = await dependencies.aiService.generateImage({
+              aspectRatio: "16:9",
+              provider: "openrouter",
+              model: "flux",
+              prompt: imagePrompt,
+            });
+            imageUrl = result.url;
+          } catch (fallbackError) {
+            console.warn("OpenRouter FLUX also failed, continuing without image", fallbackError);
+          }
         }
       }
 
