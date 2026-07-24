@@ -5,6 +5,7 @@ import { UserFacingError } from "@/lib/user-facing-error";
 import type { PastryBotContext } from "../context";
 import { resolveUserIdByTelegramId } from "../user-id";
 import { buildTelegramFileUrl, getLargestPhoto } from "./vision";
+import { addMenuKeyboard } from "../menu-return";
 
 type TokenGuardService = {
   ensureSufficientTokens(userId: string, required: number): Promise<void>;
@@ -54,7 +55,8 @@ export function registerPhotoshootPhotoHandler(
     const photo = getLargestPhoto(ctx.message.photo);
 
     if (!photo) {
-      await ctx.reply(readPhotoErrorMessage);
+      const msg = addMenuKeyboard(readPhotoErrorMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -65,7 +67,8 @@ export function registerPhotoshootPhotoHandler(
     const file = await ctx.api.getFile(photo.file_id);
 
     if (!file.file_path) {
-      await ctx.reply(missingTelegramFilePathMessage);
+      const msg = addMenuKeyboard(missingTelegramFilePathMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -77,7 +80,8 @@ export function registerPhotoshootPhotoHandler(
     );
 
     if (!userId) {
-      await ctx.reply(missingProfileMessage);
+      const msg = addMenuKeyboard(missingProfileMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -95,7 +99,8 @@ if (styleCount > 0) {
         await dependencies.tokenGuard.ensureSufficientTokens(userId, styleCount);
       } catch (error) {
         if (error instanceof UserFacingError) {
-          await ctx.reply(error.message);
+          const msg = addMenuKeyboard(error.message);
+          await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
           return;
         }
         throw error;
@@ -112,7 +117,8 @@ if (styleCount > 0) {
       const configurationError = getPhotoshootConfigurationErrorMessage(error);
 
       if (configurationError) {
-        await ctx.reply(configurationError);
+        const msg = addMenuKeyboard(configurationError);
+        await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
         return;
       }
 
@@ -137,6 +143,9 @@ await dependencies.tokenGuard.chargeTokens(
         1,
       );
     }
+
+    const menuMsg = addMenuKeyboard(`Готово! Сгенерировано ${result.images.length} стилизованных фото.`);
+    await ctx.reply(menuMsg.text, { reply_markup: menuMsg.reply_markup });
 
     if (log && convId) {
       await log.appendAssistantMessage({

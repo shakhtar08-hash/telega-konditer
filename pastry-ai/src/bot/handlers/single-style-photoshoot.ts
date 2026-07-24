@@ -6,6 +6,7 @@ import type { PastryBotContext } from "../context";
 import { resolveUserIdByTelegramId } from "../user-id";
 import { buildTelegramFileUrl, getLargestPhoto } from "./vision";
 import { toTelegramPhotoInput } from "./photoshoot";
+import { addMenuKeyboard } from "../menu-return";
 
 type TokenGuardService = {
   ensureSufficientTokens(userId: string, required: number): Promise<void>;
@@ -44,18 +45,20 @@ export function registerSingleStylePhotoshootHandler(
     const styleId = ctx.session.selectedStyleId;
 
     if (!styleId) {
-      await ctx.reply(
+      const msg = addMenuKeyboard(
         "Не выбран стиль. Нажмите /menu и выберите стиль заново.",
       );
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
     const photo = getLargestPhoto(ctx.message.photo);
 
     if (!photo) {
-      await ctx.reply(
+      const msg = addMenuKeyboard(
         "Не получилось прочитать фото. Попробуйте отправить его ещё раз.",
       );
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -64,9 +67,10 @@ export function registerSingleStylePhotoshootHandler(
     const file = await ctx.api.getFile(photo.file_id);
 
     if (!file.file_path) {
-      await ctx.reply(
+      const msg = addMenuKeyboard(
         "Telegram не вернул путь к фото. Попробуйте другое изображение.",
       );
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -81,7 +85,8 @@ export function registerSingleStylePhotoshootHandler(
     );
 
     if (!userId) {
-      await ctx.reply(missingProfileMessage);
+      const msg = addMenuKeyboard(missingProfileMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -89,7 +94,8 @@ export function registerSingleStylePhotoshootHandler(
       await dependencies.tokenGuard.ensureSufficientTokens(userId, 1);
     } catch (error) {
       if (error instanceof UserFacingError) {
-        await ctx.reply(error.message);
+        const msg = addMenuKeyboard(error.message);
+        await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
         return;
       }
       throw error;
@@ -105,7 +111,8 @@ export function registerSingleStylePhotoshootHandler(
         });
     } catch (error) {
       if (error instanceof UserFacingError) {
-        await ctx.reply(error.message);
+        const msg = addMenuKeyboard(error.message);
+        await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
         return;
       }
 
@@ -126,5 +133,8 @@ export function registerSingleStylePhotoshootHandler(
         1,
       );
     }
+
+    const menuMsg = addMenuKeyboard("Готово! Фото в выбранном стиле сгенерировано.");
+    await ctx.reply(menuMsg.text, { reply_markup: menuMsg.reply_markup });
   });
 }

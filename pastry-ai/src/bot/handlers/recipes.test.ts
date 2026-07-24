@@ -38,7 +38,7 @@ describe("recipe result actions", () => {
     expect(text).not.toContain("Нашел");
   });
 
-  it("builds recipe-bound callbacks for all five actions", () => {
+  it("builds recipe-bound callbacks for all six actions", () => {
     expect(buildRecipeActionKeyboard("recipe_1")).toEqual({
       inline_keyboard: [
         [{ text: "🍳 Создать ещё 1 рецепт", callback_data: "create_another_recipe:recipe_1" }],
@@ -46,6 +46,7 @@ describe("recipe result actions", () => {
         [{ text: "✨ Создать карточку рецепта (1 печенька)", callback_data: "create_recipe_card:recipe_1" }],
         [{ text: "📏 Пересчитать рецепт", callback_data: "recipe_recalculate:recipe_1" }],
         [{ text: "👨‍🍳 Задать вопрос", callback_data: "ask_chef_recipe:recipe_1" }],
+        [{ text: "📋 В меню", callback_data: "menu:return" }],
       ],
     });
   });

@@ -87,7 +87,8 @@ export function registerRecipeCardTextHandler(
     const text = ctx.message.text.trim();
 
     if (text.length < 10) {
-      await ctx.reply(tooShortMessage);
+      const msg = addMenuKeyboard(tooShortMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -116,7 +117,8 @@ export function registerRecipeCardTemplateCallback(
 
     if (!text || !templates.includes(template)) {
       await ctx.answerCallbackQuery();
-      await ctx.reply("Что-то пошло не так. Попробуйте ещё раз.");
+      const msg = addMenuKeyboard("Что-то пошло не так. Попробуйте ещё раз.");
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -132,14 +134,16 @@ export function registerRecipeCardTemplateCallback(
     );
 
     if (!userId) {
-      await ctx.reply(missingProfileMessage);
+      const msg = addMenuKeyboard(missingProfileMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
     const slots = await dependencies.tokenGuard.getAvailablePhotoSlots(userId, 1);
 
     if (slots < 1) {
-      await ctx.reply(noTokensMessage);
+      const msg = addMenuKeyboard(noTokensMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -163,10 +167,11 @@ export function registerRecipeCardTemplateCallback(
             { caption },
           );
         }
+        const menuMsg = addMenuKeyboard("Карточка рецепта готова!");
+        await ctx.reply(menuMsg.text, { reply_markup: menuMsg.reply_markup });
       } else {
-        for (const chunk of splitTelegramText(result.text)) {
-          await ctx.reply(chunk, { parse_mode: "Markdown" });
-        }
+        const chunks = splitTelegramText(result.text);
+        await replyChunks(ctx.reply.bind(ctx), chunks, { parse_mode: "Markdown" });
       }
 
       await dependencies.tokenGuard.chargeTokens(
@@ -177,9 +182,10 @@ export function registerRecipeCardTemplateCallback(
       );
     } catch (error) {
       console.error("Recipe card generation failed", error);
-      await ctx.reply(
+      const msg = addMenuKeyboard(
         "Произошла ошибка при создании карточки рецепта. Попробуйте ещё раз позже.",
       );
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
     }
   });
 }
@@ -203,7 +209,8 @@ export function registerRecipeContextCallbacks(
 
     if (!userId) {
       await ctx.answerCallbackQuery();
-      await ctx.reply(missingProfileMessage);
+      const msg = addMenuKeyboard(missingProfileMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -215,7 +222,8 @@ export function registerRecipeContextCallbacks(
 
     if (!recipe) {
       await ctx.answerCallbackQuery();
-      await ctx.reply(noRecipeMessage);
+      const msg = addMenuKeyboard(noRecipeMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -226,7 +234,8 @@ export function registerRecipeContextCallbacks(
 
     if (slots < 1) {
       await ctx.answerCallbackQuery();
-      await ctx.reply(noTokensMessage);
+      const msg = addMenuKeyboard(noTokensMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -253,6 +262,8 @@ export function registerRecipeContextCallbacks(
             { caption },
           );
         }
+        const menuMsg = addMenuKeyboard("Карточка рецепта готова!");
+        await ctx.reply(menuMsg.text, { reply_markup: menuMsg.reply_markup });
       } else {
         const chunks = splitTelegramText(result.text);
         await replyChunks(ctx.reply.bind(ctx), chunks, { parse_mode: "Markdown" });
@@ -266,9 +277,10 @@ export function registerRecipeContextCallbacks(
       );
     } catch (error) {
       console.error("Recipe card from context failed", error);
-      await ctx.reply(
+      const msg = addMenuKeyboard(
         "Произошла ошибка при создании карточки рецепта. Попробуйте ещё раз позже.",
       );
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
     }
   });
 
@@ -282,7 +294,8 @@ export function registerRecipeContextCallbacks(
 
     if (!userId) {
       await ctx.answerCallbackQuery();
-      await ctx.reply(missingProfileMessage);
+      const msg = addMenuKeyboard(missingProfileMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -294,7 +307,8 @@ export function registerRecipeContextCallbacks(
 
     if (!recipe) {
       await ctx.answerCallbackQuery();
-      await ctx.reply(noRecipeMessage);
+      const msg = addMenuKeyboard(noRecipeMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -305,7 +319,8 @@ export function registerRecipeContextCallbacks(
 
     if (slots < 1) {
       await ctx.answerCallbackQuery();
-      await ctx.reply(noTokensMessage);
+      const msg = addMenuKeyboard(noTokensMessage);
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
       return;
     }
 
@@ -328,6 +343,9 @@ export function registerRecipeContextCallbacks(
         toTelegramPhotoInput(image.url, "recipe-photo.png"),
       );
 
+      const menuMsg = addMenuKeyboard("Фото десерта сгенерировано!");
+      await ctx.reply(menuMsg.text, { reply_markup: menuMsg.reply_markup });
+
       await dependencies.tokenGuard.chargeTokens(
         userId,
         "recipes",
@@ -336,9 +354,10 @@ export function registerRecipeContextCallbacks(
       );
     } catch (error) {
       console.error("Recipe photo generation failed", error);
-      await ctx.reply(
+      const msg = addMenuKeyboard(
         "Произошла ошибка при генерации фото. Попробуйте ещё раз позже.",
       );
+      await ctx.reply(msg.text, { reply_markup: msg.reply_markup });
     }
   });
 

@@ -286,7 +286,8 @@ async function handleIngredientRecipe(
 
   const recipe = recipeOutput.recipes[0];
   if (!recipe) {
-    await ctx.reply("Не удалось сгенерировать рецепт. Попробуйте ещё раз.");
+    const errMsg = addMenuKeyboard("Не удалось сгенерировать рецепт. Попробуйте ещё раз.");
+    await ctx.reply(errMsg.text, { reply_markup: errMsg.reply_markup });
     return;
   }
 
@@ -334,7 +335,8 @@ async function handleBestRecipeSearch(
 
   const recipe = recipeOutput.recipes[0];
   if (!recipe) {
-    await ctx.reply("Не удалось сгенерировать рецепт. Попробуйте ещё раз.");
+    const errMsg = addMenuKeyboard("Не удалось сгенерировать рецепт. Попробуйте ещё раз.");
+    await ctx.reply(errMsg.text, { reply_markup: errMsg.reply_markup });
     return;
   }
 
@@ -441,6 +443,7 @@ export function buildRecipeActionKeyboard(recipeId: string) {
       [{ text: "✨ Создать карточку рецепта (1 печенька)", callback_data: `create_recipe_card:${recipeId}` }],
       [{ text: "📏 Пересчитать рецепт", callback_data: `recipe_recalculate:${recipeId}` }],
       [{ text: "👨‍🍳 Задать вопрос", callback_data: `ask_chef_recipe:${recipeId}` }],
+      [{ text: "📋 В меню", callback_data: "menu:return" }],
     ],
   };
 }
