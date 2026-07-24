@@ -59,6 +59,23 @@ Local bot testing can use a separate Telegram bot token and ngrok:
 
 Do not reuse the production bot token for local webhook testing unless the user explicitly wants to move the production bot webhook.
 
+## Server Access
+
+SSH key-based access is configured. Use aliases only — no IPs, passwords, or plink:
+
+| Alias | Host | Role |
+|-------|------|------|
+| `pastry-eu` | EU gateway (194.113.209.251) | Telegram ingress + Caddy |
+| `pastry-ru` | RU app + cron (159.194.206.106) | Bot logic, payments, admin |
+
+Examples:
+```bash
+ssh pastry-eu "docker ps"
+ssh pastry-ru "cd /srv/pastry-ai/app/pastry-ai && git pull && docker compose -f deploy/ru/docker-compose.yml up -d --build"
+```
+
+SSH multiplexing is not yet enabled. For long-running work, use `tmux` on the server.
+
 ## Documentation
 
 После завершения любой задачи:
