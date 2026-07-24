@@ -3,10 +3,6 @@ import { sizeConfig, type CardSize } from "@/components/recipe-card/templates/si
 import type { CardTemplate } from "@/components/recipe-card/templates";
 import type { CardPageSection, RecipeCardPage } from "./recipe-card-paginator-types";
 
-export type HeightMeasurer = {
-  measureHeight(html: string): Promise<number>;
-};
-
 type AtomicItem = {
   type: CardPageSection | "section-title-ingredients" | "section-title-steps" | "section-title-tips";
   text: string;
@@ -87,7 +83,7 @@ type PageDraft = {
   totalHeight: number;
 };
 
-export function createPaginator(_measurer: HeightMeasurer) {
+export function createPaginator() {
   return {
     async paginate(
       data: RecipeCardOutput,
@@ -101,13 +97,11 @@ export function createPaginator(_measurer: HeightMeasurer) {
 
       const availableHeight = cfg.height - (cfg.padding * 2 + cfg.footerHeight + cfg.safeBottomSpace);
 
-      // First pass: fill pages sequentially
       const pages: PageDraft[] = [];
       let current: PageDraft = { items: [], stepOffset: 0, totalHeight: 0 };
 
       for (const item of allItems) {
         const itemHeight = estimateItemHeight(cfg, item);
-        const isSectionTitle = item.type.startsWith("section-title-");
         const isFirstOnPage = current.items.length === 0;
 
         if (isFirstOnPage) {
@@ -138,8 +132,6 @@ export function createPaginator(_measurer: HeightMeasurer) {
       }
 
       if (pages.length === 0) return [];
-
-      // Return single page
       if (pages.length === 1) {
         return [buildPage(data, pages[0], 1, 1, imageUrl)];
       }
@@ -151,7 +143,6 @@ export function createPaginator(_measurer: HeightMeasurer) {
         const prev = pages[lastIdx - 1];
         for (let i = prev.items.length - 1; i >= 0; i--) {
           const item = prev.items[i];
-          // Don't move title/hero/meta items to continuation pages
           if (item.type === "header" || item.type === "hero" || item.type.startsWith("section-title-")) {
             continue;
           }
@@ -161,13 +152,10 @@ export function createPaginator(_measurer: HeightMeasurer) {
             prev.totalHeight -= itemHeight;
             last.items.unshift(item);
             last.totalHeight += itemHeight;
-          } else {
-            break;
           }
         }
       }
 
-      // Build final pages
       const result: RecipeCardPage[] = [];
       for (let i = 0; i < pages.length; i++) {
         result.push(buildPage(data, pages[i], i + 1, pages.length, imageUrl));
@@ -175,6 +163,20 @@ export function createPaginator(_measurer: HeightMeasurer) {
       return result;
     },
   };
+}
+
+function filterIngredients(
+  data: RecipeCardOutput,
+  draft: PageDraft,
+): RecipeCardOutput["ingredients"] {
+  const hasIngredients = draft.items.some((i) => i.type === "ingredients" || i.type === "section-title-ingredients");
+  if (!hasIngredients) return [];
+  const ingTexts = new Set(
+    draft.items.filter((i) => i.type === "ingredients").map((i) => i.text),
+  );
+  return data.ingredients.filter((ing) =>
+    ingTexts.has(`${ing.name} ${ing.amount}`),
+  );
 }
 
 function buildPage(
@@ -209,15 +211,7 @@ function buildPage(
     description: isFirst ? data.description : "",
     imageUrl: isFirst ? imageUrl : undefined,
     meta: isFirst ? { ...data.meta } : { time: "", yield: "", difficulty: null, storage: null, weight: null },
-    ingredients: isFirst ? data.ingredients.filter((_, idx) => {
-      if (!hasIngredients) return false;
-      const ingSections = draft.items.filter((i) => i.type === "ingredients");
-      return ingSections.some((i) => i.text === `${data.ingredients[idx].name} ${data.ingredients[idx].amount}`);
-    }) : data.ingredients.filter((_, idx) => {
-      if (!hasIngredients) return false;
-      const ingSections = draft.items.filter((i) => i.type === "ingredients");
-      return ingSections.some((i) => i.text === `${data.ingredients[idx].name} ${data.ingredients[idx].amount}`);
-    }),
+    ingredients: filterIngredients(data, draft),
     steps,
     tips: draft.items
       .filter((i) => i.type === "tips")

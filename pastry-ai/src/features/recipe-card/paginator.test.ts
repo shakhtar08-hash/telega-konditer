@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
-import { createPaginator, type HeightMeasurer } from "./paginator";
+import { createPaginator } from "./paginator";
 import { sizeConfig, type CardSize } from "@/components/recipe-card/templates/size-config";
-
-function makeStubMeasurer(): HeightMeasurer {
-  return { measureHeight: async () => 0 };
-}
 
 const makeRecipe = (overrides?: Partial<RecipeCardOutput>): RecipeCardOutput => ({
   title: "Тестовый рецепт",
@@ -34,7 +30,7 @@ const makeRecipe = (overrides?: Partial<RecipeCardOutput>): RecipeCardOutput => 
 
 describe("createPaginator", () => {
   it("returns 1-2 pages for short recipes on compact", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({ steps: ["Step 1", "Step 2", "Step 3"] });
     const pages = await paginator.paginate(data, "minimal", undefined, "compact");
     // Short recipe with 5 ingredients + 3 steps + hero + meta + tips
@@ -45,7 +41,7 @@ describe("createPaginator", () => {
   });
 
   it("returns a single page for short recipe in normal size", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({ steps: ["Step 1", "Step 2", "Step 3"] });
     const pages = await paginator.paginate(data, "minimal", undefined, "normal");
     expect(pages.length).toBe(1);
@@ -53,7 +49,7 @@ describe("createPaginator", () => {
   });
 
   it("produces multiple pages for a long recipe with many steps", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({
       steps: Array.from({ length: 25 }, (_, i) => `Step ${i + 1} with enough text to make it wrap across multiple lines of content for testing purposes`),
     });
@@ -62,7 +58,7 @@ describe("createPaginator", () => {
   });
 
   it("preserves all ingredients across pages", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({
       ingredients: Array.from({ length: 20 }, (_, i) => ({ name: `Ингредиент ${i + 1}`, amount: `${i + 1} г` })),
       steps: Array.from({ length: 15 }, (_, i) => `Step ${i + 1}`),
@@ -73,7 +69,7 @@ describe("createPaginator", () => {
   });
 
   it("preserves all tips across pages", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({
       tips: ["Tip 1", "Tip 2", "Tip 3", "Tip 4", "Tip 5", "Tip 6"],
       steps: Array.from({ length: 15 }, (_, i) => `Step ${i + 1}`),
@@ -84,7 +80,7 @@ describe("createPaginator", () => {
   });
 
   it("continues step numbering across pages", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({
       steps: Array.from({ length: 15 }, (_, i) => `Step ${i + 1} with enough text to wrap across multiple lines`),
     });
@@ -96,7 +92,7 @@ describe("createPaginator", () => {
   });
 
   it("includes hero image only on first page", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({
       steps: Array.from({ length: 20 }, (_, i) => `Step ${i + 1} with enough text to wrap across multiple lines`),
     });
@@ -108,7 +104,7 @@ describe("createPaginator", () => {
   });
 
   it("has empty description on continuation pages", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({
       steps: Array.from({ length: 20 }, (_, i) => `Step ${i + 1} with enough text to wrap across multiple lines`),
     });
@@ -120,7 +116,7 @@ describe("createPaginator", () => {
   });
 
   it("has empty meta on continuation pages", async () => {
-    const paginator = createPaginator(makeStubMeasurer());
+    const paginator = createPaginator();
     const data = makeRecipe({
       steps: Array.from({ length: 20 }, (_, i) => `Step ${i + 1} with enough text to wrap across multiple lines`),
     });

@@ -1,6 +1,6 @@
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 
-export type CardPageSection = "header" | "description" | "hero" | "meta" | "ingredients" | "steps" | "tips";
+export type CardPageSection = "header" | "hero" | "ingredients" | "steps" | "tips";
 
 export type RecipeCardPage = {
   pageNumber: number;
