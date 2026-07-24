@@ -4,12 +4,12 @@ import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 import type { StructuredRecipe } from "@/ai/schemas/recipe";
 import { renderRecipeCardHtml } from "@/components/recipe-card/RecipeCard";
 import type { CardTemplate } from "@/components/recipe-card/templates";
-import { determineCardSize } from "@/components/recipe-card/templates/utils";
+import { determineCardSizeFromData } from "@/components/recipe-card/templates/utils";
 import type { AIService } from "@/ai/provider/ai-service";
 import { chromium } from "playwright";
 import { getChromiumLaunchOptions } from "@/lib/playwright-launch";
-
-const MAX_CARD_HEIGHT = 1800;
+import { createPaginator } from "./paginator";
+import type { RecipeCardPage } from "./recipe-card-paginator-types";
 
 const difficultyLabels = {
   easy: "🟢 Легко",
@@ -101,54 +101,6 @@ function recipeSourceToText(input: {
   return formatStructuredRecipeAsText(input.recipeJson!);
 }
 
-type CardPage = {
-  data: RecipeCardOutput;
-  pageLabel?: string;
-};
-
-function buildCardPages(data: RecipeCardOutput): CardPage[] {
-  const totalSteps = data.steps.length;
-
-  if (totalSteps <= 3) {
-    return [{ data }];
-  }
-
-  const stepsPerPage = Math.ceil(totalSteps / 2);
-  const needsThirdPage = totalSteps > stepsPerPage * 2;
-  const pageCount = needsThirdPage ? 3 : 2;
-
-  const pages: CardPage[] = [];
-
-  pages.push({
-    data: {
-      ...data,
-      steps: [],
-      tips: [],
-    },
-    pageLabel: `Карточка 1/${pageCount}`,
-  });
-
-  for (let i = 1; i < pageCount; i++) {
-    const start = (i - 1) * stepsPerPage;
-    const end = i < pageCount - 1 ? i * stepsPerPage : totalSteps;
-    const isLast = i === pageCount - 1;
-
-    pages.push({
-      data: {
-        title: data.title,
-        description: "",
-        ingredients: [],
-        steps: data.steps.slice(start, end),
-        tips: isLast ? data.tips : [],
-        meta: { time: "", yield: "", difficulty: null, storage: null, weight: null },
-      },
-      pageLabel: `Карточка ${i + 1}/${pageCount}`,
-    });
-  }
-
-  return pages;
-}
-
 async function renderCardToImage(html: string): Promise<string> {
   const browser = await chromium.launch(getChromiumLaunchOptions());
   const page = await browser.newPage({
@@ -210,34 +162,16 @@ export function createRecipeCardService(dependencies: {
         }
       }
 
-      const size = determineCardSize(recipeText);
+      const size = determineCardSizeFromData(cardData);
       const templateName = input.template ?? "dark";
 
       try {
-        const firstHtml = renderRecipeCardHtml(cardData, templateName, imageUrl, size);
-
-        const probeBrowser = await chromium.launch(getChromiumLaunchOptions());
-        const probePage = await probeBrowser.newPage({ viewport: { width: 1080, height: 100 } });
-        await probePage.setContent(firstHtml);
-        const cardHeight = await probePage.evaluate(() => {
-          const el = document.querySelector(".recipe-card");
-          return el ? el.scrollHeight : 0;
-        });
-        await probeBrowser.close();
-
-        if (cardHeight > MAX_CARD_HEIGHT) {
-          const pages = buildCardPages(cardData);
-          const urls = await Promise.all(
-            pages.map((p) => {
-              const html = renderRecipeCardHtml(p.data, templateName, imageUrl, size, p.pageLabel);
-              return renderCardToImage(html);
-            }),
-          );
-          return { urls };
-        }
-
-        const url = await renderCardToImage(firstHtml);
-        return { urls: [url] };
+        const paginator = createPaginator();
+        const pages = await paginator.paginate(cardData, templateName, imageUrl, size);
+        const urls = await Promise.all(
+          pages.map((p) => renderCardToImage(renderRecipeCardHtml(p, templateName, size))),
+        );
+        return { urls };
       } catch (error) {
         console.warn("Recipe card screenshot failed, sending text", error);
         return { text: formatCardAsText(cardData) };

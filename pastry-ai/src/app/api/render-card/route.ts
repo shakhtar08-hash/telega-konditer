@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { chromium } from "playwright";
 import { recipeCardOutputSchema } from "@/ai/schemas/recipe-card";
 import { renderRecipeCardHtml } from "@/components/recipe-card/RecipeCard";
+import type { RecipeCardPage } from "@/features/recipe-card/recipe-card-paginator-types";
 import { loadEnv } from "@/lib/env";
 import { getChromiumLaunchOptions } from "@/lib/playwright-launch";
 import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit";
@@ -49,7 +50,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
     }
 
-    const html = renderRecipeCardHtml(parsed.data);
+    const cardPage: RecipeCardPage = {
+      pageNumber: 1,
+      totalPages: 1,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      meta: parsed.data.meta,
+      ingredients: parsed.data.ingredients,
+      steps: parsed.data.steps,
+      tips: parsed.data.tips,
+      sections: ["header", "hero", "ingredients", "steps", "tips"],
+      isIngredientsContinuation: false,
+      isStepsContinuation: false,
+      isTipsContinuation: false,
+      stepStartIndex: 1,
+    };
+    const html = renderRecipeCardHtml(cardPage, "minimal", "normal");
 
     const browser = await chromium.launch(getChromiumLaunchOptions());
     const page = await browser.newPage({

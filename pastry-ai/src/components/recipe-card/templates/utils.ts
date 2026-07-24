@@ -23,6 +23,16 @@ export function determineCardSize(recipeText: string): CardSize {
   return "normal";
 }
 
+export function determineCardSizeFromData(data: RecipeCardOutput): CardSize {
+  let units = 0;
+  units += data.ingredients.length * 3;
+  units += data.steps.length * 2;
+  units += data.tips.length * 2;
+  if (data.description) units += 2;
+  if (Object.values(data.meta).some(v => v !== null && v !== '')) units += 1;
+  return units <= 60 ? "compact" : "normal";
+}
+
 type MetaFields = RecipeCardOutput["meta"];
 
 const metaLabels: Record<keyof MetaFields, { icon: string }> = {
