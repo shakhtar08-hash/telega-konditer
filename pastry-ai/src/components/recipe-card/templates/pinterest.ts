@@ -25,7 +25,7 @@ export function renderPinterestHtml(
 ${sizeCssVars(size)}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { display: flex; justify-content: center; align-items: center; font-family: 'Inter', system-ui, sans-serif; background: #F0EBE3; }
-.recipe-card { width: 1080px; min-height: var(--card-min-height); display: flex; flex-direction: column; background: white; border-radius: 32px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.06); }
+.recipe-card { width: 1080px; height: var(--card-height); display: flex; flex-direction: column; background: white; border-radius: 32px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.06); }
 .hero-area { height: var(--hero-height); background: linear-gradient(135deg, #E8DFD0 0%, #D6C9B3 100%); position: relative; overflow: hidden; }
 .hero-img { width: 100%; height: 100%; object-fit: contain; }
 .hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(transparent, rgba(0,0,0,0.15)); }

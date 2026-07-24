@@ -25,7 +25,7 @@ export function renderDarkHtml(
 ${sizeCssVars(size)}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { display: flex; justify-content: center; align-items: center; font-family: 'Inter', system-ui, sans-serif; background: #0D0D0D; }
-.recipe-card { width: 1080px; min-height: var(--card-min-height); display: flex; flex-direction: column; background: #1A1A1A; border-radius: 32px; padding: var(--card-padding); gap: var(--gap); border: 1px solid #2A2A2A; }
+.recipe-card { width: 1080px; height: var(--card-height); display: flex; flex-direction: column; background: #1A1A1A; border-radius: 32px; padding: var(--card-padding); gap: var(--gap); border: 1px solid #2A2A2A; }
 h1 { font-size: var(--title-size); font-weight: 700; color: #F5F0EB; line-height: 1.15; }
 .hero-block { background: #222222; border-radius: 28px; padding: 36px; display: flex; flex-direction: column; gap: 20px; }
 .hero-img { width: 100%; height: var(--hero-height); object-fit: contain; border-radius: 20px; }

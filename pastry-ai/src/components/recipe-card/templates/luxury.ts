@@ -17,7 +17,7 @@ export function renderLuxuryHtml(
     ? `<div class="hero-block"><img src="${imageUrl}" alt="${data.title}" class="hero-img" />${meta}</div>`
     : meta ? `<div class="hero-block">${meta}</div>` : "";
   const tipHtml = data.tips.length > 0
-    ? `<div class="tips-section"><h2>💡 Советы</h2><ul>${renderTipItems(data.tips, cfg.maxTips)}</ul></div>`
+    ? `<div class="tips-section"><h2>💡 Советы</h2><ul>${renderTipItems(data.tips)}</ul></div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -29,7 +29,7 @@ export function renderLuxuryHtml(
 ${sizeCssVars(size)}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { display: flex; justify-content: center; align-items: center; font-family: 'Inter', system-ui, sans-serif; background: #F8F5F0; }
-.recipe-card { width: 1080px; min-height: var(--card-min-height); display: flex; flex-direction: column; background: #FDFCFA; border-radius: 32px; padding: var(--card-padding); gap: var(--gap); border: 1px solid #E8DFD0; box-shadow: 0 20px 80px rgba(0,0,0,0.03); }
+.recipe-card { width: 1080px; height: var(--card-height); display: flex; flex-direction: column; background: #FDFCFA; border-radius: 32px; padding: var(--card-padding); gap: var(--gap); border: 1px solid #E8DFD0; box-shadow: 0 20px 80px rgba(0,0,0,0.03); }
 h1 { font-family: 'Playfair Display', serif; font-size: var(--title-size); font-weight: 700; color: #1A1A2E; line-height: 1.15; }
 .description { font-size: var(--body-size); color: #8A8A9E; font-style: italic; line-height: 1.5; margin-top: 12px; }
 .hero-block { background: #F8F5F0; border-radius: 28px; padding: 40px; display: flex; flex-direction: column; gap: 24px; border: 1px solid #E0D5C5; }

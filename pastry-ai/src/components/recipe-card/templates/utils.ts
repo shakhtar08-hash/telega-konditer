@@ -3,11 +3,23 @@ import { sizeConfig, type CardSize } from "./size-config";
 
 export { sizeConfig };
 
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function renderSectionTitle(title: string): string {
+  return `<div class="section-title">${escapeHtml(title)}</div>`;
+}
+
 export function determineCardSize(recipeText: string): CardSize {
   const len = recipeText.length;
   if (len <= 1000) return "compact";
-  if (len <= 2500) return "normal";
-  return "long";
+  return "normal";
 }
 
 type MetaFields = RecipeCardOutput["meta"];
@@ -30,7 +42,7 @@ export function renderMetaHtml(meta: MetaFields): string {
     if (!text) continue;
 
     const label = metaLabels[key];
-    parts.push(`<div class="meta-item"><span>${label.icon}</span> ${text}</div>`);
+    parts.push(`<div class="meta-item"><span>${label.icon}</span> ${escapeHtml(text)}</div>`);
   }
 
   if (parts.length === 0) return "";
@@ -47,31 +59,31 @@ export function renderIngredientRows(ingredients: RecipeCardOutput["ingredients"
   return ingredients
     .map((item) => {
       if (isSectionHeading(item.name, item.amount)) {
-        return `<div class="ingredient-section">${item.name}</div>`;
+        return `<div class="ingredient-section">${escapeHtml(item.name)}</div>`;
       }
 
-      return `<div class="ingredient-row"><span class="ingredient-name">${item.name}</span><span class="ingredient-amount">${item.amount}</span></div>`;
+      return `<div class="ingredient-row"><span class="ingredient-name">${escapeHtml(item.name)}</span><span class="ingredient-amount">${escapeHtml(item.amount)}</span></div>`;
     })
     .join("");
 }
 
-export function renderStepItems(steps: string[]): string {
+export function renderStepItems(steps: string[], startIndex?: number): string {
   return steps
-    .map((step) => {
+    .map((step, i) => {
+      const stepNumber = startIndex !== undefined ? startIndex + i + 1 : i + 1;
       const sectionMatch = step.match(/^([А-Яа-яA-Za-z]+[^:]*?):\s*(.+)/);
       if (sectionMatch) {
-        return `<li class="step-item"><span class="step-section-label">${sectionMatch[1]}:</span> ${sectionMatch[2]}</li>`;
+        return `<li class="step-item"><span class="step-number">${stepNumber}.</span> <span class="step-section-label">${escapeHtml(sectionMatch[1])}:</span> ${escapeHtml(sectionMatch[2])}</li>`;
       }
 
-      return `<li class="step-item">${step}</li>`;
+      return `<li class="step-item"><span class="step-number">${stepNumber}.</span> ${escapeHtml(step)}</li>`;
     })
     .join("");
 }
 
-export function renderTipItems(tips: string[], maxTips: number): string {
-  const limited = tips.slice(0, maxTips);
-  if (limited.length === 0) return "";
-  return limited.map((tip) => `<li class="tip-item">${tip}</li>`).join("");
+export function renderTipItems(tips: string[]): string {
+  if (tips.length === 0) return "";
+  return tips.map((tip) => `<li class="tip-item">${escapeHtml(tip)}</li>`).join("");
 }
 
 export function sizeCssVars(size: CardSize): string {
@@ -79,7 +91,7 @@ export function sizeCssVars(size: CardSize): string {
   return `
 :root {
   --card-padding: ${s.padding}px;
-  --card-min-height: ${s.minHeight}px;
+  --card-height: ${s.height}px;
   --title-size: ${s.titleFontSize}px;
   --body-size: ${s.bodyFontSize}px;
   --step-size: ${s.stepFontSize}px;

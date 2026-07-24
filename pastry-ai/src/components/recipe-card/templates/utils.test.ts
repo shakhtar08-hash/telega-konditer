@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { determineCardSize, renderMetaHtml, renderTipItems } from "./utils";
+import { determineCardSize, escapeHtml, renderMetaHtml, renderSectionTitle, renderStepItems, renderTipItems } from "./utils";
+
+describe("escapeHtml", () => {
+  it("escapes & < > \" '", () => {
+    expect(escapeHtml(`<script>alert("xss") & 'test'</script>`)).toBe(
+      "&lt;script&gt;alert(&quot;xss&quot;) &amp; &#39;test&#39;&lt;/script&gt;",
+    );
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(escapeHtml("")).toBe("");
+  });
+
+  it("passes through safe text unchanged", () => {
+    expect(escapeHtml("hello world")).toBe("hello world");
+  });
+});
+
+describe("renderSectionTitle", () => {
+  it("wraps escaped text in a section-title div", () => {
+    expect(renderSectionTitle("Продолжение")).toBe('<div class="section-title">Продолжение</div>');
+  });
+
+  it("escapes HTML in the title", () => {
+    expect(renderSectionTitle('<script>alert("x")</script>')).toBe(
+      '<div class="section-title">&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</div>',
+    );
+  });
+});
 
 describe("determineCardSize", () => {
   it("returns compact for <=1000 chars", () => {
@@ -7,14 +35,10 @@ describe("determineCardSize", () => {
     expect(determineCardSize("a".repeat(1000))).toBe("compact");
   });
 
-  it("returns normal for 1001-2500 chars", () => {
+  it("returns normal for >1000 chars", () => {
     expect(determineCardSize("a".repeat(1500))).toBe("normal");
     expect(determineCardSize("a".repeat(2500))).toBe("normal");
-  });
-
-  it("returns long for >2500 chars", () => {
-    expect(determineCardSize("a".repeat(2501))).toBe("long");
-    expect(determineCardSize("a".repeat(3000))).toBe("long");
+    expect(determineCardSize("a".repeat(3000))).toBe("normal");
   });
 });
 
@@ -70,14 +94,41 @@ describe("renderMetaHtml", () => {
 describe("renderTipItems", () => {
   const tips = ["tip1", "tip2", "tip3", "tip4"];
 
-  it("limits tips to maxTips", () => {
-    const html = renderTipItems(tips, 2);
+  it("renders all tips without max limit", () => {
+    const html = renderTipItems(tips);
     expect(html).toContain("tip1");
     expect(html).toContain("tip2");
-    expect(html).not.toContain("tip3");
+    expect(html).toContain("tip3");
+    expect(html).toContain("tip4");
   });
 
   it("returns empty string for empty tips", () => {
-    expect(renderTipItems([], 3)).toBe("");
+    expect(renderTipItems([])).toBe("");
+  });
+
+  it("escapes HTML in tips", () => {
+    const html = renderTipItems(['<b>bold</b>']);
+    expect(html).toContain("&lt;b&gt;bold&lt;/b&gt;");
+    expect(html).not.toContain("<b>");
+  });
+});
+
+describe("renderStepItems", () => {
+  it("renders steps with sequential numbering by default", () => {
+    const html = renderStepItems(["step one", "step two"]);
+    expect(html).toContain("<span class=\"step-number\">1.</span> step one");
+    expect(html).toContain("<span class=\"step-number\">2.</span> step two");
+  });
+
+  it("renders steps with startIndex offset", () => {
+    const html = renderStepItems(["step three", "step four"], 2);
+    expect(html).toContain("<span class=\"step-number\">3.</span> step three");
+    expect(html).toContain("<span class=\"step-number\">4.</span> step four");
+  });
+
+  it("escapes HTML in step text", () => {
+    const html = renderStepItems(["<script>alert(1)</script>"]);
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(html).not.toContain("<script>");
   });
 });
