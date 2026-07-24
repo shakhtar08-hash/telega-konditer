@@ -1,6 +1,5 @@
 import {
   fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 import type { DynamicUserGroupDefinition } from "@/features/dynamic-user-groups/rule-types";
 import type {
@@ -9,10 +8,7 @@ import type {
   AdminUserGroupListRecord,
 } from "./service";
 
-export {
-  fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
-} from "@/features/admin/shared/internal-admin-client";
+export { shouldUseInternalAdminBridge } from "@/features/admin/shared/internal-admin-client";
 
 function reviveUserGroupListRecord(
   group: Omit<AdminUserGroupListRecord, "updatedAt"> & { updatedAt: string },

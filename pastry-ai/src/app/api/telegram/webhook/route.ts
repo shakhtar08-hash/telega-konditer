@@ -148,9 +148,7 @@ export async function POST(request: Request): Promise<Response> {
         { createTextPromptAgent },
         { createTextPromptService },
         { createGeneratedRecipeContextRepository },
-        { createUsageLogService },
         { createConversationLogService },
-        { createInstrumentedAIService },
       ] = await Promise.all([
         import("@/db/repositories/user-repository"),
         import("@/db/repositories/tariff-plan-repository"),
@@ -177,9 +175,7 @@ export async function POST(request: Request): Promise<Response> {
         import("@/ai/agents/text-prompt-agent"),
         import("@/features/text-prompt/text-prompt-service"),
         import("@/db/repositories/generated-recipe-context-repository"),
-        import("@/db/repositories/usage-log-service"),
         import("@/db/repositories/conversation-log-service"),
-        import("@/ai/provider/instrumented-ai-service"),
       ]);
 
       const userRepository = createUserRepository(prisma.user);
@@ -251,9 +247,6 @@ export async function POST(request: Request): Promise<Response> {
       });
       const textPromptAgent = createTextPromptAgent({ aiService, promptLoader });
       const textPromptService = createTextPromptService({ textPromptAgent });
-      const usageLogService = createUsageLogService({
-        usage: prisma.usage as never,
-      });
       const conversationLogService = createConversationLogService({
         conversation: prisma.conversation as never,
         message: prisma.message as never,

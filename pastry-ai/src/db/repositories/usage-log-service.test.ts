@@ -82,7 +82,8 @@ describe("UsageLogService", () => {
     const create = vi.fn().mockResolvedValue({ id: "usage_4" });
     const service = createUsageLogService({ usage: { create } });
 
-    const { model: _, ...inputWithoutModel } = defaultInput;
+    const { model: _unused, ...inputWithoutModel } = defaultInput;
+    void _unused;
 
     await service.recordSuccess(inputWithoutModel);
 

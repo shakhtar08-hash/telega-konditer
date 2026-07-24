@@ -74,10 +74,6 @@ const templates: CardTemplate[] = ["minimal", "pinterest", "luxury", "dark"];
 
 export function registerRecipeCardTextHandler(
   composer: Composer<PastryBotContext>,
-  dependencies: {
-    recipeCardService: RecipeCardService;
-    tokenGuard: TokenGuardService;
-  },
 ): void {
   composer.on("message:text", async (ctx, next) => {
     if (!shouldHandleRecipeCardText(ctx.session, ctx.message.text)) {

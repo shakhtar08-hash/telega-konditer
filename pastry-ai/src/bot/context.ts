@@ -14,9 +14,6 @@ export type RecipeLastIntent =
   | "refine"
   | "restart";
 
-import type { CardTemplate } from "@/components/recipe-card/templates";
-// ... rest of file
-
 export type BotSession = {
   lastFeature?: "recipes" | "best-recipe-search" | "vision" | "photoshoot" | "carousel" | "photoshoot-single-style" | "photoshoot-pick-style" | "free-lesson" | "ask-chef" | "recipe-card" | "recipe-margin" | "recipe-recalculation";
   lastPromptSlug?: string;

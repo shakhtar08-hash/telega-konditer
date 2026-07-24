@@ -29,7 +29,7 @@ type BotDependencies = {
   visionService?: Parameters<typeof registerVisionPhotoHandler>[1]["visionService"];
   freeLessonService?: Parameters<typeof registerFreeLessonTextHandler>[1]["freeLessonService"];
   askChefService?: Parameters<typeof registerAskChefTextHandler>[1]["askChefService"];
-  recipeCardService?: Parameters<typeof registerRecipeCardTextHandler>[1]["recipeCardService"];
+  recipeCardService?: Parameters<typeof registerRecipeCardTemplateCallback>[1]["recipeCardService"];
   textPromptService?: Parameters<typeof registerTextPromptHandler>[1]["textPromptService"];
   tokenGuard?: {
     getAvailablePhotoSlots(userId: string, maxSlots: number): Promise<number>;
@@ -104,10 +104,7 @@ export function createPastryBot(
     });
   }
   if (dependencies.recipeCardService) {
-    registerRecipeCardTextHandler(bot, {
-      recipeCardService: dependencies.recipeCardService,
-      tokenGuard: dependencies.tokenGuard!,
-    });
+    registerRecipeCardTextHandler(bot);
     registerRecipeCardTemplateCallback(bot, {
       recipeCardService: dependencies.recipeCardService,
       tokenGuard: dependencies.tokenGuard!,

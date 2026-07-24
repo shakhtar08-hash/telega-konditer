@@ -9,7 +9,6 @@ import type { AIService } from "@/ai/provider/ai-service";
 import { chromium } from "playwright";
 import { getChromiumLaunchOptions } from "@/lib/playwright-launch";
 import { createPaginator } from "./paginator";
-import type { RecipeCardPage } from "./recipe-card-paginator-types";
 
 const difficultyLabels = {
   easy: "🟢 Легко",

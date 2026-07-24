@@ -1,14 +1,10 @@
 import {
   fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 import type { loadAdminSettingsPageData } from "./service";
 import type { AdminSettingsEnvKey } from "./runtime-env";
 
-export {
-  fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
-} from "@/features/admin/shared/internal-admin-client";
+export { shouldUseInternalAdminBridge } from "@/features/admin/shared/internal-admin-client";
 
 type AdminSettingsPageData = Awaited<
   ReturnType<typeof loadAdminSettingsPageData>

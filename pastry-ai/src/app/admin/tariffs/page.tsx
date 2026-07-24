@@ -32,7 +32,6 @@ async function createTariff(formData: FormData) {
   const name = String(formData.get("name") ?? "");
   const tokenAmount = Number(formData.get("tokenAmount") ?? 0);
   const durationDays = Number(formData.get("durationDays") ?? 0);
-  const active = formData.get("active") === "on";
 
   if (!slug || !name || tokenAmount < 0 || !durationDays) return;
 
@@ -52,7 +51,6 @@ async function updateTariff(formData: FormData) {
   const name = String(formData.get("name") ?? "");
   const tokenAmount = Number(formData.get("tokenAmount") ?? 0);
   const durationDays = Number(formData.get("durationDays") ?? 0);
-  const active = formData.get("active") === "on";
 
   if (!id || !name || tokenAmount < 0 || !durationDays) return;
 
@@ -69,7 +67,6 @@ async function toggleTariff(formData: FormData) {
   "use server";
 
   const id = String(formData.get("id") ?? "");
-  const active = formData.get("active") === "true";
 
   if (!id) return;
 

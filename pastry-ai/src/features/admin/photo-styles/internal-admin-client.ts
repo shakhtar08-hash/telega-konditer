@@ -1,13 +1,9 @@
 import {
   fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 import type { PhotoStyleMutationInput } from "./service";
 
-export {
-  fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
-} from "@/features/admin/shared/internal-admin-client";
+export { shouldUseInternalAdminBridge } from "@/features/admin/shared/internal-admin-client";
 
 type PhotoStyleAction = "createPhotoStyle" | "updatePhotoStyle" | "deletePhotoStyle";
 

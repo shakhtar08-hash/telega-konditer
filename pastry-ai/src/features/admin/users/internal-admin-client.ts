@@ -1,12 +1,8 @@
 import {
   fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 
-export {
-  fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
-} from "@/features/admin/shared/internal-admin-client";
+export { shouldUseInternalAdminBridge } from "@/features/admin/shared/internal-admin-client";
 
 function reviveUserTariff<T extends { expiresAt: string } | null>(value: T) {
   if (!value) {

@@ -18,7 +18,6 @@ import {
 import { buildFeatureCookieBlock } from "@/features/tariffs/cookie-info";
 import {
   buildTariffPurchaseCallbackData,
-  parseTariffPurchaseCallbackData,
   type TariffPurchaseSlug,
 } from "@/features/payments/tariff-purchase";
 import { prisma } from "@/db/prisma";

@@ -16,13 +16,12 @@ function textHeight(text: string, fontSize: number, maxWidth: number): number {
   return lines * fontSize * 1.5;
 }
 
-function buildAtomicItems(data: RecipeCardOutput, cfg: typeof sizeConfig.compact): AtomicItem[] {
+function buildAtomicItems(data: RecipeCardOutput, cfg: typeof sizeConfig.compact, imageUrl?: string): AtomicItem[] {
   const items: AtomicItem[] = [];
-  const maxContentWidth = cfg.width - cfg.padding * 2;
 
   items.push({ type: "header", text: data.title + "\n" + data.description });
 
-  if (data.imageUrl || Object.values(data.meta).some((v) => v !== null && v !== "")) {
+  if (imageUrl || Object.values(data.meta).some((v) => v !== null && v !== "")) {
     items.push({ type: "hero", text: "" });
   }
 
@@ -92,7 +91,7 @@ export function createPaginator() {
       size: CardSize,
     ): Promise<RecipeCardPage[]> {
       const cfg = sizeConfig[size];
-      const allItems = buildAtomicItems(data, cfg);
+      const allItems = buildAtomicItems(data, cfg, imageUrl);
       if (allItems.length === 0) return [];
 
       const availableHeight = cfg.height - (cfg.padding * 2 + cfg.footerHeight + cfg.safeBottomSpace);

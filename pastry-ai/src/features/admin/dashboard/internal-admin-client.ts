@@ -1,13 +1,9 @@
 import {
   fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 import type { AppPlan } from "@/features/subscriptions/plans";
 
-export {
-  fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
-} from "@/features/admin/shared/internal-admin-client";
+export { shouldUseInternalAdminBridge } from "@/features/admin/shared/internal-admin-client";
 
 type AdminDashboardPageData = {
   conversations: Array<{

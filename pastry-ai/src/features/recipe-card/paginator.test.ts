@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
 import { createPaginator } from "./paginator";
-import { sizeConfig, type CardSize } from "@/components/recipe-card/templates/size-config";
 
 const makeRecipe = (overrides?: Partial<RecipeCardOutput>): RecipeCardOutput => ({
   title: "Тестовый рецепт",

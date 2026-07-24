@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecipeCardPage } from "@/features/recipe-card/recipe-card-paginator-types";
-import type { CardTemplate, CardSize } from "./templates";
+import type { CardTemplate } from "./templates";
 import { renderRecipeCardHtml } from "./RecipeCard";
 
 const makePage = (overrides?: Partial<RecipeCardPage>): RecipeCardPage => ({

@@ -1,6 +1,5 @@
 import {
   fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 import type {
   AdminTriggerDynamicUserGroupRecord,
@@ -11,10 +10,7 @@ import type {
   TriggerTestSendResult,
 } from "./service";
 
-export {
-  fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
-} from "@/features/admin/shared/internal-admin-client";
+export { shouldUseInternalAdminBridge } from "@/features/admin/shared/internal-admin-client";
 
 function reviveTriggerListRule(
   rule: Omit<AdminTriggerListRuleRecord, "createdAt" | "updatedAt"> & {

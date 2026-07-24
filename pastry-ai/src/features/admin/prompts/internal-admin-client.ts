@@ -1,13 +1,9 @@
 import {
   fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
 } from "@/features/admin/shared/internal-admin-client";
 import type { PromptProvider } from "@/db/repositories/prompt-repository";
 
-export {
-  fetchInternalAdminJson,
-  shouldUseInternalAdminBridge,
-} from "@/features/admin/shared/internal-admin-client";
+export { shouldUseInternalAdminBridge } from "@/features/admin/shared/internal-admin-client";
 
 export async function fetchInternalAdminPromptsPageData() {
   const data = await fetchInternalAdminJson<{

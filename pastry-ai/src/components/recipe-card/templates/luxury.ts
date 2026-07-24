@@ -1,12 +1,11 @@
 import type { RecipeCardPage } from "@/features/recipe-card/recipe-card-paginator-types";
 import type { CardSize } from "./size-config";
-import { sizeConfig, escapeHtml, renderIngredientRows, renderMetaHtml, renderSectionTitle, renderStepItems, renderTipItems, sizeCssVars } from "./utils";
+import { escapeHtml, renderIngredientRows, renderMetaHtml, renderSectionTitle, renderStepItems, renderTipItems, sizeCssVars } from "./utils";
 
 export function renderLuxuryHtml(
   page: RecipeCardPage,
   size: CardSize,
 ): string {
-  const cfg = sizeConfig[size];
   const isFirstPage = page.pageNumber === 1;
   const showMeta = isFirstPage && page.meta && Object.values(page.meta).some((v) => v !== null && v !== "");
   const metaHtml = showMeta ? renderMetaHtml(page.meta) : "";
