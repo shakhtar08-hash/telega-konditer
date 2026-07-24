@@ -264,7 +264,7 @@ export function registerStartCommand(
     }
   });
 
-  composer.callbackQuery("try_free", async (ctx) => {
+composer.callbackQuery("try_free", async (ctx) => {
     const from = ctx.from;
     if (!from) {
       await ctx.answerCallbackQuery();
@@ -273,7 +273,7 @@ export function registerStartCommand(
 
     const user = await prisma.user.findUnique({
       where: { telegramId: String(from.id) },
-      select: { id: true },
+      select: { id: true, promoClaimed: true },
     });
 
     if (!user) {
@@ -283,6 +283,11 @@ export function registerStartCommand(
     }
 
     await ctx.answerCallbackQuery();
+
+    if (user.promoClaimed) {
+      await ctx.reply("Вы уже использовали бесплатный пробный период. Чтобы продолжить пользоваться ботом, оплатите один из тарифов.");
+      return;
+    }
 
     await userService.assignPromoTariff(user.id);
 
@@ -530,7 +535,14 @@ async function sendExpiredTariffMessage(ctx: PastryBotContext, telegramId: strin
   const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
   const paymentUrl = buildPaymentUrl(baseUrl, telegramId);
   const buyButtonUrl = resolveBuyButtonUrl(step, paymentUrl, { baseUrl, telegramId });
-  const replyMarkup = buildExpiredTariffKeyboard(buyButtonUrl, step);
+
+  const user = await prisma.user.findUnique({
+    where: { telegramId },
+    select: { promoClaimed: true },
+  });
+  const promoClaimed = user?.promoClaimed ?? true;
+
+  const replyMarkup = buildExpiredTariffKeyboard(buyButtonUrl, step, promoClaimed);
 
   if (isPublicAppBaseUrl(baseUrl)) {
     await ctx.replyWithPhoto(resolveTelegramPhotoInput(step.imagePath), {

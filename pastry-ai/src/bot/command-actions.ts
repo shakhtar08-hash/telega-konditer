@@ -282,14 +282,20 @@ export async function sendExpiredTariffMessage(
   const paymentUrl = buildPaymentUrl(baseUrl, telegramId);
   const buyButtonUrl = resolveBuyButtonUrl(step, paymentUrl, { baseUrl, telegramId });
 
+  const user = await prisma.user.findUnique({
+    where: { telegramId },
+    select: { promoClaimed: true },
+  });
+  const promoClaimed = user?.promoClaimed ?? true;
+
   if (isPublicAppBaseUrl(baseUrl)) {
     await ctx.replyWithPhoto(resolveTelegramPhotoInput(step.imagePath), {
       caption: step.text,
-      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step),
+      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step, promoClaimed),
     });
   } else {
     await ctx.reply(step.text, {
-      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step),
+      reply_markup: buildExpiredTariffKeyboard(buyButtonUrl, step, promoClaimed),
     });
   }
 }

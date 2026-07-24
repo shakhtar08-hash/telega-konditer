@@ -268,7 +268,7 @@ describe("registerStartCommand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    prismaMock.user.findUnique.mockResolvedValue({ id: "user-1" });
+    prismaMock.user.findUnique.mockResolvedValue({ id: "user-1", promoClaimed: false });
     prismaMock.user.findFirst.mockResolvedValue({ id: "user-1" });
     prismaMock.user.update.mockResolvedValue({ id: "user-1", promoClaimed: true });
     prismaMock.userTariff.findUnique.mockResolvedValue({
@@ -448,6 +448,35 @@ describe("registerStartCommand", () => {
     expect(ctx.reply).toHaveBeenCalledWith("Главное меню", {
       reply_markup: menuReplyMarkup,
     });
+  });
+
+  it("rejects try_free when promo already claimed", async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      promoClaimed: true,
+    });
+
+    const callbackHandlers = new Map<string, TestHandler>();
+    const composer = {
+      callbackQuery: vi.fn((pattern, handler) => {
+        if (typeof pattern === "string") callbackHandlers.set(pattern, handler);
+      }),
+      command: vi.fn(),
+    } as unknown as TestComposer;
+    const userService = createUserService();
+    const ctx = {
+      ...createBaseContext(),
+      answerCallbackQuery: vi.fn().mockResolvedValue(undefined),
+    };
+
+    registerStartCommand(composer, userService);
+
+    await callbackHandlers.get("try_free")?.(ctx);
+
+    expect(userService.assignPromoTariff).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith(
+      "Вы уже использовали бесплатный пробный период. Чтобы продолжить пользоваться ботом, оплатите один из тарифов.",
+    );
   });
 
   it("dispatches user.started on /start when promo access is already active", async () => {

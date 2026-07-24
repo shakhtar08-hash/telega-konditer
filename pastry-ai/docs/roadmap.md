@@ -128,6 +128,11 @@
   - Each new recipe automatically becomes the current active recipe for all follow-up actions.
   - `GeneratedRecipeContextRepository.create()` accepts `source: "create_recipe" | "create_another"`.
   - Updated tests: `recipe-agent.test.ts` (6 tests — 1-recipe contract, excludeRecipes), `recipes.test.ts` (5-button keyboard).
+- **Expired-tariff promo abuse fix**:
+  - `buildExpiredTariffKeyboard()` now accepts optional `promoClaimed` param; hides "Попробовать бесплатно" button when `promoClaimed = true`.
+  - `sendExpiredTariffMessage()` in both `start.ts` and `command-actions.ts` fetches user's `promoClaimed` before building keyboard.
+  - `try_free` callback handler now checks `promoClaimed` and rejects the attempt with a message if the user already claimed the promo.
+  - New test: `start.test.ts` — "rejects try_free when promo already claimed".
 
 **Promo/menu recovery fixes**:
 - `assignPromoTariff()` now reissues the `promo` tariff when an existing `UserTariff` is expired, so `Попробовать бесплатно` restores real access instead of leaving the user on a stale expired tariff row.

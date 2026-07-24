@@ -329,11 +329,14 @@ export async function loadExpiredTariffStep(): Promise<OnboardingStep> {
 export function buildExpiredTariffKeyboard(
   paymentUrl: string,
   step: OnboardingStep,
+  promoClaimed?: boolean,
 ): InlineKeyboardMarkup {
   const migrated = migrateLegacyStep(step);
   const rows: InlineKeyboardButton[][] = [];
 
-  rows.push([{ callback_data: "try_free", text: "Попробовать бесплатно" }]);
+  if (!promoClaimed) {
+    rows.push([{ callback_data: "try_free", text: "Попробовать бесплатно" }]);
+  }
 
   const activeButtons = normalizeBuyButtons(migrated.buyButtons)
     .filter((button) => button.active)
