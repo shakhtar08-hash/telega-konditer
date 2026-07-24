@@ -1,20 +1,26 @@
-import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
+import type { RecipeCardPage } from "@/features/recipe-card/recipe-card-paginator-types";
 import type { CardSize } from "./size-config";
-import { renderIngredientRows, renderMetaHtml, renderStepItems, sizeCssVars } from "./utils";
+import { escapeHtml, renderIngredientRows, renderMetaHtml, renderSectionTitle, renderStepItems, renderTipItems, sizeCssVars } from "./utils";
 
 export function renderPinterestHtml(
-  data: RecipeCardOutput,
-  imageUrl: string | undefined,
+  page: RecipeCardPage,
   size: CardSize,
-  pageLabel?: string,
 ): string {
-  const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
-  const hasIngredients = data.ingredients.length > 0;
-  const hasSteps = data.steps.length > 0;
-  const meta = renderMetaHtml(data.meta);
-  const heroHtml = imageUrl
-    ? `<div class="hero-area"><img src="${imageUrl}" alt="${data.title}" class="hero-img" /><div class="hero-overlay"></div></div>`
+  const isFirstPage = page.pageNumber === 1;
+  const showMeta = isFirstPage && page.meta && Object.values(page.meta).some((v) => v !== null && v !== "");
+  const metaHtml = showMeta ? renderMetaHtml(page.meta) : "";
+  const showHero = page.sections.includes("hero") && !!page.imageUrl;
+  const heroHtml = showHero
+    ? `<div class="hero-area"><img src="${escapeHtml(page.imageUrl!)}" alt="${escapeHtml(page.title)}" class="hero-img" /><div class="hero-overlay"></div></div>`
     : "";
+  const showTips = page.sections.includes("tips") && page.tips.length > 0;
+  const tipHtml = showTips
+    ? `<section>${renderSectionTitle("💡 Советы", page.isTipsContinuation)}<ul>${renderTipItems(page.tips)}</ul></section>`
+    : "";
+  const footerText = page.totalPages > 1 ? `Карточка ${page.pageNumber}/${page.totalPages}` : "AI Кондитер · рецепт создан с помощью нейросети";
+  const hasIngredients = page.sections.includes("ingredients") && page.ingredients.length > 0;
+  const hasSteps = page.sections.includes("steps") && page.steps.length > 0;
+  const showDescription = isFirstPage && Boolean(page.description);
 
   return `<!DOCTYPE html>
 <html>
@@ -46,24 +52,26 @@ li { font-size: 22px; color: #2D2D44; line-height: 1.5; }
 .step-item { font-size: var(--step-size); color: #2D2D44; padding: 4px 0; border-bottom: 1px solid #F0EBE3; }
 .step-section-label { font-weight: 700; color: #1A1A2E; }
 .footer { text-align: center; font-size: 16px; color: #A09DB0; margin-top: auto; padding-top: 16px; }
+.section-title { font-size: 30px; font-weight: 600; color: #1A1A2E; }
 </style>
 </head>
 <body>
 <div class="recipe-card">
 ${heroHtml}
 <div class="card-content">
-<h1>${data.title}</h1>
-${data.description ? `<p class="description">${data.description}</p>` : ""}
-${meta}
+<h1>${escapeHtml(page.title)}</h1>
+${showDescription ? `<p class="description">${escapeHtml(page.description)}</p>` : ""}
+${metaHtml}
 ${hasIngredients ? `<section>
-<h2>Ингредиенты</h2>
-<div>${renderIngredientRows(data.ingredients)}</div>
+${renderSectionTitle("Ингредиенты", page.isIngredientsContinuation)}
+<div>${renderIngredientRows(page.ingredients)}</div>
 </section>` : ""}
 ${hasSteps ? `<section>
-<h2>Приготовление</h2>
-<ol>${renderStepItems(data.steps)}</ol>
+${renderSectionTitle("Приготовление", page.isStepsContinuation)}
+<ol>${renderStepItems(page.steps, page.stepStartIndex)}</ol>
 </section>` : ""}
-<div class="footer">${footerText}</div>
+${tipHtml}
+<div class="footer">${escapeHtml(footerText)}</div>
 </div>
 </div>
 </body>

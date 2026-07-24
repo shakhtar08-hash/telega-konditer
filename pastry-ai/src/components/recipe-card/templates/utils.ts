@@ -12,8 +12,9 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#39;");
 }
 
-export function renderSectionTitle(title: string): string {
-  return `<div class="section-title">${escapeHtml(title)}</div>`;
+export function renderSectionTitle(title: string, isContinuation?: boolean): string {
+  const text = isContinuation ? `${escapeHtml(title)} (продолжение)` : escapeHtml(title);
+  return `<div class="section-title">${text}</div>`;
 }
 
 export function determineCardSize(recipeText: string): CardSize {

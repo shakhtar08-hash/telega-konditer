@@ -1,24 +1,27 @@
-import type { RecipeCardOutput } from "@/ai/schemas/recipe-card";
+import type { RecipeCardPage } from "@/features/recipe-card/recipe-card-paginator-types";
 import type { CardSize } from "./size-config";
-import { renderIngredientRows, renderMetaHtml, renderStepItems, renderTipItems, sizeConfig, sizeCssVars } from "./utils";
+import { sizeConfig, escapeHtml, renderIngredientRows, renderMetaHtml, renderSectionTitle, renderStepItems, renderTipItems, sizeCssVars } from "./utils";
 
 export function renderLuxuryHtml(
-  data: RecipeCardOutput,
-  imageUrl: string | undefined,
+  page: RecipeCardPage,
   size: CardSize,
-  pageLabel?: string,
 ): string {
   const cfg = sizeConfig[size];
-  const footerText = pageLabel ?? "AI Кондитер · рецепт создан с помощью нейросети";
-  const hasIngredients = data.ingredients.length > 0;
-  const hasSteps = data.steps.length > 0;
-  const meta = renderMetaHtml(data.meta);
-  const heroHtml = imageUrl
-    ? `<div class="hero-block"><img src="${imageUrl}" alt="${data.title}" class="hero-img" />${meta}</div>`
-    : meta ? `<div class="hero-block">${meta}</div>` : "";
-  const tipHtml = data.tips.length > 0
-    ? `<div class="tips-section"><h2>💡 Советы</h2><ul>${renderTipItems(data.tips)}</ul></div>`
+  const isFirstPage = page.pageNumber === 1;
+  const showMeta = isFirstPage && page.meta && Object.values(page.meta).some((v) => v !== null && v !== "");
+  const metaHtml = showMeta ? renderMetaHtml(page.meta) : "";
+  const showHero = page.sections.includes("hero") && !!page.imageUrl;
+  const heroHtml = showHero
+    ? `<div class="hero-block"><img src="${escapeHtml(page.imageUrl!)}" alt="${escapeHtml(page.title)}" class="hero-img" />${metaHtml}</div>`
+    : metaHtml ? `<div class="hero-block">${metaHtml}</div>` : "";
+  const showTips = page.sections.includes("tips") && page.tips.length > 0;
+  const tipHtml = showTips
+    ? `<div class="tips-section">${renderSectionTitle("💡 Советы", page.isTipsContinuation)}<ul>${renderTipItems(page.tips)}</ul></div>`
     : "";
+  const footerText = page.totalPages > 1 ? `Карточка ${page.pageNumber}/${page.totalPages}` : "AI Кондитер · рецепт создан с помощью нейросети";
+  const hasIngredients = page.sections.includes("ingredients") && page.ingredients.length > 0;
+  const hasSteps = page.sections.includes("steps") && page.steps.length > 0;
+  const showDescription = isFirstPage && Boolean(page.description);
 
   return `<!DOCTYPE html>
 <html>
@@ -51,25 +54,26 @@ li::marker { color: #B88A44; }
 .tips-section { background: #F8F5F0; border-radius: 16px; padding: 28px 36px; }
 .tip-item { font-size: 20px; color: #2D2D44; padding: 4px 0; }
 .footer { text-align: center; font-size: 16px; color: #A09DB0; margin-top: auto; padding-top: 20px; border-top: 1px solid #EDE6DB; font-style: italic; }
+.section-title { font-family: 'Playfair Display', serif; font-size: 34px; color: #B88A44; border-bottom: 1px solid #C8A97E; padding-bottom: 8px; }
 </style>
 </head>
 <body>
 <div class="recipe-card">
 <div>
-<h1>${data.title}</h1>
-${data.description ? `<p class="description">${data.description}</p>` : ""}
+<h1>${escapeHtml(page.title)}</h1>
+${showDescription ? `<p class="description">${escapeHtml(page.description)}</p>` : ""}
 </div>
 ${heroHtml}
 ${hasIngredients ? `<section>
-<h2>Ингредиенты</h2>
-<div>${renderIngredientRows(data.ingredients)}</div>
+${renderSectionTitle("Ингредиенты", page.isIngredientsContinuation)}
+<div>${renderIngredientRows(page.ingredients)}</div>
 </section>` : ""}
 ${hasSteps ? `<section>
-<h2>Приготовление</h2>
-<ol>${renderStepItems(data.steps)}</ol>
+${renderSectionTitle("Приготовление", page.isStepsContinuation)}
+<ol>${renderStepItems(page.steps, page.stepStartIndex)}</ol>
 </section>` : ""}
 ${tipHtml}
-<div class="footer">${footerText}</div>
+<div class="footer">${escapeHtml(footerText)}</div>
 </div>
 </body>
 </html>`;

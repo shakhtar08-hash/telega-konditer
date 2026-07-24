@@ -27,6 +27,10 @@ describe("renderSectionTitle", () => {
       '<div class="section-title">&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</div>',
     );
   });
+
+  it("appends (продолжение) when isContinuation is true", () => {
+    expect(renderSectionTitle("Ингредиенты", true)).toBe('<div class="section-title">Ингредиенты (продолжение)</div>');
+  });
 });
 
 describe("determineCardSize", () => {
